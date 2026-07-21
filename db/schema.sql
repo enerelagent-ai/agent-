@@ -1,0 +1,2 @@
+-- PostgreSQL schema for the real estate analytics platform.
+-- Tables will be added as V1.0 features are implemented.
