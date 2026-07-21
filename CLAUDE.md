@@ -9,42 +9,59 @@ CLAUDE.md — Улаанбаатарын Үл Хөдлөх Хөрөнгийн А
 Хувилбар 1.0 (одоогийн ажил, 8 долоо хоног): Үнэгүй.мн-с scraping, дублей илрүүлэлт, тооцооллын систем, dashboard. Хувилбар 2.0 (дараагийн 8 долоо хоног): Facebook нэгтгэл, барилгын төслийн мэдээллийн сан, AI-аар санал болгох/үнэлгээ хийх систем, дулааны зураг, мэдэгдлийн систем.
 
 Tech stack
-Backend: FastAPI (Python), нэвтрэлт баталгаажуулалт
-Database: PostgreSQL
+Backend: FastAPI (Python) — одоогоор auth байхгүй (local, single-user tool; deploy хийхийн өмнө нэмнэ)
+Database: PostgreSQL (Postgres.app, local dev)
 Scraper: Playwright (Python)
 Frontend: Next.js
-Version control: GitHub
+Version control: GitHub (enerelagent-ai/agent-), gh CLI ашиглан auth хийсэн
 Deployment: тогтмол ашиглагдах серверт байршуулна (V1.0-ийн эцэст)
 Кодын дүрэм / conventions
 Python: PEP8, type hints ашиглах, функц бүрт docstring
-Commit бүр жижиг, нэг л зорилготой байх; commit message нь юу, яагаад хийснийг тайлбарлана
+Commit бүр жижиг, нэг л зорилготой байх; feature бүр тусдаа commit
 Тооцооллын логик (үнэ, ROI, түрээсийн өгөөж) бүрт unit test заавал байх
-Scraper нь rate-limit/delay-тай, сайтын ачааллыг хүндэтгэсэн байх ёстой
-Нууц түлхүүр, DB нэвтрэх мэдээллийг код дотор бичихгүй — .env ашиглах, .gitignore-д нэмэх
+Scraper нь rate-limit/delay-тай (2-3 сек), сайтын ачааллыг хүндэтгэсэн байх ёстой
+Нууц түлхүүр, DB нэвтрэх мэдээллийг код дотор бичихгүй — .env ашиглах (.gitignore-т орсон)
+Feature branch-аас main руу PR/merge хийж ажиллах (git checkout -b weekN-feature)
+Unegui.mn scraper — тодорхой хамрах хүрээ (Week 3)
+
+Зөвхөн эдгээр 2 URL-ээс scrape хийх:
+
+https://www.unegui.mn/l-hdlh/l-hdlh-zarna/ (Үл хөдлөх зарна — худалдах, ~27,587 зар)
+https://www.unegui.mn/l-hdlh/l-hdlh-treesllne/ (Үл хөдлөх түрээслүүлнэ, ~11,049 зар)
+
+АНХААР: /new-buildings/ (Шинэ орон сууц) бол тусдаа ангилал — үүнийг scrape ХИЙХГҮЙ.
+
+Зарын хуудасны бүтэц (/adv/{id}_{slug}/):
+
+Спецификаци нь key-value жагсаалт хэлбэртэй (Шал, Тагт, Ашиглалтанд орсон он, Гараж, Цонх, Барилгын давхар, Хаалга, Талбай, Хэдэн давхарт, Төлбөрийн нөхцөл, Цонхны тоо, Барилгын явц, Цахилгаан шаттай эсэх) — талбарууд зарын төрлөөс хамаарч өөр байдаг тул generic key-value parser хэрэглэх, тогтмол field жагсаалт биш
+Байршлын координат (lat/lng) нь газрын зургийн зурган URL-д шууд орсон байдаг: .../geo/static/streets/{lng}/{lat}/... — регекс/URL parsing-аар гаргаж авах боломжтой
+Утасны дугаар анхандаа хагас далд (9970-XXXX) харагддаг — "Дугаар харах" товч дарах шаардлагатай байж болзошгүй, шалгаж баталгаажуулах хэрэгтэй
+Жагсаалтын хуудасны pagination-ы бодит URL хэлбэрийг таамаглахгүйгээр Claude Code-оор шалгуулж баталгаажуулах
 Долоо хоногийн бүтэц (V1.0)
-Суурь бэлтгэл — architecture, GitHub, Claude Code тохиргоо, DB schema
-FastAPI дотоод систем, нэвтрэлт баталгаажуулалт
-Playwright scraper (Үнэгүй.мн)
+✅ Суурь бэлтгэл — architecture, GitHub, Claude Code тохиргоо, DB schema (бодит Postgres дээр туршиж баталгаажуулсан)
+✅ FastAPI дотоод систем (routes, models, DB холболт) — баталгаажуулсан, auth Week 8 хүртэл хойшлуулсан
+🔄 Playwright scraper (Үнэгүй.мн, дээрх тодорхой хамрах хүрээгээр) — явцад байна
 Дублей илрүүлэлт, өгөгдөл цэвэрлэгээ (>95% нарийвчлал зорилт)
 Тооцооллын систем: дундаж үнэ, м.кв үнэ, түрээсийн өгөөж, ROI
 Next.js dashboard, хайлт/шүүлт
 Нэгтгэл ба туршилт
-Deploy, аюулгүй байдал, баримт бичиг
+Deploy, аюулгүй байдал, баримт бичиг, auth нэмэх
 Claude Code-той ажиллах зарчим
 Даалгаврыг өдрийн хэмжээнд задалж өгөх — том context нэг дор өгөхгүй
-Нарийн/эрсдэлтэй логик (dedup, тооцоолол)-ыг эхлээд төлөвлүүлж, дараа нь бичүүлэх
-Feature бүрийн дараа commit хийх, тестээ ажиллуулах
+Нарийн/эрсдэлтэй логик (dedup, тооцоолол, scraper-ийн бодит бүтэц)-ыг эхлээд шалгуулж/төлөвлүүлж, дараа нь бичүүлэх — таамаглал биш баталгаажсан мэдээллээр ажиллах
+Feature бүрийн дараа commit хийх, тестээ ажиллуулах, GitHub руу push хийх
 Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ session)
+Их хэмжээний өгөгдөл дээр (жишээ нь 38,000 зар) шууд ажиллуулахгүй — эхлээд бага хэмжээгээр (15-20 жишээ) end-to-end тест хийж баталгаажуулсны дараа л томсгох
 Одоогийн статус
 
 (Claude Code-той ажиллах явцад энэ хэсгийг тогтмол шинэчилж, "юу дуусгасан / юу хийж байгаа" гэдгээ тэмдэглэ)
 
- Week 1: Architecture, GitHub, DB schema
- Week 2: FastAPI backend
- Week 3: Scraper
+ Week 1: Architecture, GitHub, DB schema — бодит Postgres дээр баталгаажсан
+ Week 2: FastAPI backend (schedule-ээс түрүүлж дуусгасан)
+ Week 3: Scraper (явцад — list-page URL цуглуулалт → detail-page parsing → зураг/утас → DB хадгалалт)
  Week 4: Dedup & cleaning
  Week 5: Calculations
  Week 6: Dashboard
  Week 7: Integration & testing
- Week 8: Deploy
+ Week 8: Deploy + auth нэмэх
  
