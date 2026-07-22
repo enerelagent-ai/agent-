@@ -27,14 +27,32 @@ CATEGORIES = {
 DELAY_RANGE = (2.0, 3.0)
 
 
-def scrape_details(browser: Browser, ad_urls: list[str]) -> tuple[list[dict], list[str]]:
-    """Fetch and parse each ad URL with a polite delay between requests.
+def scrape_and_save(
+    browser: Browser,
+    ad_urls: list[str],
+    dsn: str,
+    *,
+    batch_size: int = 50,
+) -> tuple[int, list[tuple[int, int, float]], list[str]]:
+    """Fetch, parse and persist ads in batches of batch_size.
 
-    Returns (mapped rows ready for upsert, error descriptions for ads that
-    could not be fetched or were unusable).
+    Incremental saving matters on long runs: a crash loses at most one
+    batch of work, and --skip-recent-days can then resume past everything
+    already saved. Returns (rows saved, duplicate matches, errors).
     """
-    rows: list[dict] = []
+    saved = 0
+    matches: list[tuple[int, int, float]] = []
     errors: list[str] = []
+    batch: list[dict] = []
+
+    def flush() -> None:
+        nonlocal saved
+        if not batch:
+            return
+        saved += upsert_listings(dsn, batch)
+        matches.extend(match_new_listings(dsn, [row["source_url"] for row in batch]))
+        batch.clear()
+
     for n, url in enumerate(ad_urls, 1):
         html = fetch_detail_html(browser, url)
         if html is None:
@@ -44,10 +62,13 @@ def scrape_details(browser: Browser, ad_urls: list[str]) -> tuple[list[dict], li
             if row is None:
                 errors.append(f"unusable page (no title): {url}")
             else:
-                rows.append(row)
-        print(f"    detail {n}/{len(ad_urls)} ok={len(rows)} err={len(errors)}")
+                batch.append(row)
+        if len(batch) >= batch_size:
+            flush()
+        print(f"    detail {n}/{len(ad_urls)} saved={saved} pending={len(batch)} err={len(errors)}", flush=True)
         time.sleep(random.uniform(*DELAY_RANGE))
-    return rows, errors
+    flush()
+    return saved, matches, errors
 
 
 def run_pipeline(
@@ -74,15 +95,13 @@ def run_pipeline(
                 print(f"{name}: skipping {len(skip)} ads scraped within {skip_recent_days} day(s)")
             if ads_per_category is not None:
                 ad_urls = ad_urls[:ads_per_category]
-            print(f"{name}: scraping {len(ad_urls)} detail pages")
-            rows, errors = scrape_details(browser, ad_urls)
-            saved = upsert_listings(dsn, rows)
-            matches = match_new_listings(dsn, [row["source_url"] for row in rows])
+            print(f"{name}: scraping {len(ad_urls)} detail pages", flush=True)
+            saved, matches, errors = scrape_and_save(browser, ad_urls, dsn)
             all_errors.extend(errors)
             print(f"{name}: saved {saved} rows, {len(matches)} duplicate matches, {len(errors)} errors")
             for id_a, id_b, score in matches:
                 print(f"    duplicate match: listings {id_a} <-> {id_b} (score {score:.2f})")
-            print()
+            print(flush=True)
         browser.close()
 
     if all_errors:

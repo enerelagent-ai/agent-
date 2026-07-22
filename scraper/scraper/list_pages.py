@@ -64,7 +64,7 @@ def collect_ad_urls(
         page_url = build_page_url(category_url, page_num)
         ad_urls = fetch_ad_urls_from_page(browser, page_url)
         new_urls = sum(1 for ad_url in ad_urls if ad_url not in seen)
-        print(f"    page {page_num}: {len(ad_urls)} ads, {new_urls} new ({page_url})")
+        print(f"    page {page_num}: {len(ad_urls)} ads, {new_urls} new ({page_url})", flush=True)
         for ad_url in ad_urls:
             seen.setdefault(ad_url, None)
         stale_pages = 0 if new_urls else stale_pages + 1
