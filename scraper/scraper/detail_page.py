@@ -66,6 +66,35 @@ def parse_posted_at(raw: str, *, now: datetime | None = None) -> str | None:
     return day.replace(hour=hour, minute=minute).strftime("%Y-%m-%dT%H:%M")
 
 
+def _slug_from_href(href: str) -> str | None:
+    """Return the last path segment of a category href, e.g. '/l-hdlh/.../oron-suuts/' -> 'oron-suuts'."""
+    segment = href.rstrip("/").rsplit("/", 1)[-1]
+    return segment or None
+
+
+def _parse_breadcrumbs(soup: BeautifulSoup) -> dict[int, tuple[str, str]]:
+    """Return breadcrumb items as {position: (name, href)}.
+
+    The ad breadcrumb is a schema.org BreadcrumbList: position 3 is the
+    transaction type (зарна/түрээслүүлнэ), position 4 the property category,
+    position 5 an optional subcategory.
+    """
+    crumbs: dict[int, tuple[str, str]] = {}
+    for li in soup.select("ul.breadcrumbs li"):
+        position_el = li.select_one("meta[itemprop=position]")
+        name_el = li.select_one("span[itemprop=name]")
+        link_el = li.select_one("a[href]")
+        if not (position_el and name_el):
+            continue
+        try:
+            position = int(position_el.get("content", ""))
+        except ValueError:
+            continue
+        href = link_el.get("href", "") if link_el else ""
+        crumbs[position] = (name_el.get_text(strip=True), href)
+    return crumbs
+
+
 def _split_location(raw: str) -> tuple[str | None, str | None]:
     """Split 'Дүүрэг, Дэд байршил, ...' into (district, sub_district)."""
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -125,6 +154,17 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
     if coords_m:
         longitude, latitude = float(coords_m.group(1)), float(coords_m.group(2))
 
+    crumbs = _parse_breadcrumbs(soup)
+    listing_type: str | None = None
+    if 3 in crumbs:
+        transaction_href = crumbs[3][1]
+        if "zarna" in transaction_href:
+            listing_type = "sale"
+        elif "treesllne" in transaction_href:
+            listing_type = "rent"
+    category_name, category_href = crumbs.get(4, (None, ""))
+    subcategory_name, subcategory_href = crumbs.get(5, (None, ""))
+
     return {
         "url": url,
         "ad_id": ad_id,
@@ -135,6 +175,11 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
         "location_raw": location_raw,
         "district": district,
         "sub_district": sub_district,
+        "listing_type": listing_type,
+        "property_category": category_name,
+        "property_category_slug": _slug_from_href(category_href),
+        "property_subcategory": subcategory_name,
+        "property_subcategory_slug": _slug_from_href(subcategory_href),
         "posted_raw": posted_raw,
         "posted_at": parse_posted_at(posted_raw) if posted_raw else None,
         "latitude": latitude,
