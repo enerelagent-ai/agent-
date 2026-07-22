@@ -60,7 +60,7 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
 
  Week 1: Architecture, GitHub, DB schema — бодит Postgres дээр баталгаажсан
  Week 2: FastAPI backend (schedule-ээс түрүүлж дуусгасан)
- Week 3: Scraper (явцад): list-page URL цуглуулалт ✅, detail-page parser ✅ (title/үнэ/байршил/огноо/координат/ангилал/утас/зураг/generic specs — 13 зар дээр live баталгаажсан), DB migration 001-002 (property_type, listing_type) local Postgres дээр applied ✅; үлдсэн — DB хадгалалт (parser dict → listings upsert)
+ Week 3: Scraper: list-page URL цуглуулалт ✅, detail-page parser ✅ (title/тайлбар/үнэ/байршил/огноо/координат/ангилал/утас/зураг/generic specs — 13 зар дээр live баталгаажсан), DB migration 001-003 (property_type, listing_type, posted_at) applied ✅, DB хадгалалт ✅ (scraper/scraper/save.py — dedup_hash, (source, source_url) upsert, unit test 7/7, 13 зар local Postgres-т end-to-end баталгаажсан); үлдсэн — бүрэн pipeline runner (list → detail → save, жижиг batch-аар туршиж томсгох)
  Week 4: Dedup & cleaning
  Week 5: Calculations
  Week 6: Dashboard
