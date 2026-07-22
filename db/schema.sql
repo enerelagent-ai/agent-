@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS listings (
                         CASE WHEN area_sqm > 0 THEN ROUND(price / area_sqm, 2) ELSE NULL END
                     ) STORED,
 
+    -- Sale and rent prices differ by ~100x, so every price statistic must be
+    -- computed within one transaction type. Nullable: V2 sources (Facebook)
+    -- may not always make the type determinable.
+    listing_type    TEXT CHECK (listing_type IN ('sale', 'rent')),
+
     -- Raw Unegui breadcrumb category (e.g. 'Орон сууц зарна'); price-per-sqm
     -- comparisons are only meaningful within one property type. Subtype is
     -- optional; for apartments it carries the room count (e.g. '3 өрөө').
