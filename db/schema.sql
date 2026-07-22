@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS listings (
                         CASE WHEN area_sqm > 0 THEN ROUND(price / area_sqm, 2) ELSE NULL END
                     ) STORED,
 
+    -- Sale and rent prices differ by ~100x, so every price statistic must be
+    -- computed within one transaction type. Nullable: V2 sources (Facebook)
+    -- may not always make the type determinable.
+    listing_type    TEXT CHECK (listing_type IN ('sale', 'rent')),
+
+    -- Raw Unegui breadcrumb category (e.g. 'Орон сууц зарна'); price-per-sqm
+    -- comparisons are only meaningful within one property type. Subtype is
+    -- optional; for apartments it carries the room count (e.g. '3 өрөө').
+    property_type   TEXT,
+    property_subtype TEXT,
+
     rooms           SMALLINT,
     district        TEXT,
     address         TEXT,
@@ -33,6 +44,10 @@ CREATE TABLE IF NOT EXISTS listings (
     -- Intentionally not unique: duplicates are resolved by app logic, not the DB.
     dedup_hash      TEXT NOT NULL,
 
+    -- When the ad was published on the source site (source-local time);
+    -- NULL when the source's relative date could not be resolved.
+    posted_at       TIMESTAMPTZ,
+
     scraped_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -42,6 +57,7 @@ CREATE TABLE IF NOT EXISTS listings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_listings_dedup_hash ON listings (dedup_hash);
+CREATE INDEX IF NOT EXISTS idx_listings_property_type ON listings (property_type);
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$

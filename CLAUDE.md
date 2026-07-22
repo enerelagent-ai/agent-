@@ -35,8 +35,10 @@ https://www.unegui.mn/l-hdlh/l-hdlh-treesllne/ (Үл хөдлөх түрээсл
 
 Спецификаци нь key-value жагсаалт хэлбэртэй (Шал, Тагт, Ашиглалтанд орсон он, Гараж, Цонх, Барилгын давхар, Хаалга, Талбай, Хэдэн давхарт, Төлбөрийн нөхцөл, Цонхны тоо, Барилгын явц, Цахилгаан шаттай эсэх) — талбарууд зарын төрлөөс хамаарч өөр байдаг тул generic key-value parser хэрэглэх, тогтмол field жагсаалт биш
 Байршлын координат (lat/lng) нь газрын зургийн зурган URL-д шууд орсон байдаг: .../geo/static/streets/{lng}/{lat}/... — регекс/URL parsing-аар гаргаж авах боломжтой
-Утасны дугаар анхандаа хагас далд (9970-XXXX) харагддаг — "Дугаар харах" товч дарах шаардлагатай байж болзошгүй, шалгаж баталгаажуулах хэрэгтэй
-Жагсаалтын хуудасны pagination-ы бодит URL хэлбэрийг таамаглахгүйгээр Claude Code-оор шалгуулж баталгаажуулах
+Утасны дугаар (баталгаажсан): бүтэн дугаар нь далд contacts-dialog (display:none) дотор tel: линкээр raw HTML-д шууд байдаг — "Дугаар харах" товч дарах шаардлагагүй; 13 зар дээр (хувь хүн + байгууллага) нэг ч олон дугаартай тохиолдол гараагүй
+Зургууд (баталгаажсан): зөвхөн div.announcement__images доторх img[itemprop=image]-ийн data-full — хуудсанд төстэй зарын ~50 thumbnail байдаг тул container-оор хязгаарлах заавал
+Ангилал (баталгаажсан): breadcrumb (schema.org BreadcrumbList) position 3 = зарах/түрээслэх, 4 = үл хөдлөхийн төрөл, 5 = дэд төрөл (орон сууцанд өрөөний тоо); АНХААР — slug нь зарах/түрээслэхэд өөр өөр (oron-suuts-zarna vs oron-suuts) тул бүлэглэхдээ үргэлж (listing_type, property_type) хосоор; URL slug-д огт итгэхгүй (хуучин зарыг дахин ашигласнаас slug худал байж болно, ж: audi-a6 slug-тай орон сууцны зар)
+Pagination (баталгаажсан): ?page=N query param, 1-р хуудас параметргүй
 Долоо хоногийн бүтэц (V1.0)
 ✅ Суурь бэлтгэл — architecture, GitHub, Claude Code тохиргоо, DB schema (бодит Postgres дээр туршиж баталгаажуулсан)
 ✅ FastAPI дотоод систем (routes, models, DB холболт) — баталгаажуулсан, auth Week 8 хүртэл хойшлуулсан
@@ -58,7 +60,7 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
 
  Week 1: Architecture, GitHub, DB schema — бодит Postgres дээр баталгаажсан
  Week 2: FastAPI backend (schedule-ээс түрүүлж дуусгасан)
- Week 3: Scraper (явцад — list-page URL цуглуулалт → detail-page parsing → зураг/утас → DB хадгалалт)
+ Week 3: Scraper: list-page URL цуглуулалт ✅, detail-page parser ✅ (title/тайлбар/үнэ/байршил/огноо/координат/ангилал/утас/зураг/generic specs — 13 зар дээр live баталгаажсан), DB migration 001-003 (property_type, listing_type, posted_at) applied ✅, DB хадгалалт ✅ (scraper/scraper/save.py — dedup_hash, (source, source_url) upsert, unit test 7/7, 13 зар local Postgres-т end-to-end баталгаажсан), pipeline runner ✅ (scraper/scraper/main.py: --pages/--ads-per-category flag, DATABASE_URL env, 18 зарын batch дээр 0 алдаатай end-to-end баталгаажсан; DB-д 29 зар). Week 3 дууссан — томсгох (бүх ~38k зар, ~өдөр орчим үргэлжилнэ) Week 4-өөс өмнө батлах шийдвэр
  Week 4: Dedup & cleaning
  Week 5: Calculations
  Week 6: Dashboard

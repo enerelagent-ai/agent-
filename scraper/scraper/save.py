@@ -1,0 +1,138 @@
+"""Map parsed ad dicts onto the listings table and upsert them into Postgres."""
+
+import hashlib
+import re
+from typing import Any
+
+import psycopg2
+import psycopg2.extras
+
+AREA_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")
+LEADING_INT_RE = re.compile(r"^(\d+)")
+
+# Coarse duplicate-candidate key: same unit re-posted should collide, price
+# edits should not. Week 4 dedup logic refines matching beyond this hash.
+_DEDUP_FIELDS = ("listing_type", "property_type", "district", "address", "rooms", "area_sqm")
+
+_UPSERT_SQL = """
+    INSERT INTO listings (
+        source, source_url, title, description, price, area_sqm, rooms,
+        district, address, lat, lng, contact_phone, photo_urls,
+        dedup_hash, listing_type, property_type, property_subtype, posted_at
+    )
+    VALUES (
+        %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(area_sqm)s, %(rooms)s,
+        %(district)s, %(address)s, %(lat)s, %(lng)s, %(contact_phone)s, %(photo_urls)s,
+        %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s, %(posted_at)s
+    )
+    ON CONFLICT (source, source_url) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        price = EXCLUDED.price,
+        area_sqm = EXCLUDED.area_sqm,
+        rooms = EXCLUDED.rooms,
+        district = EXCLUDED.district,
+        address = EXCLUDED.address,
+        lat = EXCLUDED.lat,
+        lng = EXCLUDED.lng,
+        contact_phone = EXCLUDED.contact_phone,
+        photo_urls = EXCLUDED.photo_urls,
+        dedup_hash = EXCLUDED.dedup_hash,
+        listing_type = EXCLUDED.listing_type,
+        property_type = EXCLUDED.property_type,
+        property_subtype = EXCLUDED.property_subtype,
+        posted_at = EXCLUDED.posted_at,
+        scraped_at = now()
+"""
+
+
+def normalize_dsn(dsn: str) -> str:
+    """Accept both plain libpq URLs and SQLAlchemy-style postgresql+psycopg2:// URLs."""
+    return dsn.replace("postgresql+psycopg2://", "postgresql://", 1)
+
+
+def parse_area_sqm(raw: str | None) -> float | None:
+    """Extract the numeric area from a raw 'Талбай' spec value.
+
+    Seller-entered values are messy ('296 м²', '69.85 м²', '150 м² м²');
+    the first number wins. Returns None when no number is present.
+    """
+    if not raw:
+        return None
+    match = AREA_NUMBER_RE.search(raw)
+    return float(match.group().replace(",", ".")) if match else None
+
+
+def parse_rooms(subcategory: str | None) -> int | None:
+    """Room count from an apartment subcategory like '3 өрөө' or '5+ өрөө'.
+
+    Non-apartment subcategories ('Хажуу өрөө түрээслүүлнэ') carry no leading
+    number and yield None.
+    """
+    if not subcategory:
+        return None
+    match = LEADING_INT_RE.match(subcategory.strip())
+    return int(match.group(1)) if match else None
+
+
+def compute_dedup_hash(row: dict[str, Any]) -> str:
+    """Deterministic sha256 over the coarse duplicate-candidate fields.
+
+    Floats are rounded to one decimal and text lowercased so trivial
+    formatting differences don't split candidates.
+    """
+    parts = []
+    for field in _DEDUP_FIELDS:
+        value = row.get(field)
+        if isinstance(value, float):
+            value = round(value, 1)
+        parts.append("" if value is None else str(value))
+    return hashlib.sha256("|".join(parts).lower().encode("utf-8")).hexdigest()
+
+
+def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
+    """Map one parse_detail_page() dict onto listings columns.
+
+    Returns None for unusable records (missing url or title, e.g. a fetch
+    that never cleared the bot challenge).
+    """
+    if not parsed.get("url") or not parsed.get("title"):
+        return None
+    specs = parsed.get("specs") or {}
+    phones = parsed.get("phones") or []
+    row: dict[str, Any] = {
+        "source": "unegui",
+        "source_url": parsed["url"],
+        "title": parsed["title"],
+        "description": parsed.get("description"),
+        "price": parsed.get("price"),
+        "area_sqm": parse_area_sqm(specs.get("Талбай")),
+        "rooms": parse_rooms(parsed.get("property_subcategory")),
+        "district": parsed.get("district"),
+        "address": parsed.get("location_raw"),
+        "lat": parsed.get("latitude"),
+        "lng": parsed.get("longitude"),
+        "contact_phone": phones[0] if phones else None,
+        "photo_urls": parsed.get("photo_urls") or [],
+        "listing_type": parsed.get("listing_type"),
+        "property_type": parsed.get("property_category"),
+        "property_subtype": parsed.get("property_subcategory"),
+        "posted_at": parsed.get("posted_at"),
+    }
+    row["dedup_hash"] = compute_dedup_hash(row)
+    return row
+
+
+def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
+    """Upsert mapped rows on (source, source_url) in one transaction.
+
+    Re-scraping the same ad updates the existing row (and refreshes
+    scraped_at) instead of duplicating it. Returns the number of rows sent.
+    """
+    if not rows:
+        return 0
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_batch(cur, _UPSERT_SQL, rows)
+    conn.close()
+    return len(rows)
