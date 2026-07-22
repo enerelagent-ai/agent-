@@ -15,6 +15,7 @@ from playwright.sync_api import Browser, sync_playwright
 from scraper.browser import launch_browser
 from scraper.detail_page import fetch_detail_html, parse_detail_page
 from scraper.list_pages import collect_ad_urls
+from scraper.matches import match_new_listings
 from scraper.save import listing_row_from_parsed, upsert_listings
 
 # Scope is intentionally limited to these two categories — see CLAUDE.md.
@@ -65,8 +66,12 @@ def run_pipeline(dsn: str, max_pages: int, ads_per_category: int | None) -> int:
             print(f"{name}: scraping {len(ad_urls)} detail pages")
             rows, errors = scrape_details(browser, ad_urls)
             saved = upsert_listings(dsn, rows)
+            matches = match_new_listings(dsn, [row["source_url"] for row in rows])
             all_errors.extend(errors)
-            print(f"{name}: saved {saved} rows, {len(errors)} errors\n")
+            print(f"{name}: saved {saved} rows, {len(matches)} duplicate matches, {len(errors)} errors")
+            for id_a, id_b, score in matches:
+                print(f"    duplicate match: listings {id_a} <-> {id_b} (score {score:.2f})")
+            print()
         browser.close()
 
     if all_errors:
