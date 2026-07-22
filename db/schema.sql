@@ -59,6 +59,21 @@ CREATE TABLE IF NOT EXISTS listings (
 CREATE INDEX IF NOT EXISTS idx_listings_dedup_hash ON listings (dedup_hash);
 CREATE INDEX IF NOT EXISTS idx_listings_property_type ON listings (property_type);
 
+-- Scored duplicate-candidate pairs (see migration 004): kept separate from
+-- listings so match decisions stay auditable and re-scorable. One row per
+-- pair, listing_id_a < listing_id_b.
+CREATE TABLE IF NOT EXISTS duplicate_matches (
+    listing_id_a  BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    listing_id_b  BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    score         DOUBLE PRECISION NOT NULL,
+    matched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (listing_id_a, listing_id_b),
+    CONSTRAINT ck_duplicate_matches_order CHECK (listing_id_a < listing_id_b)
+);
+
+CREATE INDEX IF NOT EXISTS idx_duplicate_matches_b ON duplicate_matches (listing_id_b);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
