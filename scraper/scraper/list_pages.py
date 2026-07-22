@@ -47,18 +47,29 @@ def collect_ad_urls(
     max_pages: int,
     *,
     delay_range: tuple[float, float] = (2.0, 3.0),
+    stop_after_stale: int = 3,
 ) -> list[str]:
     """Walk pages 1..max_pages of a category listing and collect unique ad detail URLs.
 
     Sleeps a random delay within delay_range after every page request to respect
-    the site's load.
+    the site's load. Stops early once stop_after_stale consecutive pages yield
+    no new URLs — past the category's real last page the site can only return
+    empty or repeated content, and categories differ in page count so a shared
+    max_pages overshoots the smaller one. The threshold (not a single empty
+    page) keeps one transient bot-challenge failure from truncating the walk.
     """
     seen: dict[str, None] = {}
+    stale_pages = 0
     for page_num in range(1, max_pages + 1):
         page_url = build_page_url(category_url, page_num)
         ad_urls = fetch_ad_urls_from_page(browser, page_url)
-        print(f"    page {page_num}: {len(ad_urls)} ads ({page_url})")
+        new_urls = sum(1 for ad_url in ad_urls if ad_url not in seen)
+        print(f"    page {page_num}: {len(ad_urls)} ads, {new_urls} new ({page_url})")
         for ad_url in ad_urls:
             seen.setdefault(ad_url, None)
+        stale_pages = 0 if new_urls else stale_pages + 1
+        if stale_pages >= stop_after_stale:
+            print(f"    stopping: {stop_after_stale} consecutive pages with no new ads")
+            break
         time.sleep(random.uniform(*delay_range))
     return list(seen)
