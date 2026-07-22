@@ -61,7 +61,11 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
  Week 1: Architecture, GitHub, DB schema — бодит Postgres дээр баталгаажсан
  Week 2: FastAPI backend (schedule-ээс түрүүлж дуусгасан)
  Week 3: Scraper: list-page URL цуглуулалт ✅, detail-page parser ✅ (title/тайлбар/үнэ/байршил/огноо/координат/ангилал/утас/зураг/generic specs — 13 зар дээр live баталгаажсан), DB migration 001-003 (property_type, listing_type, posted_at) applied ✅, DB хадгалалт ✅ (scraper/scraper/save.py — dedup_hash, (source, source_url) upsert, unit test 7/7, 13 зар local Postgres-т end-to-end баталгаажсан), pipeline runner ✅ (scraper/scraper/main.py: --pages/--ads-per-category flag, DATABASE_URL env, 18 зарын batch дээр 0 алдаатай end-to-end баталгаажсан; DB-д 29 зар). Week 3 дууссан — томсгох (бүх ~38k зар, ~өдөр орчим үргэлжилнэ) Week 4-өөс өмнө батлах шийдвэр
- Week 4: Dedup & cleaning
+ Week 4: Dedup & cleaning (явцад, branch: week4-dedup) — судалгаа ✅, дизайн/код хараахан эхлээгүй. Баталгаажсан баримтууд:
+   - Бодит дублей олдсон: 9571622 + 9706500 нэг ижил байр (river plaza 213м² 5 өрөө), ХОЁР ӨӨР утастай (2 агент), үнэ ~1% зөрүүтэй — dedup_hash-д үнэ/утас ороогүй нь зөв гэдгийг батлав (аль нэгийг оруулсан бол алдах байсан)
+   - Нэг утас ≠ дублей: нэг дугаар олон өөр объект зардаг (агент/олон хөрөнгөтэй эзэн) — утсыг dedup шалгуур болгож ХЭРЭГЛЭХГҮЙ, харин agent-таних шинж болгон ашиглана
+   - Координат найдваргүй: газрын зурган дээр pin тавиагүй зарууд хороооны default цэгтэй ирдэг (ж: 47.91243/106.92175 = СБД Хороо 1 default — 3 өөр барилгын зар ижил координаттай) — exact координат тааруулбал ХУДАЛ дублей үүснэ
+   - Дизайны чиглэл: dedup_hash = зөвхөн candidate bucket (хороо түвшний хаяг тул 38k дээр өөр өөр ижил-талбайтай байрууд мөргөлдөнө); шийдвэрлэх логик = bucket доторх pairwise scoring (title/барилгын нэр token similarity, үнийн ойролцоо байдал, зураг, огноо); >95% нарийвчлалыг хэмжихийн тулд labeled тестийн багц (мэдэгдэж буй repost хосууд) эхэлж бүрдүүлэх
  Week 5: Calculations
  Week 6: Dashboard
  Week 7: Integration & testing
