@@ -9,6 +9,7 @@ import psycopg2.extras
 
 AREA_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")
 LEADING_INT_RE = re.compile(r"^(\d+)")
+NEGOTIABLE_MARKER = "үнэ тохирно"
 
 # Coarse duplicate-candidate key: same unit re-posted should collide, price
 # edits should not. Week 4 dedup logic refines matching beyond this hash.
@@ -16,12 +17,13 @@ _DEDUP_FIELDS = ("listing_type", "property_type", "district", "address", "rooms"
 
 _UPSERT_SQL = """
     INSERT INTO listings (
-        source, source_url, title, description, price, area_sqm, rooms,
+        source, source_url, title, description, price, price_negotiable, area_sqm, rooms,
         district, address, lat, lng, contact_phone, photo_urls,
         dedup_hash, listing_type, property_type, property_subtype, posted_at
     )
     VALUES (
-        %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(area_sqm)s, %(rooms)s,
+        %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(price_negotiable)s,
+        %(area_sqm)s, %(rooms)s,
         %(district)s, %(address)s, %(lat)s, %(lng)s, %(contact_phone)s, %(photo_urls)s,
         %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s, %(posted_at)s
     )
@@ -29,6 +31,7 @@ _UPSERT_SQL = """
         title = EXCLUDED.title,
         description = EXCLUDED.description,
         price = EXCLUDED.price,
+        price_negotiable = EXCLUDED.price_negotiable,
         area_sqm = EXCLUDED.area_sqm,
         rooms = EXCLUDED.rooms,
         district = EXCLUDED.district,
@@ -61,6 +64,16 @@ def parse_area_sqm(raw: str | None) -> float | None:
         return None
     match = AREA_NUMBER_RE.search(raw)
     return float(match.group().replace(",", ".")) if match else None
+
+
+def parse_price_negotiable(price_raw: str | None) -> bool | None:
+    """Whether the display price text carries 'Үнэ тохирно' (negotiable).
+
+    Returns None when there is no price text to judge from.
+    """
+    if not price_raw:
+        return None
+    return NEGOTIABLE_MARKER in price_raw.lower()
 
 
 def parse_rooms(subcategory: str | None) -> int | None:
@@ -106,6 +119,7 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "title": parsed["title"],
         "description": parsed.get("description"),
         "price": parsed.get("price"),
+        "price_negotiable": parse_price_negotiable(parsed.get("price_raw")),
         "area_sqm": parse_area_sqm(specs.get("Талбай")),
         "rooms": parse_rooms(parsed.get("property_subcategory")),
         "district": parsed.get("district"),

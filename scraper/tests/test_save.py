@@ -5,6 +5,7 @@ from scraper.save import (
     listing_row_from_parsed,
     normalize_dsn,
     parse_area_sqm,
+    parse_price_negotiable,
     parse_rooms,
 )
 
@@ -43,6 +44,14 @@ def test_parse_area_sqm_variants() -> None:
     assert parse_area_sqm(None) is None
 
 
+def test_parse_price_negotiable_variants() -> None:
+    assert parse_price_negotiable("2.8 Тэрбум ₮ Үнэ тохирно") is True
+    assert parse_price_negotiable("7.9 сая ₮ 8.9 сая ₮ Үнэ тохирно") is True
+    assert parse_price_negotiable("99,330 ₮") is False
+    assert parse_price_negotiable(None) is None
+    assert parse_price_negotiable("") is None
+
+
 def test_parse_rooms_variants() -> None:
     assert parse_rooms("3 өрөө") == 3
     assert parse_rooms("5+ өрөө") == 5
@@ -73,6 +82,7 @@ def test_listing_row_mapping() -> None:
     assert row["contact_phone"] == "+97683033091"  # first phone wins
     assert row["description"] == "Төв талбайд ойр, бүрэн тохижсон."
     assert row["posted_at"] == "2026-07-21T21:32"
+    assert row["price_negotiable"] is False  # sample price_raw has no marker
     assert row["area_sqm"] == 49.0
     assert row["rooms"] == 2
     assert row["listing_type"] == "rent"
