@@ -17,20 +17,24 @@ _DEDUP_FIELDS = ("listing_type", "property_type", "district", "address", "rooms"
 
 _UPSERT_SQL = """
     INSERT INTO listings (
-        source, source_url, title, description, price, price_negotiable, area_sqm, rooms,
+        source, source_url, title, description, price, price_raw, price_negotiable,
+        area_sqm, rooms,
         district, address, lat, lng, contact_phone, photo_urls,
-        dedup_hash, listing_type, property_type, property_subtype, posted_at
+        dedup_hash, listing_type, property_type, property_subtype,
+        posted_at, posted_raw, specs
     )
     VALUES (
-        %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(price_negotiable)s,
-        %(area_sqm)s, %(rooms)s,
+        %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(price_raw)s,
+        %(price_negotiable)s, %(area_sqm)s, %(rooms)s,
         %(district)s, %(address)s, %(lat)s, %(lng)s, %(contact_phone)s, %(photo_urls)s,
-        %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s, %(posted_at)s
+        %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s,
+        %(posted_at)s, %(posted_raw)s, %(specs)s
     )
     ON CONFLICT (source, source_url) DO UPDATE SET
         title = EXCLUDED.title,
         description = EXCLUDED.description,
         price = EXCLUDED.price,
+        price_raw = EXCLUDED.price_raw,
         price_negotiable = EXCLUDED.price_negotiable,
         area_sqm = EXCLUDED.area_sqm,
         rooms = EXCLUDED.rooms,
@@ -45,6 +49,8 @@ _UPSERT_SQL = """
         property_type = EXCLUDED.property_type,
         property_subtype = EXCLUDED.property_subtype,
         posted_at = EXCLUDED.posted_at,
+        posted_raw = EXCLUDED.posted_raw,
+        specs = EXCLUDED.specs,
         scraped_at = now()
 """
 
@@ -119,6 +125,7 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "title": parsed["title"],
         "description": parsed.get("description"),
         "price": parsed.get("price"),
+        "price_raw": parsed.get("price_raw"),
         "price_negotiable": parse_price_negotiable(parsed.get("price_raw")),
         "area_sqm": parse_area_sqm(specs.get("Талбай")),
         "rooms": parse_rooms(parsed.get("property_subcategory")),
@@ -132,9 +139,41 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "property_type": parsed.get("property_category"),
         "property_subtype": parsed.get("property_subcategory"),
         "posted_at": parsed.get("posted_at"),
+        "posted_raw": parsed.get("posted_raw"),
+        "specs": psycopg2.extras.Json(specs),
     }
     row["dedup_hash"] = compute_dedup_hash(row)
     return row
+
+
+def recently_scraped(
+    cur: psycopg2.extensions.cursor, urls: list[str], days: float
+) -> set[str]:
+    """Subset of urls whose listings were already scraped within `days` days.
+
+    Lets an interrupted full-scrape run resume without re-fetching pages it
+    already processed (and without hammering the site twice). Expects a
+    RealDictCursor (the convention for cursor-taking helpers here).
+    """
+    if not urls:
+        return set()
+    cur.execute(
+        "SELECT source_url FROM listings"
+        " WHERE source_url = ANY(%s) AND scraped_at > now() - %s * interval '1 day'",
+        (urls, days),
+    )
+    return {row["source_url"] for row in cur.fetchall()}
+
+
+def recently_scraped_urls(dsn: str, urls: list[str], days: float) -> set[str]:
+    """Connection-owning wrapper around recently_scraped() for the pipeline."""
+    if not urls:
+        return set()
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            result = recently_scraped(cur, urls, days)
+    conn.close()
+    return result
 
 
 def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:

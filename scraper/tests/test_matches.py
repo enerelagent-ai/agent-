@@ -1,13 +1,9 @@
 """Integration tests for duplicate-match recording, run against the local
-Postgres inside a transaction that is always rolled back (nothing persists)."""
+Postgres inside a transaction that is always rolled back (nothing persists).
+The `cur` fixture comes from conftest.py."""
 
 import json
-import os
 from pathlib import Path
-
-import psycopg2
-import psycopg2.extras
-import pytest
 
 from scraper.matches import (
     fetch_listing,
@@ -15,10 +11,8 @@ from scraper.matches import (
     record_matches,
     superseded_listing_ids,
 )
-from scraper.save import normalize_dsn
 
 FIXTURE = Path(__file__).parent / "fixtures" / "labeled_pairs.json"
-DSN = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/postgres")
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm, rooms,
@@ -29,19 +23,6 @@ _INSERT_SQL = """
             %(posted_at)s, 'test-hash')
     RETURNING id
 """
-
-
-@pytest.fixture()
-def cur():
-    """Cursor in a transaction that is rolled back after each test."""
-    try:
-        conn = psycopg2.connect(normalize_dsn(DSN))
-    except psycopg2.OperationalError:
-        pytest.skip("local Postgres not available")
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    yield cursor
-    conn.rollback()
-    conn.close()
 
 
 def _insert_pair(cur) -> tuple[int, int]:

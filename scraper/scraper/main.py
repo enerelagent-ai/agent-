@@ -16,7 +16,7 @@ from scraper.browser import launch_browser
 from scraper.detail_page import fetch_detail_html, parse_detail_page
 from scraper.list_pages import collect_ad_urls
 from scraper.matches import match_new_listings
-from scraper.save import listing_row_from_parsed, upsert_listings
+from scraper.save import listing_row_from_parsed, recently_scraped_urls, upsert_listings
 
 # Scope is intentionally limited to these two categories — see CLAUDE.md.
 # /new-buildings/ and any other category must NOT be scraped.
@@ -50,9 +50,16 @@ def scrape_details(browser: Browser, ad_urls: list[str]) -> tuple[list[dict], li
     return rows, errors
 
 
-def run_pipeline(dsn: str, max_pages: int, ads_per_category: int | None) -> int:
+def run_pipeline(
+    dsn: str,
+    max_pages: int,
+    ads_per_category: int | None,
+    skip_recent_days: float = 0.0,
+) -> int:
     """Collect ad URLs from both categories, scrape details, upsert into Postgres.
 
+    skip_recent_days > 0 skips ads already scraped within that window, so an
+    interrupted long run can resume without re-fetching finished pages.
     Returns the number of error entries encountered (0 means a clean run).
     """
     all_errors: list[str] = []
@@ -61,6 +68,10 @@ def run_pipeline(dsn: str, max_pages: int, ads_per_category: int | None) -> int:
         for name, category_url in CATEGORIES.items():
             print(f"{name}: collecting ad urls (pages 1-{max_pages})")
             ad_urls = collect_ad_urls(browser, category_url, max_pages=max_pages)
+            if skip_recent_days > 0:
+                skip = recently_scraped_urls(dsn, ad_urls, skip_recent_days)
+                ad_urls = [u for u in ad_urls if u not in skip]
+                print(f"{name}: skipping {len(skip)} ads scraped within {skip_recent_days} day(s)")
             if ads_per_category is not None:
                 ad_urls = ad_urls[:ads_per_category]
             print(f"{name}: scraping {len(ad_urls)} detail pages")
@@ -91,12 +102,23 @@ def main() -> None:
         default=None,
         help="cap detail pages per category; omit to scrape every collected URL",
     )
+    parser.add_argument(
+        "--skip-recent-days",
+        type=float,
+        default=0.0,
+        help="skip ads already scraped within this many days (resume support); 0 disables",
+    )
     args = parser.parse_args()
 
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         sys.exit("DATABASE_URL environment variable is required (see backend/.env)")
-    error_count = run_pipeline(dsn, max_pages=args.pages, ads_per_category=args.ads_per_category)
+    error_count = run_pipeline(
+        dsn,
+        max_pages=args.pages,
+        ads_per_category=args.ads_per_category,
+        skip_recent_days=args.skip_recent_days,
+    )
     sys.exit(1 if error_count else 0)
 
 
