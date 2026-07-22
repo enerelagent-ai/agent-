@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS listings (
     -- Intentionally not unique: duplicates are resolved by app logic, not the DB.
     dedup_hash      TEXT NOT NULL,
 
+    -- When the ad was published on the source site (source-local time);
+    -- NULL when the source's relative date could not be resolved.
+    posted_at       TIMESTAMPTZ,
+
     scraped_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
