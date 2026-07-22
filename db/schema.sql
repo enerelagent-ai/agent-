@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS listings (
     description     TEXT,
 
     price           NUMERIC(14, 2),
+    -- "Үнэ тохирно" on the ad; NULL = unknown (no price text seen yet).
+    price_negotiable BOOLEAN,
     area_sqm        NUMERIC(10, 2),
     -- Derived from price/area_sqm so it stays consistent with the source values;
     -- NULL when either input is missing or area_sqm is not positive.
