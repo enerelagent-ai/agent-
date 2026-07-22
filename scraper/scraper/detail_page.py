@@ -95,6 +95,36 @@ def _parse_breadcrumbs(soup: BeautifulSoup) -> dict[int, tuple[str, str]]:
     return crumbs
 
 
+def _parse_phones(soup: BeautifulSoup) -> list[str]:
+    """Owner phone numbers from the hidden contacts dialog's tel: anchors.
+
+    The dialog ships pre-rendered in the raw HTML (display:none), so no
+    'Дугаар харах' click is needed. Site-support numbers live outside the
+    dialog as unrendered {{...}} templates; the guard drops any that leak.
+    """
+    phones: list[str] = []
+    for anchor in soup.select("div.contacts-dialog a[href^='tel:']"):
+        number = anchor.get("href", "").removeprefix("tel:").strip()
+        if number and "{{" not in number and number not in phones:
+            phones.append(number)
+    return phones
+
+
+def _parse_photo_urls(soup: BeautifulSoup) -> list[str]:
+    """Full-size gallery image URLs, scoped to the ad's own gallery container.
+
+    The page also carries ~50 thumbnails for the similar-ads grid, so only
+    div.announcement__images images count. data-full is the full-size
+    variant; src is the already-loaded fallback.
+    """
+    urls: list[str] = []
+    for img in soup.select("div.announcement__images img[itemprop=image]"):
+        url = img.get("data-full") or img.get("src")
+        if url and url not in urls:
+            urls.append(url)
+    return urls
+
+
 def _split_location(raw: str) -> tuple[str | None, str | None]:
     """Split 'Дүүрэг, Дэд байршил, ...' into (district, sub_district)."""
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -184,5 +214,7 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
         "posted_at": parse_posted_at(posted_raw) if posted_raw else None,
         "latitude": latitude,
         "longitude": longitude,
+        "phones": _parse_phones(soup),
+        "photo_urls": _parse_photo_urls(soup),
         "specs": specs,
     }
