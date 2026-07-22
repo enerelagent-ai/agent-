@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS listings (
                         CASE WHEN area_sqm > 0 THEN ROUND(price / area_sqm, 2) ELSE NULL END
                     ) STORED,
 
+    -- Raw Unegui breadcrumb category (e.g. 'Орон сууц зарна'); price-per-sqm
+    -- comparisons are only meaningful within one property type. Subtype is
+    -- optional; for apartments it carries the room count (e.g. '3 өрөө').
+    property_type   TEXT,
+    property_subtype TEXT,
+
     rooms           SMALLINT,
     district        TEXT,
     address         TEXT,
@@ -42,6 +48,7 @@ CREATE TABLE IF NOT EXISTS listings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_listings_dedup_hash ON listings (dedup_hash);
+CREATE INDEX IF NOT EXISTS idx_listings_property_type ON listings (property_type);
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
