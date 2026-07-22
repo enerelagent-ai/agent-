@@ -1,4 +1,6 @@
-from playwright.sync_api import Browser, BrowserContext, Playwright
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+
+CHALLENGE_TITLE_MARKER = "just a moment"
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -34,3 +36,14 @@ def new_context(browser: Browser) -> BrowserContext:
     )
     context.add_init_script(_HIDE_WEBDRIVER_SCRIPT)
     return context
+
+
+def wait_past_challenge(page: Page, timeout_s: float = 12.0, poll_s: float = 1.0) -> bool:
+    """Poll the page title until the bot-check interstitial clears, or timeout_s elapses."""
+    elapsed = 0.0
+    while elapsed < timeout_s:
+        if CHALLENGE_TITLE_MARKER not in (page.title() or "").lower():
+            return True
+        page.wait_for_timeout(int(poll_s * 1000))
+        elapsed += poll_s
+    return CHALLENGE_TITLE_MARKER not in (page.title() or "").lower()

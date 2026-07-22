@@ -3,12 +3,11 @@ import re
 import time
 from urllib.parse import urljoin
 
-from playwright.sync_api import Browser, Page
+from playwright.sync_api import Browser
 
-from scraper.browser import new_context
+from scraper.browser import new_context, wait_past_challenge
 
 AD_HREF_RE = re.compile(r"^/adv/\d+_[\w-]+/?$")
-CHALLENGE_TITLE_MARKER = "just a moment"
 
 
 def build_page_url(category_url: str, page_num: int) -> str:
@@ -16,17 +15,6 @@ def build_page_url(category_url: str, page_num: int) -> str:
     if page_num <= 1:
         return category_url
     return f"{category_url}?page={page_num}"
-
-
-def _wait_past_challenge(page: Page, timeout_s: float = 12.0, poll_s: float = 1.0) -> bool:
-    """Poll the page title until the bot-check interstitial clears, or timeout_s elapses."""
-    elapsed = 0.0
-    while elapsed < timeout_s:
-        if CHALLENGE_TITLE_MARKER not in (page.title() or "").lower():
-            return True
-        page.wait_for_timeout(int(poll_s * 1000))
-        elapsed += poll_s
-    return CHALLENGE_TITLE_MARKER not in (page.title() or "").lower()
 
 
 def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> list[str]:
@@ -40,7 +28,7 @@ def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> 
         try:
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded")
-            if _wait_past_challenge(page):
+            if wait_past_challenge(page):
                 hrefs = page.eval_on_selector_all(
                     "a[href*='/adv/']", "els => els.map(e => e.getAttribute('href'))"
                 )
