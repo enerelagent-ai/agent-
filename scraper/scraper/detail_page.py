@@ -142,6 +142,7 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
     soup = BeautifulSoup(html, "html.parser")
 
     title_el = soup.select_one("h1#ad-title")
+    description_el = soup.select_one("div.announcement-description[itemprop=description]")
     price_meta = soup.select_one("meta[itemprop=price]")
     currency_meta = soup.select_one("meta[itemprop=priceCurrency]")
     price_cost_el = soup.select_one(".announcement-price__cost")
@@ -199,6 +200,7 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
         "url": url,
         "ad_id": ad_id,
         "title": title_el.get_text(strip=True) if title_el else None,
+        "description": description_el.get_text("\n", strip=True) if description_el else None,
         "price": price,
         "price_raw": re.sub(r"\s+", " ", price_cost_el.get_text(" ", strip=True)) if price_cost_el else None,
         "currency": currency_meta.get("content") if currency_meta else None,
