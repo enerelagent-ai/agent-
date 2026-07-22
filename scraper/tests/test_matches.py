@@ -9,7 +9,12 @@ import psycopg2
 import psycopg2.extras
 import pytest
 
-from scraper.matches import fetch_listing, find_matches_for_listing, record_matches
+from scraper.matches import (
+    fetch_listing,
+    find_matches_for_listing,
+    record_matches,
+    superseded_listing_ids,
+)
 from scraper.save import normalize_dsn
 
 FIXTURE = Path(__file__).parent / "fixtures" / "labeled_pairs.json"
@@ -83,3 +88,21 @@ def test_duplicate_pair_is_found_and_recorded(cur) -> None:
 
 def test_missing_listing_yields_no_row(cur) -> None:
     assert fetch_listing(cur, "test://does-not-exist") is None
+
+
+def test_superseded_ids_keep_one_listing_per_group(cur) -> None:
+    id_a, id_b = _insert_pair(cur)
+    record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.9)])
+
+    superseded = superseded_listing_ids(cur)
+    ours = superseded & {id_a, id_b}
+    assert len(ours) == 1  # exactly one of the pair is dropped
+    # Equal completeness -> the more recently posted one is kept.
+    kept = ({id_a, id_b} - ours).pop()
+    row_kept = [r for r in
+                (fetch_listing(cur, "test://dup-a"), fetch_listing(cur, "test://dup-b"))
+                if r["id"] == kept][0]
+    row_dropped = [r for r in
+                   (fetch_listing(cur, "test://dup-a"), fetch_listing(cur, "test://dup-b"))
+                   if r["id"] != kept][0]
+    assert (row_kept["posted_at"] or "") >= (row_dropped["posted_at"] or "")

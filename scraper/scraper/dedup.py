@@ -125,3 +125,42 @@ def classify_pair(a: dict[str, Any], b: dict[str, Any]) -> str:
     if not are_candidates(a, b):
         return "distinct"
     return "duplicate" if score_pair(a, b)["total"] >= DUPLICATE_THRESHOLD else "distinct"
+
+
+# Fields whose presence makes a listing more useful to analytics; used to
+# choose the canonical member of a duplicate group.
+_COMPLETENESS_FIELDS = ("price", "area_sqm", "rooms")
+
+
+def group_pairs(pairs: list[tuple[int, int]]) -> list[set[int]]:
+    """Merge matched pairs into duplicate groups (connected components),
+    so A~B and B~C land in one {A, B, C} group."""
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b in pairs:
+        parent[find(a)] = find(b)
+    groups: dict[int, set[int]] = {}
+    for node in parent:
+        groups.setdefault(find(node), set()).add(node)
+    return list(groups.values())
+
+
+def pick_canonical(rows: list[dict[str, Any]]) -> int:
+    """Pick the listing analytics should keep from one duplicate group.
+
+    Order of preference: most complete data (non-null price/area/rooms),
+    then most recently posted, then highest id — deterministic so repeated
+    runs agree.
+    """
+    def preference(row: dict[str, Any]) -> tuple[int, str, int]:
+        completeness = sum(row.get(f) is not None for f in _COMPLETENESS_FIELDS)
+        return (completeness, row.get("posted_at") or "", row["id"])
+
+    return max(rows, key=preference)["id"]

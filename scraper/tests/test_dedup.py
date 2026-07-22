@@ -6,8 +6,10 @@ from pathlib import Path
 from scraper.dedup import (
     are_candidates,
     classify_pair,
+    group_pairs,
     normalize_title_tokens,
     photo_count_similarity,
+    pick_canonical,
     price_proximity,
     score_pair,
     title_similarity,
@@ -66,6 +68,24 @@ def test_labeled_fixture_is_classified_perfectly() -> None:
             f"misclassified: {pair['note']} "
             f"(scores={score_pair(pair['a'], pair['b'])})"
         )
+
+
+def test_group_pairs_merges_transitively() -> None:
+    groups = group_pairs([(1, 2), (2, 3), (5, 6)])
+    assert sorted(groups, key=min) == [{1, 2, 3}, {5, 6}]
+    assert group_pairs([]) == []
+
+
+def test_pick_canonical_prefers_completeness_then_recency_then_id() -> None:
+    complete = {"id": 1, "price": 1.0, "area_sqm": 50.0, "rooms": 2, "posted_at": "2026-07-01T00:00"}
+    sparse_newer = {"id": 2, "price": 1.0, "area_sqm": None, "rooms": None, "posted_at": "2026-07-20T00:00"}
+    assert pick_canonical([complete, sparse_newer]) == 1  # completeness beats recency
+
+    older = dict(complete, id=3, posted_at="2026-06-01T00:00")
+    assert pick_canonical([complete, older]) == 1  # equal completeness -> newer wins
+
+    twin = dict(complete, id=9)
+    assert pick_canonical([complete, twin]) == 9  # full tie -> highest id, deterministic
 
 
 def test_duplicates_and_distinct_are_separated_with_margin() -> None:

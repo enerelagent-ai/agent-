@@ -13,7 +13,13 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
-from scraper.dedup import DUPLICATE_THRESHOLD, are_candidates, score_pair
+from scraper.dedup import (
+    DUPLICATE_THRESHOLD,
+    are_candidates,
+    group_pairs,
+    pick_canonical,
+    score_pair,
+)
 from scraper.save import normalize_dsn
 
 Match = tuple[int, int, float]
@@ -72,6 +78,25 @@ def record_matches(cur: psycopg2.extensions.cursor, matches: list[Match]) -> Non
     """Upsert scored pairs into duplicate_matches."""
     for id_a, id_b, score in matches:
         cur.execute(_RECORD_SQL, (id_a, id_b, score))
+
+
+def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
+    """Ids analytics must EXCLUDE so duplicate groups count once.
+
+    Every recorded match pair is merged into groups; each group keeps its
+    canonical listing (see dedup.pick_canonical) and contributes the rest
+    here. Consumers filter with e.g. WHERE id != ALL(%s).
+    """
+    cur.execute("SELECT listing_id_a, listing_id_b FROM duplicate_matches")
+    pairs = [(r["listing_id_a"], r["listing_id_b"]) for r in cur.fetchall()]
+    superseded: set[int] = set()
+    for group in group_pairs(pairs):
+        cur.execute(_LISTING_FIELDS + " WHERE id = ANY(%s)", (list(group),))
+        rows = [dict(r) for r in cur.fetchall()]
+        if len(rows) < 2:
+            continue
+        superseded |= {row["id"] for row in rows} - {pick_canonical(rows)}
+    return superseded
 
 
 def match_new_listings(dsn: str, source_urls: list[str]) -> list[Match]:
