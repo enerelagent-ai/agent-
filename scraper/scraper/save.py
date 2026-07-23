@@ -177,15 +177,35 @@ def recently_scraped_urls(dsn: str, urls: list[str], days: float) -> set[str]:
 
 
 def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
-    """Upsert mapped rows on (source, source_url) in one transaction.
+    """Upsert mapped rows on (source, source_url); returns rows actually saved.
 
     Re-scraping the same ad updates the existing row (and refreshes
-    scraped_at) instead of duplicating it. Returns the number of rows sent.
+    scraped_at) instead of duplicating it. Normally one transaction; if the
+    batch fails on bad data (e.g. an absurd seller-entered price), it falls
+    back to row-by-row so the one bad ad is skipped with a warning instead
+    of losing the whole batch — vital on long unattended runs.
     """
     if not rows:
         return 0
-    with psycopg2.connect(normalize_dsn(dsn)) as conn:
-        with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(cur, _UPSERT_SQL, rows)
-    conn.close()
-    return len(rows)
+    conn = psycopg2.connect(normalize_dsn(dsn))
+    try:
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    psycopg2.extras.execute_batch(cur, _UPSERT_SQL, rows)
+            return len(rows)
+        except psycopg2.DataError:
+            conn.rollback()
+            saved = 0
+            for row in rows:
+                try:
+                    with conn:
+                        with conn.cursor() as cur:
+                            cur.execute(_UPSERT_SQL, row)
+                    saved += 1
+                except psycopg2.DataError as exc:
+                    reason = str(exc).splitlines()[0]
+                    print(f"    skipped bad row {row.get('source_url')}: {reason}", flush=True)
+            return saved
+    finally:
+        conn.close()
