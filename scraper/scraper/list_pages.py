@@ -4,6 +4,7 @@ import time
 from urllib.parse import urljoin
 
 from playwright.sync_api import Browser
+from playwright.sync_api import Error as PlaywrightError
 
 from scraper.browser import new_context, wait_past_challenge
 
@@ -21,7 +22,9 @@ def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> 
     """Load one list page in a fresh browser context and return the unique,
     absolute detail-page URLs found on it.
 
-    Returns an empty list if the bot-check interstitial never clears after retrying.
+    Returns an empty list if the bot-check interstitial never clears after
+    retrying, or if every attempt fails on a transient error (network change,
+    timeout) — long unattended runs must survive those, not crash.
     """
     for attempt in range(retries + 1):
         context = new_context(browser)
@@ -34,10 +37,13 @@ def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> 
                 )
                 matched = {h for h in hrefs if h and AD_HREF_RE.match(h)}
                 return sorted(urljoin(url, h) for h in matched)
+        except PlaywrightError as exc:
+            reason = str(exc).splitlines()[0][:120]
+            print(f"    fetch error (attempt {attempt + 1}): {reason}", flush=True)
         finally:
             context.close()
         if attempt < retries:
-            time.sleep(2)
+            time.sleep(2 * (attempt + 1))
     return []
 
 

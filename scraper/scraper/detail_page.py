@@ -11,6 +11,7 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 from playwright.sync_api import Browser
+from playwright.sync_api import Error as PlaywrightError
 
 from scraper.browser import new_context, wait_past_challenge
 
@@ -27,7 +28,9 @@ ABS_DATE_RE = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})")
 def fetch_detail_html(browser: Browser, url: str, *, retries: int = 2) -> str | None:
     """Load one ad detail page in a fresh browser context and return its HTML.
 
-    Returns None if the bot-check interstitial never clears after retrying.
+    Returns None if the bot-check interstitial never clears after retrying,
+    or if every attempt fails on a transient error (network change, timeout)
+    — long unattended runs must survive those, not crash.
     """
     for attempt in range(retries + 1):
         context = new_context(browser)
@@ -36,10 +39,13 @@ def fetch_detail_html(browser: Browser, url: str, *, retries: int = 2) -> str | 
             page.goto(url, wait_until="domcontentloaded")
             if wait_past_challenge(page):
                 return page.content()
+        except PlaywrightError as exc:
+            reason = str(exc).splitlines()[0][:120]
+            print(f"    fetch error (attempt {attempt + 1}): {reason}", flush=True)
         finally:
             context.close()
         if attempt < retries:
-            time.sleep(2)
+            time.sleep(2 * (attempt + 1))
     return None
 
 
