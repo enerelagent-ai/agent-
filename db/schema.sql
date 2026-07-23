@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS listings (
     title           TEXT NOT NULL,
     description     TEXT,
 
-    price           NUMERIC(14, 2),
+    price           NUMERIC(18, 2),
     -- Display price text as shown on the ad (keeps discount info:
     -- "7.9 сая ₮ 8.9 сая ₮ Үнэ тохирно").
     price_raw       TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS listings (
     area_sqm        NUMERIC(10, 2),
     -- Derived from price/area_sqm so it stays consistent with the source values;
     -- NULL when either input is missing or area_sqm is not positive.
-    price_per_sqm   NUMERIC(14, 2) GENERATED ALWAYS AS (
+    price_per_sqm   NUMERIC(18, 2) GENERATED ALWAYS AS (
                         CASE WHEN area_sqm > 0 THEN ROUND(price / area_sqm, 2) ELSE NULL END
                     ) STORED,
 
