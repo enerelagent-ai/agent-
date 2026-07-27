@@ -5,7 +5,7 @@ The `cur` fixture comes from conftest.py."""
 import json
 from pathlib import Path
 
-from scraper.matches import (
+from analytics.matches import (
     fetch_listing,
     find_matches_for_listing,
     possible_duplicate_pairs,

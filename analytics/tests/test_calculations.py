@@ -3,8 +3,8 @@ Postgres inside a transaction that is always rolled back. The `cur` fixture
 (conftest.py) sees real committed data too, but synthetic districts below
 use names that cannot collide with real Ulaanbaatar district data."""
 
-from scraper.calculations import average_price_by_group
-from scraper.matches import record_matches
+from analytics.calculations import average_price_by_group
+from analytics.matches import record_matches
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,

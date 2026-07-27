@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from scraper.dedup import (
+from analytics.dedup import (
     AUTO_RESOLVE_THRESHOLD,
     are_candidates,
     classify_pair,

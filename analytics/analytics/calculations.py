@@ -9,8 +9,8 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
-from scraper.matches import superseded_listing_ids
-from scraper.save import normalize_dsn
+from analytics.matches import superseded_listing_ids
+from analytics.db import normalize_dsn
 
 # listing_type is included in the group-by even though only property_type
 # and district were asked for: sale and rent prices differ by ~100x for the
