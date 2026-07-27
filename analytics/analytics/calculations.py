@@ -4,6 +4,7 @@ Every query excludes matches.superseded_listing_ids() first, so an
 auto-resolved duplicate group is counted once, not once per repost.
 """
 
+from decimal import Decimal
 from typing import Any
 
 import psycopg2
@@ -241,3 +242,95 @@ def yield_category_coverage_conn(dsn: str) -> list[dict[str, Any]]:
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return yield_category_coverage(cur)
+
+
+# Below this on either side, a district is dropped from the ranked table
+# entirely rather than scored: with too few listings, investment_score is
+# noise, not signal. Verified against the live DB — without this cutoff,
+# Багануур's single sale/rent pair (n_sale=1) outranks Хан-Уул's 4,308
+# sale listings purely because the ranking treats every district equally
+# regardless of sample size.
+_MIN_SAMPLE_SIZE = 20
+
+
+def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """Week 6 dashboard input: one row per district, built on top of
+    rental_yield_by_district_rooms() rather than a fresh query, so it always
+    reflects the same match/exclusion logic as the room-level yield table.
+
+    Room-count buckets are recombined with each bucket's own sample size as
+    the weight (sum of price*n_sale over sum of n_sale, same for rent), not
+    a naive average across room sizes — a district with mostly 2-room
+    listings shouldn't be pulled toward a thin 5+-room bucket's price level.
+    gross_rental_yield_pct is then recomputed from those recombined
+    district-level price/rent figures, not averaged from the per-bucket
+    yields directly, for the same reason.
+
+    roi_pct is the same number as gross_rental_yield_pct: annual rent over
+    purchase price for an all-cash buyer. There's no financing, expense, or
+    vacancy data in this DB to build a richer ROI on top of, so it's kept as
+    an explicitly named alias rather than invented from assumptions — a
+    dashboard/API consumer looking for "ROI" should still find it.
+
+    Districts with n_sale < _MIN_SAMPLE_SIZE or n_rent < _MIN_SAMPLE_SIZE are
+    dropped before ranking (see _MIN_SAMPLE_SIZE).
+
+    investment_score (0-100) combines avg_sale_price and gross_rental_yield_pct
+    by rank, not by blending their raw units: districts are ranked cheapest
+    -> priciest and highest-yield -> lowest-yield, each rank converted to a
+    0-100 scale (best = 100), then averaged 50/50. This is a simple,
+    transparent MVP score — swap in a different blend once Week 6 shows what
+    dashboard users actually weigh price vs. yield.
+    """
+    buckets = rental_yield_by_district_rooms(cur)
+
+    totals: dict[str, dict[str, Any]] = {}
+    for b in buckets:
+        t = totals.setdefault(b["district"], {
+            "n_sale": 0, "n_rent": 0,
+            "sale_price_sum": Decimal(0), "annual_rent_sum": Decimal(0),
+        })
+        t["n_sale"] += b["n_sale"]
+        t["n_rent"] += b["n_rent"]
+        t["sale_price_sum"] += b["avg_sale_price"] * b["n_sale"]
+        t["annual_rent_sum"] += b["avg_annual_rent"] * b["n_rent"]
+
+    rows = []
+    for district, t in totals.items():
+        if t["n_sale"] < _MIN_SAMPLE_SIZE or t["n_rent"] < _MIN_SAMPLE_SIZE:
+            continue
+        avg_sale_price = t["sale_price_sum"] / t["n_sale"]
+        avg_annual_rent = t["annual_rent_sum"] / t["n_rent"]
+        gross_yield_pct = (avg_annual_rent / avg_sale_price) * 100
+        rows.append({
+            "district": district,
+            "n_sale": t["n_sale"],
+            "n_rent": t["n_rent"],
+            "avg_sale_price": round(avg_sale_price, 2),
+            "gross_rental_yield_pct": round(gross_yield_pct, 2),
+            "roi_pct": round(gross_yield_pct, 2),
+        })
+
+    n = len(rows)
+    if n > 1:
+        cheapest_first = sorted(rows, key=lambda r: r["avg_sale_price"])
+        price_rank = {r["district"]: i for i, r in enumerate(cheapest_first)}
+        highest_yield_first = sorted(rows, key=lambda r: -r["gross_rental_yield_pct"])
+        yield_rank = {r["district"]: i for i, r in enumerate(highest_yield_first)}
+        for r in rows:
+            price_score = 100 * (1 - price_rank[r["district"]] / (n - 1))
+            yield_score = 100 * (1 - yield_rank[r["district"]] / (n - 1))
+            r["investment_score"] = round((price_score + yield_score) / 2, 1)
+    else:
+        for r in rows:
+            r["investment_score"] = 100.0
+
+    rows.sort(key=lambda r: -r["investment_score"])
+    return rows
+
+
+def investment_summary_by_district_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for investment_summary_by_district()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return investment_summary_by_district(cur)

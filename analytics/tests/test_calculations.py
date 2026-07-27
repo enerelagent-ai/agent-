@@ -3,8 +3,11 @@ Postgres inside a transaction that is always rolled back. The `cur` fixture
 (conftest.py) sees real committed data too, but synthetic districts below
 use names that cannot collide with real Ulaanbaatar district data."""
 
+import pytest
+
 from analytics.calculations import (
     average_price_by_group,
+    investment_summary_by_district,
     rental_yield_by_district_rooms,
     yield_category_coverage,
 )
@@ -195,3 +198,88 @@ def test_yield_category_coverage_apartments_calculable_others_are_not(cur) -> No
 
     # every category must land in exactly one bucket, with a reason iff excluded
     assert all((r["reason"] is None) == r["calculable"] for r in rows)
+
+
+def _district_row(rows, district):
+    return next(r for r in rows if r["district"] == district)
+
+
+def _insert_many(cur, url_prefix, n, price, area, **kwargs):
+    for i in range(n):
+        _insert(cur, f"{url_prefix}-{i}", price, area, **kwargs)
+
+
+def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district(cur) -> None:
+    # 1-room bucket: 15 sales @100M, 10 rents @1M/mo
+    _insert_many(cur, "test://inv-a-1r-sale", 15, 100_000_000, 30.0,
+                 district="Инвест А", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://inv-a-1r-rent", 10, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Инвест А", property_subtype="1 өрөө", rooms=1)
+    # 2-room bucket: 5 sales @300M, 10 rents @2M/mo
+    _insert_many(cur, "test://inv-a-2r-sale", 5, 300_000_000, 60.0,
+                 district="Инвест А", property_subtype="2 өрөө", rooms=2)
+    _insert_many(cur, "test://inv-a-2r-rent", 10, 2_000_000, 60.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Инвест А", property_subtype="2 өрөө", rooms=2)
+    # total n_sale=20, n_rent=20 -> right at _MIN_SAMPLE_SIZE, must still be included
+
+    rows = investment_summary_by_district(cur)
+    row = _district_row(rows, "Инвест А")
+
+    # weighted avg price: (100M*15 + 300M*5) / 20 = 150,000,000
+    assert float(row["avg_sale_price"]) == pytest.approx(150_000_000.0, abs=0.01)
+    # weighted annual rent: (1M*12*10 + 2M*12*10) / 20 = 18,000,000; yield = 18M/150M*100 = 12%
+    assert float(row["gross_rental_yield_pct"]) == pytest.approx(12.0, abs=0.01)
+    assert row["roi_pct"] == row["gross_rental_yield_pct"]
+    assert row["n_sale"] == 20
+    assert row["n_rent"] == 20
+
+
+def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:
+    # 19 sales, 19 rents -> one short of _MIN_SAMPLE_SIZE=20 on both sides
+    _insert_many(cur, "test://inv-thin-sale", 19, 100_000_000, 30.0,
+                 district="Нимгэн дүүрэг", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://inv-thin-rent", 19, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Нимгэн дүүрэг", property_subtype="1 өрөө", rooms=1)
+
+    rows = investment_summary_by_district(cur)
+    assert all(r["district"] != "Нимгэн дүүрэг" for r in rows)
+
+
+def test_investment_score_ranks_cheaper_higher_yield_district_above_pricier_lower_yield(cur) -> None:
+    # Cheap and high-yield: 1-room, 20 sales @100M, 20 rents @1M/mo -> yield 12%
+    _insert_many(cur, "test://inv-cheap-sale", 20, 100_000_000, 30.0,
+                 district="Инвест Хямд", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://inv-cheap-rent", 20, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Инвест Хямд", property_subtype="1 өрөө", rooms=1)
+    # Expensive and low-yield: 1-room, 20 sales @500M, 20 rents @1M/mo -> yield 2.4%
+    _insert_many(cur, "test://inv-costly-sale", 20, 500_000_000, 30.0,
+                 district="Инвест Үнэтэй", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://inv-costly-rent", 20, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Инвест Үнэтэй", property_subtype="1 өрөө", rooms=1)
+
+    rows = investment_summary_by_district(cur)
+    cheap = _district_row(rows, "Инвест Хямд")
+    costly = _district_row(rows, "Инвест Үнэтэй")
+
+    # cheaper AND higher-yield must outrank pricier AND lower-yield,
+    # regardless of where real districts fall in the same ranking.
+    assert cheap["investment_score"] > costly["investment_score"]
+    assert 0.0 <= cheap["investment_score"] <= 100.0
+    assert 0.0 <= costly["investment_score"] <= 100.0
+
+
+def test_investment_summary_real_data_smoke_check(cur) -> None:
+    """Sanity check against the actual scraped dataset: must run and return
+    plausible aggregates for every real district with apartment yield data."""
+    rows = investment_summary_by_district(cur)
+    assert len(rows) > 0
+    for row in rows:
+        assert row["avg_sale_price"] > 0
+        assert row["roi_pct"] == row["gross_rental_yield_pct"]
+        assert 0.0 <= row["investment_score"] <= 100.0
+        assert row["n_sale"] > 0 and row["n_rent"] > 0
