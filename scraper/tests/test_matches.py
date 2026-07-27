@@ -8,6 +8,7 @@ from pathlib import Path
 from scraper.matches import (
     fetch_listing,
     find_matches_for_listing,
+    possible_duplicate_pairs,
     record_matches,
     superseded_listing_ids,
 )
@@ -87,3 +88,16 @@ def test_superseded_ids_keep_one_listing_per_group(cur) -> None:
                    (fetch_listing(cur, "test://dup-a"), fetch_listing(cur, "test://dup-b"))
                    if r["id"] != kept][0]
     assert (row_kept["posted_at"] or "") >= (row_dropped["posted_at"] or "")
+
+
+def test_possible_duplicate_tier_is_excluded_from_superseded_ids(cur) -> None:
+    """A match below AUTO_RESOLVE_THRESHOLD (Possible Duplicate) must not
+    cause analytics to drop either listing — only surface for review."""
+    id_a, id_b = _insert_pair(cur)
+    pair_key = (min(id_a, id_b), max(id_a, id_b))
+    record_matches(cur, [(*pair_key, 0.65)])  # review tier, not auto-resolve
+
+    assert not (superseded_listing_ids(cur) & set(pair_key))
+
+    review_queue = possible_duplicate_pairs(cur)
+    assert any(m[:2] == pair_key for m in review_queue)

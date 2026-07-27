@@ -14,7 +14,8 @@ import psycopg2
 import psycopg2.extras
 
 from scraper.dedup import (
-    DUPLICATE_THRESHOLD,
+    AUTO_RESOLVE_THRESHOLD,
+    CANDIDATE_THRESHOLD,
     are_candidates,
     group_pairs,
     pick_canonical,
@@ -68,7 +69,7 @@ def find_matches_for_listing(
         if not are_candidates(row, other):
             continue
         total = score_pair(row, other)["total"]
-        if total >= DUPLICATE_THRESHOLD:
+        if total >= CANDIDATE_THRESHOLD:
             id_a, id_b = sorted((row["id"], other["id"]))
             matches.append((id_a, id_b, total))
     return matches
@@ -83,11 +84,18 @@ def record_matches(cur: psycopg2.extensions.cursor, matches: list[Match]) -> Non
 def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
     """Ids analytics must EXCLUDE so duplicate groups count once.
 
-    Every recorded match pair is merged into groups; each group keeps its
-    canonical listing (see dedup.pick_canonical) and contributes the rest
-    here. Consumers filter with e.g. WHERE id != ALL(%s).
+    Only matches at or above AUTO_RESOLVE_THRESHOLD are used to build
+    groups: below that (the "Possible Duplicate" tier) precision is too low
+    to safely drop a listing from analytics — see dedup.match_status and
+    the fixture validation it cites. Those pairs surface via
+    possible_duplicate_pairs() for human review instead. Every group above
+    the bar keeps its canonical listing (dedup.pick_canonical) and
+    contributes the rest here. Consumers filter with e.g. WHERE id != ALL(%s).
     """
-    cur.execute("SELECT listing_id_a, listing_id_b FROM duplicate_matches")
+    cur.execute(
+        "SELECT listing_id_a, listing_id_b FROM duplicate_matches WHERE score >= %s",
+        (AUTO_RESOLVE_THRESHOLD,),
+    )
     pairs = [(r["listing_id_a"], r["listing_id_b"]) for r in cur.fetchall()]
     superseded: set[int] = set()
     for group in group_pairs(pairs):
@@ -97,6 +105,18 @@ def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
             continue
         superseded |= {row["id"] for row in rows} - {pick_canonical(rows)}
     return superseded
+
+
+def possible_duplicate_pairs(cur: psycopg2.extensions.cursor) -> list[Match]:
+    """Matches in the 'Possible Duplicate' review tier: recorded as
+    candidates but not auto-resolved (see superseded_listing_ids). Intended
+    for a human review queue; ordered by score, most confident first."""
+    cur.execute(
+        "SELECT listing_id_a, listing_id_b, score FROM duplicate_matches"
+        " WHERE score >= %s AND score < %s ORDER BY score DESC",
+        (CANDIDATE_THRESHOLD, AUTO_RESOLVE_THRESHOLD),
+    )
+    return [(r["listing_id_a"], r["listing_id_b"], r["score"]) for r in cur.fetchall()]
 
 
 def match_new_listings(dsn: str, source_urls: list[str]) -> list[Match]:
