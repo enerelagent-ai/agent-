@@ -3,24 +3,31 @@ Postgres inside a transaction that is always rolled back. The `cur` fixture
 (conftest.py) sees real committed data too, but synthetic districts below
 use names that cannot collide with real Ulaanbaatar district data."""
 
-from analytics.calculations import average_price_by_group
+from analytics.calculations import (
+    average_price_by_group,
+    rental_yield_by_district_rooms,
+    yield_category_coverage,
+)
 from analytics.matches import record_matches
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,
-                          district, listing_type, property_type, photo_urls,
-                          dedup_hash)
+                          district, listing_type, property_type,
+                          property_subtype, rooms, photo_urls, dedup_hash)
     VALUES ('unegui', %(source_url)s, 'test', %(price)s, %(area_sqm)s,
-            %(district)s, %(listing_type)s, %(property_type)s, '{}', 'test-hash')
+            %(district)s, %(listing_type)s, %(property_type)s,
+            %(property_subtype)s, %(rooms)s, '{}', 'test-hash')
     RETURNING id
 """
 
 
 def _insert(cur, url, price, area, *, listing_type="sale",
-            property_type="Орон сууц зарна", district="Тест дүүрэг") -> int:
+            property_type="Орон сууц зарна", district="Тест дүүрэг",
+            property_subtype=None, rooms=None) -> int:
     cur.execute(_INSERT_SQL, {
         "source_url": url, "price": price, "area_sqm": area,
         "district": district, "listing_type": listing_type, "property_type": property_type,
+        "property_subtype": property_subtype, "rooms": rooms,
     })
     return cur.fetchone()["id"]
 
@@ -105,3 +112,86 @@ def test_real_data_smoke_check(cur) -> None:
     assert 0 < total_grouped <= 36_666
     for row in rows:
         assert row["avg_price"] is None or float(row["avg_price"]) > 0
+
+
+def _yield_row(rows, *, district, rooms):
+    return next(r for r in rows if r["district"] == district and r["rooms"] == rooms)
+
+
+def test_rental_yield_matches_by_district_and_rooms_not_by_category_average(cur) -> None:
+    # Same district, two different room sizes, each with its own sale/rent pair.
+    _insert(cur, "test://yield-1r-sale", 100_000_000, 30.0,
+            district="Өгөөж дүүрэг", property_subtype="1 өрөө", rooms=1)
+    _insert(cur, "test://yield-1r-rent", 1_000_000, 30.0, listing_type="rent",
+            property_type="Орон сууц түрээслүүлнэ",
+            district="Өгөөж дүүрэг", property_subtype="1 өрөө", rooms=1)
+    _insert(cur, "test://yield-3r-sale", 400_000_000, 80.0,
+            district="Өгөөж дүүрэг", property_subtype="3 өрөө", rooms=3)
+    _insert(cur, "test://yield-3r-rent", 2_000_000, 80.0, listing_type="rent",
+            property_type="Орон сууц түрээслүүлнэ",
+            district="Өгөөж дүүрэг", property_subtype="3 өрөө", rooms=3)
+
+    rows = rental_yield_by_district_rooms(cur)
+    one_room = _yield_row(rows, district="Өгөөж дүүрэг", rooms=1)
+    three_room = _yield_row(rows, district="Өгөөж дүүрэг", rooms=3)
+
+    # 1-room: 1M/mo * 12 = 12M annual / 100M sale = 12%, payback 100M/12M = 8.3y
+    assert float(one_room["gross_rental_yield_pct"]) == 12.0
+    assert float(one_room["payback_years"]) == 8.3
+    # 3-room: 2M/mo * 12 = 24M annual / 400M sale = 6% — must not be blended
+    # with the 1-room pair into a single category-level average.
+    assert float(three_room["gross_rental_yield_pct"]) == 6.0
+
+
+def test_rental_yield_requires_both_sale_and_rent_present(cur) -> None:
+    _insert(cur, "test://yield-onesided", 100_000_000, 30.0,
+            district="Ганц тал дүүрэг", property_subtype="2 өрөө", rooms=2)
+
+    rows = rental_yield_by_district_rooms(cur)
+    assert all(r["district"] != "Ганц тал дүүрэг" for r in rows)
+
+
+def test_rental_yield_excludes_auto_resolved_duplicate(cur) -> None:
+    id_a = _insert(cur, "test://yield-dup-a", 100_000_000, 30.0,
+                   district="Давхар дүүрэг", property_subtype="2 өрөө", rooms=2)
+    id_b = _insert(cur, "test://yield-dup-b", 300_000_000, 30.0,
+                   district="Давхар дүүрэг", property_subtype="2 өрөө", rooms=2)
+    record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.95)])  # auto-resolve tier
+    _insert(cur, "test://yield-dup-rent", 1_000_000, 30.0, listing_type="rent",
+            property_type="Орон сууц түрээслүүлнэ",
+            district="Давхар дүүрэг", property_subtype="2 өрөө", rooms=2)
+
+    rows = rental_yield_by_district_rooms(cur)
+    row = _yield_row(rows, district="Давхар дүүрэг", rooms=2)
+    assert row["n_sale"] == 1
+    # tie on completeness/posted_at -> pick_canonical keeps the higher id (id_b, 300M)
+    assert float(row["avg_sale_price"]) == 300_000_000.0
+
+
+def test_yield_category_coverage_apartments_calculable_others_are_not(cur) -> None:
+    rows = yield_category_coverage(cur)
+    by_category = {r["category"]: r for r in rows}
+
+    apartments = by_category["Орон сууц (apartments)"]
+    assert apartments["calculable"] is True
+    assert apartments["reason"] is None
+    assert apartments["n_sale"] > 0 and apartments["n_rent"] > 0
+
+    land = by_category["Газар (land)"]
+    assert land["calculable"] is False
+    assert "subtype/rooms" in land["reason"]
+
+    houses = by_category["Хашаа байшин (houses)"]
+    assert houses["calculable"] is False
+    assert "gers" in houses["reason"]
+
+    ger = by_category["Монгол гэр (traditional ger)"]
+    assert ger["calculable"] is False
+    assert "folded into" in ger["reason"]
+
+    hostel = by_category["Hostel/Хостел"]
+    assert hostel["calculable"] is False
+    assert "rent-only" in hostel["reason"]
+
+    # every category must land in exactly one bucket, with a reason iff excluded
+    assert all((r["reason"] is None) == r["calculable"] for r in rows)
