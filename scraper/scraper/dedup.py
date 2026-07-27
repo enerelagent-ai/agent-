@@ -12,7 +12,7 @@ survivors on soft signals. Deliberately excluded as evidence:
 
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 # Sellers mix latin lookalikes into cyrillic words ("13-p xopoo"); folding
 # them keeps token comparison consistent. Purely-latin words are folded on
@@ -35,7 +35,23 @@ AREA_BAND = 0.10
 PRICE_FULL_MISMATCH = 0.15   # relative price gap treated as "completely different"
 DATE_FULL_MISMATCH_DAYS = 30.0
 WEIGHTS = {"title": 0.45, "price": 0.35, "photos": 0.08, "posted": 0.12}
-DUPLICATE_THRESHOLD = 0.60
+
+# Confidence tiers (Week 4 spec, item A.1). Below CANDIDATE_THRESHOLD a pair
+# is not a match at all. Validated on 20 pairs pulled from the full
+# 36,666-listing / 48,855-match scrape (2026-07-27, see tests/fixtures/
+# labeled_pairs.json): the [0.90, 1.0] band was 10/10 genuine duplicates,
+# while [0.60, 0.70) was only ~8/10 — false positives cluster near the old
+# single threshold, so scores there are surfaced for human review rather
+# than auto-merged.
+CANDIDATE_THRESHOLD = 0.60
+AUTO_RESOLVE_THRESHOLD = 0.80
+
+# Kept as an alias: matches.py's recording cutoff is "is this worth storing
+# as a candidate at all", which is CANDIDATE_THRESHOLD, not the auto-resolve
+# bar.
+DUPLICATE_THRESHOLD = CANDIDATE_THRESHOLD
+
+MatchStatus = Literal["duplicate", "possible_duplicate", "distinct"]
 
 
 def normalize_title_tokens(title: str | None) -> set[str]:
@@ -119,12 +135,27 @@ def score_pair(a: dict[str, Any], b: dict[str, Any]) -> dict[str, float]:
     return signals
 
 
-def classify_pair(a: dict[str, Any], b: dict[str, Any]) -> str:
-    """'duplicate' when the pair survives blocking and scores past the
-    threshold; 'distinct' otherwise."""
+def match_status(score: float) -> MatchStatus:
+    """Confidence tier for an already-computed score (Week 4 spec A.1).
+
+    >= AUTO_RESOLVE_THRESHOLD: safe to auto-resolve as a Duplicate.
+    [CANDIDATE_THRESHOLD, AUTO_RESOLVE_THRESHOLD): Possible Duplicate — a
+    human review candidate, not auto-merged (this is where false positives
+    concentrate; see the module-level note on the fixture validation).
+    Below CANDIDATE_THRESHOLD: distinct.
+    """
+    if score >= AUTO_RESOLVE_THRESHOLD:
+        return "duplicate"
+    if score >= CANDIDATE_THRESHOLD:
+        return "possible_duplicate"
+    return "distinct"
+
+
+def classify_pair(a: dict[str, Any], b: dict[str, Any]) -> MatchStatus:
+    """Full pipeline for one pair: block, then tier the score."""
     if not are_candidates(a, b):
         return "distinct"
-    return "duplicate" if score_pair(a, b)["total"] >= DUPLICATE_THRESHOLD else "distinct"
+    return match_status(score_pair(a, b)["total"])
 
 
 # Fields whose presence makes a listing more useful to analytics; used to
