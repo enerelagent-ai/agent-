@@ -7,6 +7,7 @@ from scraper.save import (
     parse_area_sqm,
     parse_price_negotiable,
     parse_rooms,
+    recently_scraped,
 )
 
 SAMPLE_PARSED = {
@@ -83,6 +84,9 @@ def test_listing_row_mapping() -> None:
     assert row["description"] == "Төв талбайд ойр, бүрэн тохижсон."
     assert row["posted_at"] == "2026-07-21T21:32"
     assert row["price_negotiable"] is False  # sample price_raw has no marker
+    assert row["price_raw"] == "99,330 ₮"
+    assert row["posted_raw"] == "Өчигдөр 21:32"
+    assert row["specs"].adapted == SAMPLE_PARSED["specs"]  # full dict kept as JSONB
     assert row["area_sqm"] == 49.0
     assert row["rooms"] == 2
     assert row["listing_type"] == "rent"
@@ -96,6 +100,19 @@ def test_listing_row_mapping() -> None:
 def test_unusable_records_are_skipped() -> None:
     assert listing_row_from_parsed({"url": "https://x/", "error": "challenge"}) is None
     assert listing_row_from_parsed({"title": "no url"}) is None
+
+
+def test_recently_scraped_filters_by_window(cur) -> None:
+    """Fresh rows are skipped, stale rows are re-scraped (integration, rolled back)."""
+    for url, age in (("test://fresh", "0 seconds"), ("test://stale", "2 days")):
+        cur.execute(
+            """INSERT INTO listings (source, source_url, title, dedup_hash, scraped_at)
+               VALUES ('unegui', %s, 't', 'x', now() - %s::interval)""",
+            (url, age),
+        )
+    urls = ["test://fresh", "test://stale", "test://unknown"]
+    assert recently_scraped(cur, urls, days=1.0) == {"test://fresh"}
+    assert recently_scraped(cur, [], days=1.0) == set()
 
 
 def test_normalize_dsn() -> None:

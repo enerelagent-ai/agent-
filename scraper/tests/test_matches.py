@@ -1,24 +1,19 @@
 """Integration tests for duplicate-match recording, run against the local
-Postgres inside a transaction that is always rolled back (nothing persists)."""
+Postgres inside a transaction that is always rolled back (nothing persists).
+The `cur` fixture comes from conftest.py."""
 
 import json
-import os
 from pathlib import Path
-
-import psycopg2
-import psycopg2.extras
-import pytest
 
 from scraper.matches import (
     fetch_listing,
     find_matches_for_listing,
+    possible_duplicate_pairs,
     record_matches,
     superseded_listing_ids,
 )
-from scraper.save import normalize_dsn
 
 FIXTURE = Path(__file__).parent / "fixtures" / "labeled_pairs.json"
-DSN = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/postgres")
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm, rooms,
@@ -29,19 +24,6 @@ _INSERT_SQL = """
             %(posted_at)s, 'test-hash')
     RETURNING id
 """
-
-
-@pytest.fixture()
-def cur():
-    """Cursor in a transaction that is rolled back after each test."""
-    try:
-        conn = psycopg2.connect(normalize_dsn(DSN))
-    except psycopg2.OperationalError:
-        pytest.skip("local Postgres not available")
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    yield cursor
-    conn.rollback()
-    conn.close()
 
 
 def _insert_pair(cur) -> tuple[int, int]:
@@ -106,3 +88,16 @@ def test_superseded_ids_keep_one_listing_per_group(cur) -> None:
                    (fetch_listing(cur, "test://dup-a"), fetch_listing(cur, "test://dup-b"))
                    if r["id"] != kept][0]
     assert (row_kept["posted_at"] or "") >= (row_dropped["posted_at"] or "")
+
+
+def test_possible_duplicate_tier_is_excluded_from_superseded_ids(cur) -> None:
+    """A match below AUTO_RESOLVE_THRESHOLD (Possible Duplicate) must not
+    cause analytics to drop either listing — only surface for review."""
+    id_a, id_b = _insert_pair(cur)
+    pair_key = (min(id_a, id_b), max(id_a, id_b))
+    record_matches(cur, [(*pair_key, 0.65)])  # review tier, not auto-resolve
+
+    assert not (superseded_listing_ids(cur) & set(pair_key))
+
+    review_queue = possible_duplicate_pairs(cur)
+    assert any(m[:2] == pair_key for m in review_queue)
