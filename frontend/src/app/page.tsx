@@ -1,9 +1,8 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { KpiRow } from "@/components/KpiRow";
-import { DistrictTable } from "@/components/DistrictTable";
+import { DashboardBody } from "@/components/DashboardBody";
 import { DonutChart } from "@/components/DonutChart";
-import { RecentListings } from "@/components/RecentListings";
 import { PriceTrendChart } from "@/components/PriceTrendChart";
 import {
   getInvestmentSummary,
@@ -34,8 +33,7 @@ export default async function DashboardPage() {
             <DonutChart data={listingCounts} />
             <PriceTrendChart data={priceTrend} />
           </div>
-          <DistrictTable rows={investmentSummary} />
-          <RecentListings listings={recentListings} />
+          <DashboardBody investmentSummary={investmentSummary} initialListings={recentListings} />
         </main>
       </div>
     </div>
