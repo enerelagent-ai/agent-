@@ -485,3 +485,278 @@ def price_trend_conn(
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return price_trend(cur, listing_type, property_type)
+
+
+# Below this, an apartment listing's area is more likely a scraper parsing
+# failure than a real micro-unit: checked against the live DB, there's a
+# cluster of listings with area_sqm 0-7 that are physically impossible for
+# their own stated room count (a "2 өрөө" claiming 1m², a "3 өрөө" claiming
+# 0m²) alongside a separate cluster of genuine tiny units (explicitly "мини"
+# or "00 тоот" basement conversions) that all sit at 8m² and up. This floor
+# keeps both the group median and individual listings clear of the first
+# cluster without touching the second. (area_sqm=0 already yields a NULL
+# price_per_sqm via the generated column's own CASE guard in db/schema.sql,
+# so this floor's real job is the 1-7 range that guard doesn't catch.)
+_MIN_AREA_SQM_FOR_DEAL = 10.0
+
+# Unegui's own room-count category caps at "5+ өрөө" (property_subtype),
+# so rooms=5 in this data is really "5 or more" -- it silently mixes true
+# 5-room flats with 6+-room duplexes. Verified against the real DB: three
+# of the "5+ өрөө" listings that scored as confident top deals (~49%, just
+# under MAX_CONFIDENT_DEAL_PCT) were titled "6 өрөө" / "6 өрөө дуплекс",
+# priced completely normally for their own size (~consistent ₮/m² across
+# all three) -- they only looked underpriced against a median pulled up
+# by smaller true-5-room units in the same bucket. Rooms 1-4 don't have
+# this ambiguity: each is Unegui's own exact category, not an open range.
+# Same "not comparable, don't approximate" call as yield_category_coverage.
+_OPEN_ENDED_ROOMS = 5
+
+# Confidence tiers, mirroring dedup's CANDIDATE_THRESHOLD/AUTO_RESOLVE_THRESHOLD
+# structure but inverted: a MODERATE discount is more trustworthy than an
+# extreme one. Real bargains rarely exceed ~50% below the comparable group's
+# median; a wrong room count or property_type — putting a listing in the
+# wrong comparison group entirely — routinely produces something that looks
+# far more extreme than that. Guards against bad price/area data (the median
+# baseline, the area floor) can't catch this, since a misclassified listing
+# can otherwise look completely clean.
+MIN_NOTABLE_DEAL_PCT = 10.0
+MAX_CONFIDENT_DEAL_PCT = 50.0
+
+# Below this, a comparable group is dropped entirely rather than scored —
+# same discipline as investment_summary_by_district's district-level cutoff,
+# just at the finer (district, rooms, listing_type) grain this module uses.
+# Verified against the real DB: without this, a 2-listing group could put a
+# listing in the confident "top_deal" tier off a "median" that's really just
+# one other listing's price — no more trustworthy than a coin flip.
+MIN_COMPARABLE_GROUP_SIZE = 20
+
+_MISCLASSIFICATION_REVIEW_REASON = "магадгүй ангилал буруу — шалгах шаардлагатай"
+
+_DEAL_PERCENTAGES_SQL = """
+    WITH group_medians AS (
+        SELECT district, rooms, listing_type,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm) AS group_median_price_per_sqm,
+               count(*) AS n_comparable
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
+          AND area_sqm >= %(min_area_sqm)s
+          AND rooms != %(open_ended_rooms)s
+          AND price_negotiable IS NOT TRUE
+        GROUP BY district, rooms, listing_type
+        HAVING count(*) >= %(min_group_size)s
+    ),
+    priced AS (
+        SELECT
+            l.id, l.district, l.rooms, l.listing_type, l.property_type,
+            l.price, l.price_per_sqm, l.area_sqm,
+            round(gm.group_median_price_per_sqm::numeric, 2) AS group_median_price_per_sqm,
+            gm.n_comparable,
+            round((((gm.group_median_price_per_sqm - l.price_per_sqm)
+                    / gm.group_median_price_per_sqm) * 100)::numeric, 2) AS deal_pct
+        FROM listings l
+        JOIN group_medians gm
+          ON l.district = gm.district AND l.rooms = gm.rooms AND l.listing_type = gm.listing_type
+        WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.district IS NOT NULL AND l.rooms IS NOT NULL AND l.price_per_sqm IS NOT NULL
+          AND l.area_sqm >= %(min_area_sqm)s
+          AND l.rooms != %(open_ended_rooms)s
+          AND l.price_negotiable IS NOT TRUE
+    )
+    -- Classification runs on the already-rounded deal_pct (not the raw
+    -- expression) so it always agrees with the value callers actually see —
+    -- otherwise a row could round across a tier boundary (e.g. a raw value
+    -- of 9.996 rounds to 10.00 for display but would classify as
+    -- not_notable using the unrounded number) and disagree with
+    -- classify_deal(deal_pct).
+    SELECT *,
+        CASE
+            WHEN deal_pct > %(max_confident_pct)s THEN 'needs_review'
+            WHEN deal_pct >= %(min_notable_pct)s THEN 'top_deal'
+            ELSE 'not_notable'
+        END AS deal_status
+    FROM priced
+    ORDER BY deal_pct DESC
+"""
+
+
+def classify_deal(deal_pct: float) -> str:
+    """Confidence-tier classification for a deal_pct value — see
+    MIN_NOTABLE_DEAL_PCT/MAX_CONFIDENT_DEAL_PCT. Kept as a standalone
+    function (mirroring dedup.classify_pair) so the threshold logic is
+    testable independent of a DB round-trip; deal_percentages()'s SQL
+    computes the same classification directly (it already has the numbers
+    in hand), and a test cross-checks the two never drift apart.
+    """
+    if deal_pct > MAX_CONFIDENT_DEAL_PCT:
+        return "needs_review"
+    if deal_pct >= MIN_NOTABLE_DEAL_PCT:
+        return "top_deal"
+    return "not_notable"
+
+
+def deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """How each listing's price/m² compares to its comparable group's
+    median: (district, rooms, listing_type) — sale and rent never blended
+    (same ~100x gap as everywhere else in this module), and rooms is part of
+    the group for the same reason rental_yield_by_district_rooms uses it:
+    a studio and a 5-room unit in the same district aren't comparable.
+
+    Only ever populated for listings with rooms set — apartments, the one
+    property_type with room-count data (see yield_category_coverage: every
+    other category has rooms NULL for every row). Listings missing area
+    (price_per_sqm NULL), below _MIN_AREA_SQM_FOR_DEAL, in the open-ended
+    _OPEN_ENDED_ROOMS ("5+ өрөө") bucket, or marked price_negotiable are
+    excluded from both sides of the comparison — a negotiable listing's
+    price is a placeholder (e.g. "170 ₮ Үнэ тохирно"), not a real one, so
+    it can neither have a sensible deal_pct itself nor belong in anyone
+    else's group baseline. (A negotiable listing still gets a price
+    estimate — see estimate_negotiable_price() — just never a deal_pct.)
+    Groups smaller than MIN_COMPARABLE_GROUP_SIZE are dropped entirely
+    (and every listing in them along with it): verified against the real
+    DB that without this, a 2-listing group could put something in the
+    confident tier off a "median" that's really just one other listing.
+
+    Baseline is the group's MEDIAN price/m², not the mean: verified against
+    the real DB (Сүхбаатар, 4-room rentals) that a single corrupted row
+    (a "4 өрөө" listing with area_sqm=1) dragged the mean to more than 2x
+    the median, making several genuinely-average-priced listings look like
+    70-80% "deals" that weren't. Median shrugs off that kind of single-row
+    corruption; mean doesn't.
+
+    deal_pct is positive when a listing is CHEAPER than its group's median
+    price/m² (a good deal) and negative when pricier — sorted best-deal-first
+    by default. group_median_price_per_sqm is computed over canonical
+    (non-superseded) listings only, and is the same for every listing in a
+    group regardless of whatever district/property_type/price filters an API
+    caller applies afterward — the comparison baseline must stay whole-market,
+    not shrink to match a filtered view.
+
+    deal_status classifies each row via classify_deal(): 'top_deal' for a
+    plausible discount, 'needs_review' for one extreme enough that a wrong
+    comparison group (bad room count, bad property_type) is a more likely
+    explanation than a genuine bargain — carries deal_reason in that case.
+    'not_notable' means the deviation isn't large enough to be interesting
+    either way. n_comparable is the group's size, so a caller can judge how
+    much to trust a given deal_pct regardless of tier.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_DEAL_PERCENTAGES_SQL, {
+        "excluded_ids": excluded,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "open_ended_rooms": _OPEN_ENDED_ROOMS,
+        "max_confident_pct": MAX_CONFIDENT_DEAL_PCT,
+        "min_notable_pct": MIN_NOTABLE_DEAL_PCT,
+    })
+    rows = [dict(row) for row in cur.fetchall()]
+    for row in rows:
+        row["deal_reason"] = _MISCLASSIFICATION_REVIEW_REASON if row["deal_status"] == "needs_review" else None
+    return rows
+
+
+def deal_percentages_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for deal_percentages()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return deal_percentages(cur)
+
+
+_ESTIMATE_NEGOTIABLE_PRICE_SQL = """
+    WITH group_medians AS (
+        SELECT district, rooms, listing_type, property_type,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm) AS group_median_price_per_sqm,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS group_median_price,
+               count(*) AS n_comparable
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
+          AND area_sqm >= %(min_area_sqm)s
+          AND rooms != %(open_ended_rooms)s
+          AND price_negotiable IS NOT TRUE
+        GROUP BY district, rooms, listing_type, property_type
+        HAVING count(*) >= %(min_group_size)s
+    )
+    SELECT
+        l.id, l.district, l.rooms, l.listing_type, l.property_type,
+        l.price AS placeholder_price, l.price_raw, l.area_sqm,
+        round(gm.group_median_price_per_sqm::numeric, 2) AS group_median_price_per_sqm,
+        round(gm.group_median_price::numeric, 2) AS group_median_price,
+        gm.n_comparable,
+        CASE
+            WHEN l.area_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+                THEN round((gm.group_median_price_per_sqm * l.area_sqm)::numeric, 2)
+            ELSE round(gm.group_median_price::numeric, 2)
+        END AS estimated_price,
+        CASE
+            WHEN l.area_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+                THEN round(gm.group_median_price_per_sqm::numeric, 2)
+            ELSE NULL
+        END AS estimated_price_per_sqm,
+        CASE
+            WHEN l.area_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s THEN 'area_based'
+            ELSE 'group_median_price'
+        END AS estimate_basis
+    FROM listings l
+    JOIN group_medians gm
+      ON l.district = gm.district AND l.rooms = gm.rooms
+     AND l.listing_type = gm.listing_type AND l.property_type = gm.property_type
+    WHERE l.id != ALL(%(excluded_ids)s)
+      AND l.price_negotiable IS TRUE
+      AND l.district IS NOT NULL AND l.rooms IS NOT NULL
+      AND l.rooms != %(open_ended_rooms)s
+    ORDER BY l.district, l.rooms, l.listing_type
+"""
+
+
+def estimate_negotiable_price(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """Price estimate for price_negotiable listings — a placeholder price
+    (e.g. "170 ₮ Үнэ тохирно") is never a real one, so instead of treating
+    it as data, this estimates what the listing would likely cost from its
+    comparable group's real (non-negotiable) prices.
+
+    Deliberately a separate function rather than an extension of
+    deal_percentages(): built the same way as everywhere else in this
+    module (group MEDIAN not mean, the area floor, the open-ended
+    "5+ өрөө" bucket excluded, MIN_COMPARABLE_GROUP_SIZE) — but a
+    negotiable listing must never appear in a deal ranking, confident or
+    needs_review, since there's no real price to judge it against in the
+    first place; estimation and deal-finding are different questions.
+    Grouped by (district, rooms, listing_type, property_type) —
+    property_type is redundant with rooms for apartments (the only
+    rooms IS NOT NULL category, so property_type is already implied), but
+    included for parity with a literal reading of the group key and in
+    case that ever stops being true.
+
+    Two estimation methods, in estimate_basis:
+    - 'area_based': the listing's own area_sqm is known and clears the
+      same _MIN_AREA_SQM_FOR_DEAL floor used elsewhere. estimated_price =
+      group_median_price_per_sqm * this listing's area_sqm — preferred
+      since it accounts for this specific unit's size.
+    - 'group_median_price': area is missing or implausible (the same
+      floor that would otherwise flag a parsing failure). Falls back to
+      the group's own median total price, with estimated_price_per_sqm
+      left None — deriving one from an untrusted area would just
+      manufacture a second bad number from the first.
+
+    Only ever produced for apartments in rooms 1-4 with a group of at
+    least MIN_COMPARABLE_GROUP_SIZE non-negotiable, canonical comparables
+    — the same categories deal_percentages() can score. Everything else
+    (non-apartments, "5+ өрөө", thin groups) gets no estimate, same "not
+    comparable, don't approximate" call made throughout this module.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_ESTIMATE_NEGOTIABLE_PRICE_SQL, {
+        "excluded_ids": excluded,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "open_ended_rooms": _OPEN_ENDED_ROOMS,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+    })
+    return [dict(row) for row in cur.fetchall()]
+
+
+def estimate_negotiable_price_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for estimate_negotiable_price()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return estimate_negotiable_price(cur)

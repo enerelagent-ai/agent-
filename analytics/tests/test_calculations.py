@@ -8,7 +8,14 @@ from datetime import date
 import pytest
 
 from analytics.calculations import (
+    MAX_CONFIDENT_DEAL_PCT,
+    MIN_COMPARABLE_GROUP_SIZE,
+    _MIN_AREA_SQM_FOR_DEAL,
+    _OPEN_ENDED_ROOMS,
     average_price_by_group,
+    classify_deal,
+    deal_percentages,
+    estimate_negotiable_price,
     investment_summary_by_district,
     listing_counts_by_property_type,
     price_trend,
@@ -419,3 +426,325 @@ def test_listing_counts_by_property_type_returns_exactly_four_rows(cur) -> None:
     keys = {(r["bucket"], r["listing_type"]) for r in rows}
     assert keys == {("apartments", "sale"), ("apartments", "rent"), ("other", "sale"), ("other", "rent")}
     assert all(r["n"] >= 0 for r in rows)
+
+
+def _deal_row(rows, url_id):
+    return next(r for r in rows if r["id"] == url_id)
+
+
+def test_deal_percentages_computed_against_group_median(cur) -> None:
+    # Group of 20 (MIN_COMPARABLE_GROUP_SIZE): 17 filler listings @ 3M/sqm,
+    # plus 100M/150M/200M @ 50 sqm each -> price/sqm 2M, 3M, 4M. Median of
+    # the 20 values stays exactly 3M (18 of them sit at 3M) -- equal to the
+    # mean for this near-symmetric case; the median-vs-mean distinction only
+    # bites with a skewing outlier, see test_deal_percentages_median_resists_outlier.
+    _insert_many(cur, "test://deal-filler", 17, 150_000_000, 50.0,
+                 district="Дил дүүрэг", rooms=2)
+    id_a = _insert(cur, "test://deal-a", 100_000_000, 50.0, district="Дил дүүрэг", rooms=2)
+    id_b = _insert(cur, "test://deal-b", 150_000_000, 50.0, district="Дил дүүрэг", rooms=2)
+    id_c = _insert(cur, "test://deal-c", 200_000_000, 50.0, district="Дил дүүрэг", rooms=2)
+
+    rows = deal_percentages(cur)
+    row_a, row_b, row_c = (_deal_row(rows, i) for i in (id_a, id_b, id_c))
+
+    assert float(row_a["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+    assert row_a["n_comparable"] == 20
+    # cheapest -> best deal (positive), priciest -> worst (negative)
+    assert float(row_a["deal_pct"]) == pytest.approx(33.33, abs=0.01)
+    assert float(row_b["deal_pct"]) == pytest.approx(0.0, abs=0.01)
+    assert float(row_c["deal_pct"]) == pytest.approx(-33.33, abs=0.01)
+    assert row_a["deal_pct"] > row_b["deal_pct"] > row_c["deal_pct"]
+    # 33.33% clears MIN_NOTABLE_DEAL_PCT but not MAX_CONFIDENT_DEAL_PCT
+    assert row_a["deal_status"] == "top_deal"
+    assert row_a["deal_reason"] is None
+    assert row_b["deal_status"] == "not_notable"  # 0% isn't notable either way
+    assert row_c["deal_status"] == "not_notable"  # priced above median, not a deal
+
+
+def test_deal_percentages_median_resists_single_outlier(cur) -> None:
+    """Verified against the real DB: a single corrupted row in a Сүхбаатар
+    4-room rental group (area_sqm=1, so price/sqm came out ~40x too high)
+    dragged that group's MEAN more than 2x above its median, making several
+    normally-priced listings look like 70-80% "deals". This reproduces the
+    same shape with a bad PRICE instead of a bad area (area alone is already
+    caught by _MIN_AREA_SQM_FOR_DEAL, so this isolates the mean-vs-median
+    fix specifically): 19 normal listings + 1 with a garbage low price.
+    """
+    normal_ids = [
+        _insert(cur, f"test://deal-outlier-normal-{i}", 150_000_000, 50.0,
+                district="Хэвийн дил дүүрэг", rooms=2)
+        for i in range(19)
+    ]  # price/sqm = 3,000,000 each; 19 + 1 outlier = 20, MIN_COMPARABLE_GROUP_SIZE
+    outlier_id = _insert(cur, "test://deal-outlier-bad", 1_000_000, 50.0,
+                          district="Хэвийн дил дүүрэг", rooms=2)  # price/sqm = 20,000 (typo-like)
+
+    rows = deal_percentages(cur)
+    normal_rows = [_deal_row(rows, i) for i in normal_ids]
+    outlier_row = _deal_row(rows, outlier_id)
+
+    # median of [3M x19, 20K] is 3M -- untouched by the one outlier (a mean
+    # would be pulled down to ~2.85M, which would make every normal listing
+    # look ~-5% i.e. overpriced, instead of the correct 0%).
+    for row in normal_rows:
+        assert float(row["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+        assert float(row["deal_pct"]) == pytest.approx(0.0, abs=0.01)
+        assert row["deal_status"] == "not_notable"
+
+    # the outlier itself is still an extreme deviation either way -- but the
+    # confidence tier correctly keeps it OUT of the confident "top deal" list.
+    assert float(outlier_row["deal_pct"]) > MAX_CONFIDENT_DEAL_PCT
+    assert outlier_row["deal_status"] == "needs_review"
+    assert outlier_row["deal_reason"] == "магадгүй ангилал буруу — шалгах шаардлагатай"
+
+
+def test_deal_percentages_excludes_listings_without_rooms(cur) -> None:
+    # No property_subtype/rooms data -- e.g. an office or land listing.
+    _insert(cur, "test://deal-norooms", 100_000_000, 50.0,
+            district="Дил тасархай дүүрэг", property_type="Оффис зарна", rooms=None)
+
+    rows = deal_percentages(cur)
+    assert all(r["district"] != "Дил тасархай дүүрэг" for r in rows)
+
+
+def test_deal_percentages_excludes_listings_without_area(cur) -> None:
+    ids_with_area = [
+        _insert(cur, f"test://deal-area-a-{i}", 100_000_000, 50.0,
+                district="Талбайгүй дил дүүрэг", rooms=3)
+        for i in range(20)
+    ]
+    _insert(cur, "test://deal-area-b", 200_000_000, None,
+            district="Талбайгүй дил дүүрэг", rooms=3)  # price_per_sqm NULL
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Талбайгүй дил дүүрэг"]
+    assert {r["id"] for r in group_rows} == set(ids_with_area)
+    assert group_rows[0]["n_comparable"] == 20  # the no-area listing isn't in the group either
+
+
+def test_deal_percentages_excludes_listings_below_min_area(cur) -> None:
+    # area_sqm=2 for a "3 өрөө" is exactly the kind of parsing-failure
+    # pattern _MIN_AREA_SQM_FOR_DEAL exists to catch (see its docstring).
+    ids_real = [
+        _insert(cur, f"test://deal-tinyarea-real-{i}", 100_000_000, 50.0,
+                district="Жижиг талбай дил дүүрэг", rooms=3)
+        for i in range(20)
+    ]
+    _insert(cur, "test://deal-tinyarea-bad", 100_000_000, 2.0,
+            district="Жижиг талбай дил дүүрэг", rooms=3)
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Жижиг талбай дил дүүрэг"]
+    assert {r["id"] for r in group_rows} == set(ids_real)
+    assert group_rows[0]["n_comparable"] == 20  # the tiny-area row isn't in the group either
+
+
+def test_deal_percentages_excludes_negotiable_price_listings(cur) -> None:
+    """price_negotiable=true listings carry a placeholder price (e.g. "170 ₮
+    Үнэ тохирно" -- id 3039 on the real DB), not a real one. Verified this
+    was previously flowing straight into deal_percentages() and scoring
+    against real listings' median. Must be excluded from both sides: neither
+    scored itself nor counted toward anyone else's group baseline. (It still
+    gets a price *estimate* -- see estimate_negotiable_price() -- just never
+    a deal_pct, since deal-finding and estimation are deliberately separate.)
+    """
+    ids_real = [
+        _insert(cur, f"test://deal-negotiable-real-{i}", 150_000_000, 50.0,
+                district="Тохиролцоот дил дүүрэг", rooms=2)
+        for i in range(20)
+    ]
+    negotiable_id = _insert(cur, "test://deal-negotiable-bad", 170, 50.0,
+                             district="Тохиролцоот дил дүүрэг", rooms=2)
+    cur.execute("UPDATE listings SET price_negotiable = true WHERE id = %s", (negotiable_id,))
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Тохиролцоот дил дүүрэг"]
+    assert {r["id"] for r in group_rows} == set(ids_real)
+    assert group_rows[0]["n_comparable"] == 20  # the negotiable listing isn't in the group either
+    assert float(group_rows[0]["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+
+
+def test_deal_percentages_drops_groups_below_min_comparable_size(cur) -> None:
+    # One short of MIN_COMPARABLE_GROUP_SIZE=20 -- the whole group (and every
+    # listing in it) must be dropped entirely, not scored off a thin sample.
+    _insert_many(cur, "test://deal-thin", 19, 150_000_000, 50.0,
+                 district="Нимгэн дил дүүрэг", rooms=2)
+
+    rows = deal_percentages(cur)
+    assert all(r["district"] != "Нимгэн дил дүүрэг" for r in rows)
+
+
+def test_deal_percentages_excludes_open_ended_rooms_bucket(cur) -> None:
+    # Unegui's own category caps at "5+ өрөө" -- rooms=5 here really means
+    # "5 or more", so it must not be treated as a comparable group at all
+    # (verified against the real DB: 6-room duplexes tagged rooms=5 showed
+    # up as false ~49% "deals" against a median skewed by smaller true
+    # 5-room units in the same bucket).
+    _insert(cur, "test://deal-5plus-a", 600_000_000, 200.0,
+            district="Таван өрөө дүүрэг", rooms=5)
+    _insert(cur, "test://deal-5plus-b", 900_000_000, 250.0,
+            district="Таван өрөө дүүрэг", rooms=5)
+
+    rows = deal_percentages(cur)
+    assert all(r["district"] != "Таван өрөө дүүрэг" for r in rows)
+
+
+def test_deal_percentages_keeps_sale_and_rent_groups_separate(cur) -> None:
+    ids_sale = [
+        _insert(cur, f"test://deal-sale-{i}", 300_000_000, 50.0,
+                district="Хосгүй дил дүүрэг", rooms=2, listing_type="sale")
+        for i in range(20)
+    ]
+    ids_rent = [
+        _insert(cur, f"test://deal-rent-{i}", 1_500_000, 50.0, listing_type="rent",
+                property_type="Орон сууц түрээслүүлнэ",
+                district="Хосгүй дил дүүрэг", rooms=2)
+        for i in range(20)
+    ]
+
+    rows = deal_percentages(cur)
+    sale_rows = [r for r in rows if r["id"] in ids_sale]
+    rent_rows = [r for r in rows if r["id"] in ids_rent]
+    # each listing_type forms its own (district, rooms, listing_type) group
+    assert len(sale_rows) == 20 and len(rent_rows) == 20
+    assert sale_rows[0]["n_comparable"] == 20
+    assert rent_rows[0]["n_comparable"] == 20
+    assert all(float(r["deal_pct"]) == 0.0 for r in sale_rows)
+    assert all(float(r["deal_pct"]) == 0.0 for r in rent_rows)
+
+
+def test_deal_percentages_excludes_auto_resolved_duplicate_from_group_median(cur) -> None:
+    _insert_many(cur, "test://deal-dup-filler", 18, 150_000_000, 50.0,
+                 district="Дил давхар дүүрэг", rooms=2)
+    id_a = _insert(cur, "test://deal-dup-a", 100_000_000, 50.0, district="Дил давхар дүүрэг", rooms=2)
+    id_b = _insert(cur, "test://deal-dup-b", 300_000_000, 50.0, district="Дил давхар дүүрэг", rooms=2)
+    record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.95)])  # auto-resolve tier
+    id_c = _insert(cur, "test://deal-dup-c", 100_000_000, 50.0, district="Дил давхар дүүрэг", rooms=2)
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Дил давхар дүүрэг"]
+    # 18 filler + one of dup-a/dup-b (the other superseded) + dup-c = 20
+    assert len(group_rows) == 20
+    assert group_rows[0]["n_comparable"] == 20
+
+
+def test_deal_percentages_real_data_smoke_check(cur) -> None:
+    rows = deal_percentages(cur)
+    assert len(rows) > 0
+    for row in rows:
+        assert row["rooms"] is not None
+        assert row["rooms"] != _OPEN_ENDED_ROOMS
+        assert row["area_sqm"] >= _MIN_AREA_SQM_FOR_DEAL
+        assert row["n_comparable"] >= MIN_COMPARABLE_GROUP_SIZE
+        # deal_status must always agree with what classify_deal() computes
+        # independently from the same deal_pct -- SQL and Python must never drift.
+        assert row["deal_status"] == classify_deal(float(row["deal_pct"]))
+        assert (row["deal_reason"] is not None) == (row["deal_status"] == "needs_review")
+    # sorted best-deal-first
+    deal_pcts = [float(r["deal_pct"]) for r in rows]
+    assert deal_pcts == sorted(deal_pcts, reverse=True)
+
+
+def _make_negotiable(cur, district, rooms, *, area_sqm=60.0, listing_type="sale",
+                      property_type="Орон сууц зарна", url="test://negotiable") -> int:
+    listing_id = _insert(cur, url, 170, area_sqm, district=district, rooms=rooms,
+                          listing_type=listing_type, property_type=property_type)
+    cur.execute("UPDATE listings SET price_negotiable = true WHERE id = %s", (listing_id,))
+    return listing_id
+
+
+def _estimate_row(rows, listing_id):
+    return next(r for r in rows if r["id"] == listing_id)
+
+
+def test_estimate_negotiable_price_area_based(cur) -> None:
+    # 20 filler listings, uniform 150M @ 50 sqm -> price/sqm median = 3M,
+    # price median = 150M. Negotiable listing has its OWN area (60 sqm,
+    # different from filler's 50) so area-based and group-median-price
+    # fallback would disagree -- confirms which method actually ran.
+    _insert_many(cur, "test://est-area-filler", 20, 150_000_000, 50.0,
+                 district="Тохирсон дил дүүрэг", rooms=2)
+    negotiable_id = _make_negotiable(cur, "Тохирсон дил дүүрэг", 2, area_sqm=60.0,
+                                      url="test://est-area-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    row = _estimate_row(rows, negotiable_id)
+
+    assert row["estimate_basis"] == "area_based"
+    assert float(row["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+    assert float(row["estimated_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+    # 3,000,000 * 60 sqm = 180,000,000 -- NOT the filler's own 150M price
+    assert float(row["estimated_price"]) == pytest.approx(180_000_000.0, abs=0.01)
+    assert row["n_comparable"] == 20
+
+
+def test_estimate_negotiable_price_falls_back_when_area_missing(cur) -> None:
+    _insert_many(cur, "test://est-noarea-filler", 20, 150_000_000, 50.0,
+                 district="Талбайгүй тохирсон дүүрэг", rooms=2)
+    negotiable_id = _make_negotiable(cur, "Талбайгүй тохирсон дүүрэг", 2, area_sqm=None,
+                                      url="test://est-noarea-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    row = _estimate_row(rows, negotiable_id)
+
+    assert row["estimate_basis"] == "group_median_price"
+    assert row["estimated_price_per_sqm"] is None  # never derived from an untrusted area
+    assert float(row["estimated_price"]) == pytest.approx(150_000_000.0, abs=0.01)
+
+
+def test_estimate_negotiable_price_falls_back_when_area_implausible(cur) -> None:
+    # area_sqm=2 fails the same _MIN_AREA_SQM_FOR_DEAL floor deal_percentages() uses.
+    _insert_many(cur, "test://est-tinyarea-filler", 20, 150_000_000, 50.0,
+                 district="Жижиг тохирсон дүүрэг", rooms=2)
+    negotiable_id = _make_negotiable(cur, "Жижиг тохирсон дүүрэг", 2, area_sqm=2.0,
+                                      url="test://est-tinyarea-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    row = _estimate_row(rows, negotiable_id)
+
+    assert row["estimate_basis"] == "group_median_price"
+    assert row["estimated_price_per_sqm"] is None
+    assert float(row["estimated_price"]) == pytest.approx(150_000_000.0, abs=0.01)
+
+
+def test_estimate_negotiable_price_excludes_open_ended_rooms(cur) -> None:
+    _insert_many(cur, "test://est-5plus-filler", 20, 600_000_000, 200.0,
+                 district="Таван өрөө тохирсон дүүрэг", rooms=5)
+    _make_negotiable(cur, "Таван өрөө тохирсон дүүрэг", 5, url="test://est-5plus-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    assert all(r["district"] != "Таван өрөө тохирсон дүүрэг" for r in rows)
+
+
+def test_estimate_negotiable_price_excludes_listings_without_rooms(cur) -> None:
+    _insert_many(cur, "test://est-norooms-filler", 20, 100_000_000, 50.0,
+                 district="Тохирсон тасархай дүүрэг", property_type="Оффис зарна", rooms=None)
+    _make_negotiable(cur, "Тохирсон тасархай дүүрэг", None,
+                      property_type="Оффис зарна", url="test://est-norooms-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    assert all(r["district"] != "Тохирсон тасархай дүүрэг" for r in rows)
+
+
+def test_estimate_negotiable_price_no_estimate_below_min_group_size(cur) -> None:
+    # Only 19 real comparables -- one short of MIN_COMPARABLE_GROUP_SIZE.
+    _insert_many(cur, "test://est-thin-filler", 19, 150_000_000, 50.0,
+                 district="Нимгэн тохирсон дүүрэг", rooms=2)
+    _make_negotiable(cur, "Нимгэн тохирсон дүүрэг", 2, url="test://est-thin-negotiable")
+
+    rows = estimate_negotiable_price(cur)
+    assert all(r["district"] != "Нимгэн тохирсон дүүрэг" for r in rows)
+
+
+def test_estimate_negotiable_price_real_data_smoke_check(cur) -> None:
+    rows = estimate_negotiable_price(cur)
+    assert len(rows) > 0
+    for row in rows:
+        assert row["rooms"] is not None
+        assert row["rooms"] != _OPEN_ENDED_ROOMS
+        assert row["n_comparable"] >= MIN_COMPARABLE_GROUP_SIZE
+        assert row["estimate_basis"] in ("area_based", "group_median_price")
+        assert float(row["estimated_price"]) > 0
+        if row["estimate_basis"] == "area_based":
+            assert row["estimated_price_per_sqm"] is not None
+        else:
+            assert row["estimated_price_per_sqm"] is None
