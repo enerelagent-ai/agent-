@@ -31,6 +31,7 @@ export interface Listing {
   title: string;
   description: string | null;
   price: number | null;
+  price_negotiable: boolean | null;
   area_sqm: number | null;
   price_per_sqm: number | null;
   rooms: number | null;
@@ -45,6 +46,19 @@ export interface Listing {
   scraped_at: string;
   created_at: string;
   updated_at: string;
+
+  // From analytics.deal_percentages() — null when not applicable (see that
+  // function's docstring: non-apartments, thin comparable groups, etc.)
+  deal_pct: number | null;
+  deal_status: "top_deal" | "needs_review" | "not_notable" | null;
+  deal_reason: string | null;
+  n_comparable: number | null;
+
+  // From analytics.estimate_negotiable_price() — only ever set alongside
+  // price_negotiable=true, never alongside a deal_pct.
+  estimated_price: number | null;
+  estimated_price_per_sqm: number | null;
+  estimate_basis: "area_based" | "group_median_price" | null;
 }
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -76,6 +90,7 @@ export interface ListingFilters {
   propertyType?: string;
   minPrice?: number;
   maxPrice?: number;
+  sortBy?: "recent" | "deal_pct";
   limit?: number;
 }
 
@@ -87,6 +102,7 @@ export function getFilteredListings(filters: ListingFilters = {}): Promise<Listi
   if (filters.propertyType) params.set("property_type", filters.propertyType);
   if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
+  if (filters.sortBy) params.set("sort_by", filters.sortBy);
   params.set("limit", String(filters.limit ?? 6));
   return getJSON(`/dashboard/listings?${params.toString()}`);
 }
