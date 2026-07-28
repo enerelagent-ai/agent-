@@ -1,11 +1,15 @@
-from analytics.calculations import investment_summary_by_district_conn
+from analytics.calculations import (
+    investment_summary_by_district_conn,
+    listing_counts_by_property_type_conn,
+    price_trend_conn,
+)
 from analytics.matches import superseded_listing_ids_conn
 from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession
 from app.config import settings
 from app.models.listing import Listing
-from app.schemas.dashboard import DistrictInvestmentSummary
+from app.schemas.dashboard import DistrictInvestmentSummary, ListingTypeCount, PriceTrendPoint
 from app.schemas.listing import ListingOut
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -14,6 +18,24 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/investment-summary", response_model=list[DistrictInvestmentSummary])
 def investment_summary() -> list[dict]:
     return investment_summary_by_district_conn(settings.database_url)
+
+
+@router.get("/price-trend", response_model=list[PriceTrendPoint])
+def price_trend(
+    listing_type: str = Query("sale"),
+    property_type: str = Query("Орон сууц зарна"),
+) -> list[dict]:
+    """Overall price trend for one (listing_type, property_type) slice, one
+    point per price_history snapshot. Defaults to sale-side apartments — see
+    analytics.calculations.price_trend for why. Only ever has as many points
+    as snapshot_market_prices() has been run; today that's a single point.
+    """
+    return price_trend_conn(settings.database_url, listing_type, property_type)
+
+
+@router.get("/listing-counts-by-type", response_model=list[ListingTypeCount])
+def listing_counts_by_type() -> list[dict]:
+    return listing_counts_by_property_type_conn(settings.database_url)
 
 
 @router.get("/listings", response_model=list[ListingOut])
