@@ -3,12 +3,17 @@ Postgres inside a transaction that is always rolled back. The `cur` fixture
 (conftest.py) sees real committed data too, but synthetic districts below
 use names that cannot collide with real Ulaanbaatar district data."""
 
+from datetime import date
+
 import pytest
 
 from analytics.calculations import (
     average_price_by_group,
     investment_summary_by_district,
+    listing_counts_by_property_type,
+    price_trend,
     rental_yield_by_district_rooms,
+    snapshot_market_prices,
     yield_category_coverage,
 )
 from analytics.matches import record_matches
@@ -141,9 +146,11 @@ def test_rental_yield_matches_by_district_and_rooms_not_by_category_average(cur)
     # 1-room: 1M/mo * 12 = 12M annual / 100M sale = 12%, payback 100M/12M = 8.3y
     assert float(one_room["gross_rental_yield_pct"]) == 12.0
     assert float(one_room["payback_years"]) == 8.3
+    assert float(one_room["avg_sale_price_per_sqm"]) == pytest.approx(100_000_000 / 30, abs=0.01)
     # 3-room: 2M/mo * 12 = 24M annual / 400M sale = 6% — must not be blended
     # with the 1-room pair into a single category-level average.
     assert float(three_room["gross_rental_yield_pct"]) == 6.0
+    assert float(three_room["avg_sale_price_per_sqm"]) == pytest.approx(400_000_000 / 80, abs=0.01)
 
 
 def test_rental_yield_requires_both_sale_and_rent_present(cur) -> None:
@@ -229,6 +236,8 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
 
     # weighted avg price: (100M*15 + 300M*5) / 20 = 150,000,000
     assert float(row["avg_sale_price"]) == pytest.approx(150_000_000.0, abs=0.01)
+    # weighted price/sqm: (100M/30 * 15 + 300M/60 * 5) / 20 = 3,750,000
+    assert float(row["avg_price_per_sqm"]) == pytest.approx(3_750_000.0, abs=0.01)
     # weighted annual rent: (1M*12*10 + 2M*12*10) / 20 = 18,000,000; yield = 18M/150M*100 = 12%
     assert float(row["gross_rental_yield_pct"]) == pytest.approx(12.0, abs=0.01)
     assert row["roi_pct"] == row["gross_rental_yield_pct"]
@@ -283,3 +292,130 @@ def test_investment_summary_real_data_smoke_check(cur) -> None:
         assert row["roi_pct"] == row["gross_rental_yield_pct"]
         assert 0.0 <= row["investment_score"] <= 100.0
         assert row["n_sale"] > 0 and row["n_rent"] > 0
+
+
+# A clearly-fake date, distinct from any date a real snapshot run would use
+# (today), so these tests never collide with the real price_history rows.
+_TEST_SNAPSHOT_DATE = date(2020, 1, 1)
+
+
+def _price_history_row(cur, *, listing_type, property_type, district, snapshot_date=_TEST_SNAPSHOT_DATE):
+    cur.execute(
+        "SELECT * FROM price_history WHERE snapshot_date = %s AND listing_type = %s"
+        " AND property_type = %s AND district = %s",
+        (snapshot_date, listing_type, property_type, district),
+    )
+    return cur.fetchone()
+
+
+def _insert_price_history(cur, *, district, n_listings, avg_price, avg_price_per_sqm=None,
+                           listing_type="sale", property_type="Орон сууц зарна",
+                           snapshot_date=_TEST_SNAPSHOT_DATE) -> None:
+    cur.execute(
+        "INSERT INTO price_history (snapshot_date, listing_type, property_type,"
+        " district, n_listings, avg_price, avg_price_per_sqm)"
+        " VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (snapshot_date, listing_type, property_type, district, n_listings, avg_price, avg_price_per_sqm),
+    )
+
+
+def test_snapshot_market_prices_inserts_a_row_per_group(cur) -> None:
+    _insert(cur, "test://snap-a", 100_000_000, 50.0, district="Түүх дүүрэг")
+    _insert(cur, "test://snap-b", 200_000_000, 50.0, district="Түүх дүүрэг")
+
+    n = snapshot_market_prices(cur, snapshot_date=_TEST_SNAPSHOT_DATE)
+    assert n > 0
+
+    row = _price_history_row(cur, listing_type="sale", property_type="Орон сууц зарна", district="Түүх дүүрэг")
+    assert row is not None
+    assert row["n_listings"] == 2
+    assert float(row["avg_price"]) == 150_000_000.0
+
+
+def test_snapshot_market_prices_upserts_on_rerun_same_day(cur) -> None:
+    _insert(cur, "test://snap-rerun-a", 100_000_000, 50.0, district="Дахин дүүрэг")
+    snapshot_market_prices(cur, snapshot_date=_TEST_SNAPSHOT_DATE)
+
+    # A second listing appears before the next run on the same day.
+    _insert(cur, "test://snap-rerun-b", 300_000_000, 50.0, district="Дахин дүүрэг")
+    snapshot_market_prices(cur, snapshot_date=_TEST_SNAPSHOT_DATE)
+
+    cur.execute(
+        "SELECT count(*) AS n FROM price_history WHERE snapshot_date = %s"
+        " AND listing_type = 'sale' AND property_type = 'Орон сууц зарна' AND district = 'Дахин дүүрэг'",
+        (_TEST_SNAPSHOT_DATE,),
+    )
+    assert cur.fetchone()["n"] == 1  # upserted, not duplicated
+
+    row = _price_history_row(cur, listing_type="sale", property_type="Орон сууц зарна", district="Дахин дүүрэг")
+    assert row["n_listings"] == 2
+    assert float(row["avg_price"]) == 200_000_000.0
+
+
+def test_price_trend_weights_districts_by_their_own_n_listings(cur) -> None:
+    """price_trend aggregates across ALL districts for a slice, so seed
+    price_history directly (not via snapshot_market_prices, which snapshots
+    the whole DB and would mix thousands of real apartment listings from
+    other districts into this same snapshot_date) to keep this isolated."""
+    _insert_price_history(cur, district="Тренд А", n_listings=3, avg_price=100_000_000)
+    _insert_price_history(cur, district="Тренд Б", n_listings=1, avg_price=500_000_000)
+
+    rows = price_trend(cur, listing_type="sale", property_type="Орон сууц зарна")
+    row = next(r for r in rows if r["snapshot_date"] == _TEST_SNAPSHOT_DATE)
+
+    # weighted avg: (100M*3 + 500M*1) / 4 = 200,000,000 -- must not be a
+    # naive (100M + 500M) / 2 = 300M average across the two districts.
+    assert float(row["avg_price"]) == 200_000_000.0
+    assert row["n_listings"] == 4
+
+
+def test_price_trend_real_data_smoke_check(cur) -> None:
+    """Once a real snapshot has been recorded, the default (sale, apartments)
+    slice must return at least one plausible point."""
+    rows = price_trend(cur)
+    assert len(rows) > 0
+    for row in rows:
+        assert row["avg_price"] is None or float(row["avg_price"]) > 0
+
+
+def _counts_by_key(cur):
+    return {(r["bucket"], r["listing_type"]): r["n"] for r in listing_counts_by_property_type(cur)}
+
+
+def test_listing_counts_by_property_type_buckets_and_counts_correctly(cur) -> None:
+    before = _counts_by_key(cur)
+
+    _insert(cur, "test://counts-apt-sale", 100_000_000, 50.0,
+            listing_type="sale", property_type="Орон сууц зарна", district="Тоолол дүүрэг")
+    _insert(cur, "test://counts-apt-rent", 1_000_000, 50.0,
+            listing_type="rent", property_type="Орон сууц түрээслүүлнэ", district="Тоолол дүүрэг")
+    _insert(cur, "test://counts-other-sale", 50_000_000, 50.0,
+            listing_type="sale", property_type="Тест бусад зарна", district="Тоолол дүүрэг")
+    _insert(cur, "test://counts-other-rent", 500_000, 50.0,
+            listing_type="rent", property_type="Тест бусад түрээслүүлнэ", district="Тоолол дүүрэг")
+
+    after = _counts_by_key(cur)
+    assert after[("apartments", "sale")] == before[("apartments", "sale")] + 1
+    assert after[("apartments", "rent")] == before[("apartments", "rent")] + 1
+    assert after[("other", "sale")] == before[("other", "sale")] + 1
+    assert after[("other", "rent")] == before[("other", "rent")] + 1
+
+
+def test_listing_counts_by_property_type_excludes_superseded_duplicate(cur) -> None:
+    before = _counts_by_key(cur)
+
+    id_a = _insert(cur, "test://counts-dup-a", 100_000_000, 50.0,
+                   property_type="Орон сууц зарна", district="Тоолол давхар дүүрэг")
+    id_b = _insert(cur, "test://counts-dup-b", 300_000_000, 50.0,
+                   property_type="Орон сууц зарна", district="Тоолол давхар дүүрэг")
+    record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.95)])  # auto-resolve tier
+
+    after = _counts_by_key(cur)
+    assert after[("apartments", "sale")] == before[("apartments", "sale")] + 1  # not +2
+
+
+def test_listing_counts_by_property_type_returns_exactly_four_rows(cur) -> None:
+    rows = listing_counts_by_property_type(cur)
+    keys = {(r["bucket"], r["listing_type"]) for r in rows}
+    assert keys == {("apartments", "sale"), ("apartments", "rent"), ("other", "sale"), ("other", "rent")}
+    assert all(r["n"] >= 0 for r in rows)

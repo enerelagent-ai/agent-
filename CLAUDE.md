@@ -76,4 +76,9 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
  Week 6: Dashboard
  Week 7: Integration & testing
  Week 8: Deploy + auth нэмэх
+
+Мэдэгдэж буй асуудлууд (Known issues)
+
+ - backend/app/api/routes/listings.py-ийн /listings endpoint: /dashboard/listings-д олдож засагдсан ижил pagination тогтворгүй байдлын алдаатай (2026-07-28) — ORDER BY зөвхөн scraped_at дээр байдаг тул (batch insert-ийн улмаас олон мөр ижил timestamp-тай) offset хуудаснууд давхцаж болно. Засвар: id-г нэмэлт tiebreaker болгож нэмэх (жишээ нь .order_by(Listing.scraped_at.desc(), Listing.id.desc())) — хараахан хийгдээгүй.
+ - matches.superseded_listing_ids(): дуудалт бүрт ~0.7 сек зарцуулдаг (дублей бүлэг тус бүрт тусдаа SQL query хийдэг дизайн). /dashboard/* route бүр энэ функцийг request бүрт дахин тооцоолдог (кэшлэдэггүй). Local single-user хэрэглээнд OK, гэхдээ бодит deployment/traffic-ийн өмнө (Week 8-ийн санаа зовнил) кэшлэх эсвэл урьдчилан тооцоолох (precompute/materialize) шаардлагатай.
  

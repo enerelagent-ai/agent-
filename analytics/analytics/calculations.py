@@ -4,6 +4,7 @@ Every query excludes matches.superseded_listing_ids() first, so an
 auto-resolved duplicate group is counted once, not once per repost.
 """
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -71,7 +72,8 @@ _RENTAL_YIELD_SQL = """
     WITH sale AS (
         SELECT district, property_subtype, rooms,
                count(*) AS n_sale,
-               round(avg(price)::numeric, 2) AS avg_sale_price
+               round(avg(price)::numeric, 2) AS avg_sale_price,
+               round(avg(price_per_sqm)::numeric, 2) AS avg_sale_price_per_sqm
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
           AND listing_type = 'sale' AND property_type = %(sale_label)s
@@ -90,7 +92,7 @@ _RENTAL_YIELD_SQL = """
     )
     SELECT
         s.district, s.property_subtype, s.rooms,
-        s.n_sale, s.avg_sale_price,
+        s.n_sale, s.avg_sale_price, s.avg_sale_price_per_sqm,
         r.n_rent, r.avg_rent_price,
         round(r.avg_rent_price * 12, 2) AS avg_annual_rent,
         round((r.avg_rent_price * 12 / s.avg_sale_price) * 100, 2) AS gross_rental_yield_pct,
@@ -117,6 +119,8 @@ def rental_yield_by_district_rooms(cur: psycopg2.extensions.cursor) -> list[dict
     plausible gross residential yield). payback_years is avg_sale_price
     divided by avg_annual_rent — years of rent to recoup the purchase price
     at current averages, ignoring financing, vacancy, and expenses.
+    avg_sale_price_per_sqm is the sale side's price/m² for the same bucket
+    (rent side has no equivalent field — nothing here needs it).
     """
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_RENTAL_YIELD_SQL, {
@@ -244,6 +248,52 @@ def yield_category_coverage_conn(dsn: str) -> list[dict[str, Any]]:
             return yield_category_coverage(cur)
 
 
+_LISTING_COUNTS_SQL = """
+    SELECT
+        listing_type,
+        CASE WHEN property_type = ANY(%(apartment_labels)s) THEN 'apartments' ELSE 'other' END AS bucket,
+        count(*) AS n
+    FROM listings
+    WHERE id != ALL(%(excluded_ids)s)
+      AND listing_type IS NOT NULL
+      AND property_type IS NOT NULL
+    GROUP BY listing_type, bucket
+"""
+
+
+def listing_counts_by_property_type(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """Sale vs rent listing counts, over canonical (non-superseded) listings,
+    for a donut/part-to-whole chart.
+
+    Simplified to two buckets (apartments vs everything else) rather than
+    all ~14 property_type categories: a donut reads as part-to-whole "at a
+    glance" only up to a handful of segments, and apartments alone are
+    already roughly half of all listings (the one category the rest of this
+    module treats specially too — see rental_yield_by_district_rooms).
+    Always returns exactly 4 rows (apartments x sale/rent, other x
+    sale/rent), zero-filled if a bucket has no listings, so the chart layer
+    never has to guess a missing combination.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_LISTING_COUNTS_SQL, {
+        "excluded_ids": excluded,
+        "apartment_labels": [_APARTMENT_SALE_LABEL, _APARTMENT_RENT_LABEL],
+    })
+    counts = {(row["listing_type"], row["bucket"]): row["n"] for row in cur.fetchall()}
+    return [
+        {"bucket": bucket, "listing_type": listing_type, "n": counts.get((listing_type, bucket), 0)}
+        for bucket in ("apartments", "other")
+        for listing_type in ("sale", "rent")
+    ]
+
+
+def listing_counts_by_property_type_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for listing_counts_by_property_type()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return listing_counts_by_property_type(cur)
+
+
 # Below this on either side, a district is dropped from the ranked table
 # entirely rather than scored: with too few listings, investment_score is
 # noise, not signal. Verified against the live DB — without this cutoff,
@@ -264,7 +314,9 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     listings shouldn't be pulled toward a thin 5+-room bucket's price level.
     gross_rental_yield_pct is then recomputed from those recombined
     district-level price/rent figures, not averaged from the per-bucket
-    yields directly, for the same reason.
+    yields directly, for the same reason. avg_price_per_sqm is recombined
+    the same way, weighted separately by n_sale_with_sqm so a bucket with no
+    area data doesn't distort it; None if no bucket in the district has any.
 
     roi_pct is the same number as gross_rental_yield_pct: annual rent over
     purchase price for an all-cash buyer. There's no financing, expense, or
@@ -287,13 +339,19 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     totals: dict[str, dict[str, Any]] = {}
     for b in buckets:
         t = totals.setdefault(b["district"], {
-            "n_sale": 0, "n_rent": 0,
+            "n_sale": 0, "n_rent": 0, "n_sale_with_sqm": 0,
             "sale_price_sum": Decimal(0), "annual_rent_sum": Decimal(0),
+            "sale_price_per_sqm_sum": Decimal(0),
         })
         t["n_sale"] += b["n_sale"]
         t["n_rent"] += b["n_rent"]
         t["sale_price_sum"] += b["avg_sale_price"] * b["n_sale"]
         t["annual_rent_sum"] += b["avg_annual_rent"] * b["n_rent"]
+        # avg_sale_price_per_sqm can be NULL for a bucket with no area data;
+        # weight its own sum/count separately so a gap doesn't skew avg_sale_price.
+        if b["avg_sale_price_per_sqm"] is not None:
+            t["sale_price_per_sqm_sum"] += b["avg_sale_price_per_sqm"] * b["n_sale"]
+            t["n_sale_with_sqm"] += b["n_sale"]
 
     rows = []
     for district, t in totals.items():
@@ -302,11 +360,15 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
         avg_sale_price = t["sale_price_sum"] / t["n_sale"]
         avg_annual_rent = t["annual_rent_sum"] / t["n_rent"]
         gross_yield_pct = (avg_annual_rent / avg_sale_price) * 100
+        avg_price_per_sqm = (
+            t["sale_price_per_sqm_sum"] / t["n_sale_with_sqm"] if t["n_sale_with_sqm"] else None
+        )
         rows.append({
             "district": district,
             "n_sale": t["n_sale"],
             "n_rent": t["n_rent"],
             "avg_sale_price": round(avg_sale_price, 2),
+            "avg_price_per_sqm": round(avg_price_per_sqm, 2) if avg_price_per_sqm is not None else None,
             "gross_rental_yield_pct": round(gross_yield_pct, 2),
             "roi_pct": round(gross_yield_pct, 2),
         })
@@ -334,3 +396,92 @@ def investment_summary_by_district_conn(dsn: str) -> list[dict[str, Any]]:
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return investment_summary_by_district(cur)
+
+
+_PRICE_HISTORY_UPSERT_SQL = """
+    INSERT INTO price_history (snapshot_date, listing_type, property_type,
+                                district, n_listings, avg_price, avg_price_per_sqm)
+    VALUES (%(snapshot_date)s, %(listing_type)s, %(property_type)s,
+            %(district)s, %(n_listings)s, %(avg_price)s, %(avg_price_per_sqm)s)
+    ON CONFLICT (snapshot_date, listing_type, property_type, district)
+    DO UPDATE SET n_listings = EXCLUDED.n_listings,
+                  avg_price = EXCLUDED.avg_price,
+                  avg_price_per_sqm = EXCLUDED.avg_price_per_sqm
+"""
+
+
+def snapshot_market_prices(cur: psycopg2.extensions.cursor, snapshot_date: date | None = None) -> int:
+    """Record one price_history row per (listing_type, property_type,
+    district) group for snapshot_date (default: today), so price trends can
+    be charted over time without waiting on a separate historical dataset.
+
+    Reuses average_price_by_group() rather than re-querying listings, so a
+    snapshot always reflects the exact same canonical (non-superseded) set
+    Week 5's other calculations use. Re-running on the same day upserts in
+    place (see migration 008's UNIQUE constraint) rather than accumulating
+    duplicate rows; running on a later day appends a new generation of rows,
+    which is what lets the trend grow richer over time with no code changes.
+    """
+    snapshot_date = snapshot_date or date.today()
+    groups = average_price_by_group(cur)
+    for row in groups:
+        cur.execute(_PRICE_HISTORY_UPSERT_SQL, {
+            "snapshot_date": snapshot_date,
+            "listing_type": row["listing_type"],
+            "property_type": row["property_type"],
+            "district": row["district"],
+            "n_listings": row["n_listings"],
+            "avg_price": row["avg_price"],
+            "avg_price_per_sqm": row["avg_price_per_sqm"],
+        })
+    return len(groups)
+
+
+def snapshot_market_prices_conn(dsn: str, snapshot_date: date | None = None) -> int:
+    """Connection-owning wrapper for snapshot_market_prices()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return snapshot_market_prices(cur, snapshot_date)
+
+
+_PRICE_TREND_SQL = """
+    SELECT
+        snapshot_date,
+        sum(n_listings) AS n_listings,
+        round((sum(avg_price * n_listings) / NULLIF(sum(n_listings), 0))::numeric, 2) AS avg_price,
+        round((sum(avg_price_per_sqm * n_listings) / NULLIF(sum(n_listings), 0))::numeric, 2) AS avg_price_per_sqm
+    FROM price_history
+    WHERE listing_type = %(listing_type)s AND property_type = %(property_type)s
+    GROUP BY snapshot_date
+    ORDER BY snapshot_date
+"""
+
+
+def price_trend(
+    cur: psycopg2.extensions.cursor,
+    listing_type: str = "sale",
+    property_type: str = "Орон сууц зарна",
+) -> list[dict[str, Any]]:
+    """Overall price trend for one (listing_type, property_type) slice: one
+    point per snapshot_date, with districts recombined by each snapshot's own
+    n_listings weight (mirroring investment_summary_by_district's approach)
+    rather than a naive average across districts.
+
+    Defaults to sale-side apartments — the closest analogue to the "average
+    price / m²" headline figure a market dashboard usually leads with, and
+    the category with the deepest, most reliable data (see
+    yield_category_coverage). With only one snapshot on record, this returns
+    a single point; it fills in as snapshot_market_prices() runs again over
+    time, with no change needed here.
+    """
+    cur.execute(_PRICE_TREND_SQL, {"listing_type": listing_type, "property_type": property_type})
+    return [dict(row) for row in cur.fetchall()]
+
+
+def price_trend_conn(
+    dsn: str, listing_type: str = "sale", property_type: str = "Орон сууц зарна"
+) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for price_trend()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return price_trend(cur, listing_type, property_type)
