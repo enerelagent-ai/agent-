@@ -25,6 +25,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 next-env.d.ts
+*.tsbuildinfo
 
 # Environment variables
 .env

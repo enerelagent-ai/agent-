@@ -1,54 +1,43 @@
-const API_URL = "http://localhost:8000";
+import { Sidebar } from "@/components/Sidebar";
+import { Topbar } from "@/components/Topbar";
+import { KpiRow } from "@/components/KpiRow";
+import { DistrictTable } from "@/components/DistrictTable";
+import { DonutChart } from "@/components/DonutChart";
+import { RecentListings } from "@/components/RecentListings";
+import { PriceTrendChart } from "@/components/PriceTrendChart";
+import {
+  getInvestmentSummary,
+  getListingCountsByType,
+  getPriceTrend,
+  getRecentListings,
+  summarizeInvestment,
+} from "@/lib/api";
 
-interface DistrictInvestmentSummary {
-  district: string;
-  avg_sale_price: number;
-  gross_rental_yield_pct: number;
-  roi_pct: number;
-}
+export default async function DashboardPage() {
+  const [investmentSummary, listingCounts, priceTrend, recentListings] = await Promise.all([
+    getInvestmentSummary(),
+    getListingCountsByType(),
+    getPriceTrend(),
+    getRecentListings(6),
+  ]);
 
-async function getInvestmentSummary(): Promise<DistrictInvestmentSummary[]> {
-  const res = await fetch(`${API_URL}/dashboard/investment-summary`, {
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new Error(`/dashboard/investment-summary returned ${res.status}`);
-  }
-  return res.json();
-}
-
-function formatPrice(value: number): string {
-  return new Intl.NumberFormat("en-US").format(Math.round(value));
-}
-
-export default async function Home() {
-  const rows = await getInvestmentSummary();
+  const totals = summarizeInvestment(investmentSummary);
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <h1>Дүүргийн хөрөнгө оруулалтын үзүүлэлт</h1>
-      <table style={{ borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={cellStyle}>Дүүрэг</th>
-            <th style={cellStyle}>Дундаж зарах үнэ</th>
-            <th style={cellStyle}>Түрээсийн өгөөж (%)</th>
-            <th style={cellStyle}>ROI (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.district}>
-              <td style={cellStyle}>{row.district}</td>
-              <td style={cellStyle}>{formatPrice(row.avg_sale_price)}</td>
-              <td style={cellStyle}>{row.gross_rental_yield_pct.toFixed(2)}</td>
-              <td style={cellStyle}>{row.roi_pct.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <Topbar title="Хяналтын самбар" />
+        <main className="flex flex-col gap-6 bg-surface-page p-8">
+          <KpiRow totals={totals} />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DonutChart data={listingCounts} />
+            <PriceTrendChart data={priceTrend} />
+          </div>
+          <DistrictTable rows={investmentSummary} />
+          <RecentListings listings={recentListings} />
+        </main>
+      </div>
+    </div>
   );
 }
-
-const cellStyle = { border: "1px solid #ccc", padding: "6px 12px" };

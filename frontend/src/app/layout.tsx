@@ -1,9 +1,14 @@
 import type { ReactNode } from "react";
+import "./globals.css";
+
+export const metadata = {
+  title: "Улаанбаатар Үл Хөдлөх Хөрөнгө — Аналитик платформ",
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="mn">
-      <body>{children}</body>
+      <body className="font-sans">{children}</body>
     </html>
   );
 }
