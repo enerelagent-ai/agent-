@@ -13,7 +13,7 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
-from scraper.dedup import (
+from analytics.dedup import (
     AUTO_RESOLVE_THRESHOLD,
     CANDIDATE_THRESHOLD,
     are_candidates,
@@ -21,7 +21,7 @@ from scraper.dedup import (
     pick_canonical,
     score_pair,
 )
-from scraper.save import normalize_dsn
+from analytics.db import normalize_dsn
 
 Match = tuple[int, int, float]
 
