@@ -25,6 +25,8 @@ class Listing(Base):
     price_per_sqm: Mapped[float | None] = mapped_column(Numeric(14, 2))
 
     rooms: Mapped[int | None] = mapped_column(SmallInteger)
+    listing_type: Mapped[str | None] = mapped_column(Text)
+    property_type: Mapped[str | None] = mapped_column(Text)
     district: Mapped[str | None] = mapped_column(Text)
     address: Mapped[str | None] = mapped_column(Text)
     lat: Mapped[float | None] = mapped_column(Double)

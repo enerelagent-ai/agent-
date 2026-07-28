@@ -107,6 +107,13 @@ def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
     return superseded
 
 
+def superseded_listing_ids_conn(dsn: str) -> set[int]:
+    """Connection-owning wrapper for superseded_listing_ids()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return superseded_listing_ids(cur)
+
+
 def possible_duplicate_pairs(cur: psycopg2.extensions.cursor) -> list[Match]:
     """Matches in the 'Possible Duplicate' review tier: recorded as
     candidates but not auto-resolved (see superseded_listing_ids). Intended

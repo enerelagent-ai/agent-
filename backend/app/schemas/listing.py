@@ -15,6 +15,8 @@ class ListingOut(BaseModel):
     area_sqm: float | None
     price_per_sqm: float | None
     rooms: int | None
+    listing_type: str | None
+    property_type: str | None
     district: str | None
     address: str | None
     lat: float | None

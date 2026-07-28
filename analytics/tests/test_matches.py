@@ -3,6 +3,7 @@ Postgres inside a transaction that is always rolled back (nothing persists).
 The `cur` fixture comes from conftest.py."""
 
 import json
+import os
 from pathlib import Path
 
 from analytics.matches import (
@@ -11,6 +12,7 @@ from analytics.matches import (
     possible_duplicate_pairs,
     record_matches,
     superseded_listing_ids,
+    superseded_listing_ids_conn,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "labeled_pairs.json"
@@ -101,3 +103,11 @@ def test_possible_duplicate_tier_is_excluded_from_superseded_ids(cur) -> None:
 
     review_queue = possible_duplicate_pairs(cur)
     assert any(m[:2] == pair_key for m in review_queue)
+
+
+def test_superseded_listing_ids_conn_matches_cursor_version(cur) -> None:
+    """The connection-owning wrapper opens a separate connection, so it can
+    only see already-committed data — this test makes no inserts of its own,
+    so both should see the same real, already-committed superseded set."""
+    dsn = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/postgres")
+    assert superseded_listing_ids_conn(dsn) == superseded_listing_ids(cur)
