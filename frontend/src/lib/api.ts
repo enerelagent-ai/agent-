@@ -71,6 +71,26 @@ export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
 }
 
+export interface ListingFilters {
+  district?: string;
+  propertyType?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  limit?: number;
+}
+
+// Client-side counterpart to getRecentListings, for the interactive filter
+// controls — same endpoint, just with whichever params are actually set.
+export function getFilteredListings(filters: ListingFilters = {}): Promise<Listing[]> {
+  const params = new URLSearchParams();
+  if (filters.district) params.set("district", filters.district);
+  if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
+  if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
+  params.set("limit", String(filters.limit ?? 6));
+  return getJSON(`/dashboard/listings?${params.toString()}`);
+}
+
 export interface InvestmentSummaryTotals {
   totalListings: number;
   districtCount: number;

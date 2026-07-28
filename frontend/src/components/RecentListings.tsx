@@ -1,5 +1,43 @@
-import type { Listing } from "@/lib/api";
+"use client";
+
+import { useState } from "react";
+import { getFilteredListings, type Listing } from "@/lib/api";
 import { formatMnt } from "@/lib/format";
+
+// Sale and rent listings use different raw property_type strings for the
+// same real-world category (see analytics.calculations' _PROPERTY_TYPE_GROUPS
+// and the Week 5 investigation) — exact values pulled from the live DB, not
+// guessed, since the backend filter is an exact string match.
+const SALE_PROPERTY_TYPES = [
+  { value: "Орон сууц зарна", label: "Орон сууц" },
+  { value: "Газар зарна", label: "Газар" },
+  { value: "АОС, хаус, зуслан, амралтын газар зарна", label: "АОС, хаус, зуслан, амралтын газар" },
+  { value: "Худалдаа, үйлчилгээний талбай зарна", label: "Худалдаа, үйлчилгээний талбай" },
+  { value: "Үйлдвэр, агуулах, oбьект зарна", label: "Үйлдвэр, агуулах, oбьект" },
+  { value: "Оффис зарна", label: "Оффис" },
+  { value: "Хашаа байшин зарна", label: "Хашаа байшин" },
+  { value: "Гараж, контейнер, з-сууц зарна", label: "Гараж, контейнер, з-сууц" },
+  { value: "Монгол гэр зарна", label: "Монгол гэр" },
+  { value: "00-н өрөө, В1, подвал зарна", label: "00-н өрөө, В1, подвал" },
+  { value: "Нийтийн байр, дотуур байр зарна", label: "Нийтийн байр, дотуур байр" },
+  { value: "Бусад зарна", label: "Бусад" },
+];
+
+const RENT_PROPERTY_TYPES = [
+  { value: "Орон сууц түрээслүүлнэ", label: "Орон сууц" },
+  { value: "Худалдаа, үйлчилгээний талбай түрээслүүлнэ", label: "Худалдаа, үйлчилгээний талбай" },
+  { value: "Оффис түрээслүүлнэ", label: "Оффис" },
+  { value: "Үйлдвэр, агуулах, oбьект түрээслүүлнэ", label: "Үйлдвэр, агуулах, oбьект" },
+  { value: "АОС, хаус, зуслан, амралтын газар түрээслүүлнэ", label: "АОС, хаус, зуслан, амралтын газар" },
+  { value: "Хоногоор байр, байшин түрээслүүлнэ", label: "Хоногоор байр, байшин" },
+  { value: "Нийтийн байр, дотуур байр түрээслүүлнэ", label: "Нийтийн байр, дотуур байр" },
+  { value: "00-н өрөө, В1, подвал түрээслүүлнэ", label: "00-н өрөө, В1, подвал" },
+  { value: "Гараж, контейнер, з-сууц түрээслүүлнэ", label: "Гараж, контейнер, з-сууц" },
+  { value: "Хашаа байшин, гэр түрээслүүлнэ", label: "Хашаа байшин, гэр" },
+  { value: "Hostel/Хостел", label: "Hostel/Хостел" },
+  { value: "Газар түрээслүүлнэ", label: "Газар" },
+  { value: "Хурлын өрөө, заал түрээслүүлнэ", label: "Хурлын өрөө, заал" },
+];
 
 function timeAgo(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
@@ -9,36 +47,147 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(diffHours / 24)} өдрийн өмнө`;
 }
 
-export function RecentListings({ listings }: { listings: Listing[] }) {
+interface RecentListingsProps {
+  initialListings: Listing[];
+  districts: string[];
+  onDistrictApplied?: (district: string | null) => void;
+}
+
+export function RecentListings({ initialListings, districts, onDistrictApplied }: RecentListingsProps) {
+  const [listings, setListings] = useState(initialListings);
+  const [district, setDistrict] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function applyFilters() {
+    setLoading(true);
+    try {
+      const rows = await getFilteredListings({
+        district: district || undefined,
+        propertyType: propertyType || undefined,
+        minPrice: minPrice ? Number(minPrice) : undefined,
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        limit: 6,
+      });
+      setListings(rows);
+      onDistrictApplied?.(district || null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-line-grid bg-surface-card p-5">
       <h2 className="mb-4 text-base font-semibold text-ink-primary">Шинэ зар мэдээлэл</h2>
-      <ul className="flex flex-col divide-y divide-line-grid">
-        {listings.map((listing) => (
-          <li key={listing.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-            <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-surface-page">
-              {listing.photo_urls[0] && (
-                // eslint-disable-next-line @next/next/no-img-element -- external CDN images, no next.config.js domain allowlist yet
-                <img src={listing.photo_urls[0]} alt="" className="h-full w-full object-cover" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <p className="truncate text-sm font-medium text-ink-primary">{listing.title}</p>
-                <span className="shrink-0 text-sm font-semibold text-ink-primary">
-                  {listing.price !== null ? formatMnt(listing.price) : "—"}
-                </span>
+
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Дүүрэг
+          <select
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            className="rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          >
+            <option value="">Бүгд</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Төрөл
+          <select
+            value={propertyType}
+            onChange={(e) => setPropertyType(e.target.value)}
+            className="rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          >
+            <option value="">Бүгд</option>
+            <optgroup label="Худалдах">
+              {SALE_PROPERTY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Түрээслэх">
+              {RENT_PROPERTY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Үнэ, min
+          <input
+            type="number"
+            inputMode="numeric"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            placeholder="0"
+            className="w-28 rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Үнэ, max
+          <input
+            type="number"
+            inputMode="numeric"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            placeholder="—"
+            className="w-28 rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={applyFilters}
+          disabled={loading}
+          className="rounded-md bg-series-1 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {loading ? "Шүүж байна…" : "Шүүх"}
+        </button>
+      </div>
+
+      {listings.length === 0 ? (
+        <p className="py-4 text-sm text-ink-muted">Энэ шүүлтээр зар олдсонгүй.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line-grid">
+          {listings.map((listing) => (
+            <li key={listing.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-surface-page">
+                {listing.photo_urls[0] && (
+                  // eslint-disable-next-line @next/next/no-img-element -- external CDN images, no next.config.js domain allowlist yet
+                  <img src={listing.photo_urls[0]} alt="" className="h-full w-full object-cover" />
+                )}
               </div>
-              <p className="truncate text-xs text-ink-secondary">
-                {listing.district ?? "Байршил тодорхойгүй"}
-                {listing.rooms ? ` · ${listing.rooms} өрөө` : ""}
-                {listing.area_sqm ? ` · ${listing.area_sqm} мкв` : ""}
-              </p>
-              <p className="text-xs text-ink-muted">{timeAgo(listing.scraped_at)}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-ink-primary">{listing.title}</p>
+                  <span className="shrink-0 text-sm font-semibold text-ink-primary">
+                    {listing.price !== null ? formatMnt(listing.price) : "—"}
+                  </span>
+                </div>
+                <p className="truncate text-xs text-ink-secondary">
+                  {listing.district ?? "Байршил тодорхойгүй"}
+                  {listing.rooms ? ` · ${listing.rooms} өрөө` : ""}
+                  {listing.area_sqm ? ` · ${listing.area_sqm} мкв` : ""}
+                </p>
+                <p className="text-xs text-ink-muted">{timeAgo(listing.scraped_at)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
