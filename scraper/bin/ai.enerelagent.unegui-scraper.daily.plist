@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.enerelagent.unegui-scraper.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/Axe/Documents/agent-/agent-/scraper/bin/run_daily_scrape.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Only fires at the scheduled time; does not run immediately on load. -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Catch-all diagnostics for failures before the script's own logging
+         takes over (e.g. the script itself failing to start). The script
+         writes its real per-run log under scraper/logs/daily_scrape_*.log. -->
+    <key>StandardOutPath</key>
+    <string>/Users/Axe/Documents/agent-/agent-/scraper/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Axe/Documents/agent-/agent-/scraper/logs/launchd.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/Axe/Documents/agent-/agent-/scraper</string>
+</dict>
+</plist>

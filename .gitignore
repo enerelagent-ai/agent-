@@ -48,3 +48,7 @@ Thumbs.db
 # Logs
 *.log
 scrape_log.txt
+
+# Scheduled scrape run artifacts
+scraper/logs/
+scraper/.daily_scrape.lock/
