@@ -4,6 +4,15 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { DistrictInvestmentSummary } from "@/lib/api";
 import { formatMnt, formatPercent } from "@/lib/format";
+import { InfoTooltip } from "./InfoTooltip";
+
+const METHODOLOGY_TEXT =
+  "Эдгээр нь тухайн дүүргийн ДУНДАЖ үзүүлэлт — аль нэг тодорхой байрны мэдээлэл биш. " +
+  "Давхардсан (дублей) зарыг хассаны дараа үлдсэн зарууд дээр үндэслэв. Худалдах ба " +
+  "түрээслэх тус бүрд дор хаяж 20 харьцуулах боломжтой зартай дүүргийг л харуулсан — " +
+  "цөөн тооны зартай дүүргийг санаатайгаар оруулаагүй, учир нь тийм тохиолдолд тоо " +
+  "буруу ойлголт өгч болзошгүй. Түрээсийн өгөөж = (жилийн дундаж түрээс ÷ дундаж " +
+  "зарах үнэ) × 100 — ижил дүүрэг, ижил өрөөний тоотой байруудын бүлгээр тооцсон.";
 
 type SortKey = "avg_sale_price" | "gross_rental_yield_pct" | "roi_pct";
 
@@ -44,8 +53,9 @@ export function DistrictTable({ rows, highlightedDistrict }: DistrictTableProps)
 
   return (
     <div className="rounded-xl border border-line-grid bg-surface-card p-5">
-      <h2 className="mb-4 text-base font-semibold text-ink-primary">
+      <h2 className="mb-4 flex items-center gap-1.5 text-base font-semibold text-ink-primary">
         Дүүргийн хөрөнгө оруулалтын үзүүлэлт
+        <InfoTooltip text={METHODOLOGY_TEXT} />
       </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

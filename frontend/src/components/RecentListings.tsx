@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { getFilteredListings, type Listing } from "@/lib/api";
 import { formatListingPrice, formatPercent } from "@/lib/format";
+import { ListingDetailModal } from "./ListingDetailModal";
 
 // Sale and rent listings use different raw property_type strings for the
 // same real-world category (see analytics.calculations' _PROPERTY_TYPE_GROUPS
@@ -63,6 +65,7 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
   async function runFetch(nextTab: Tab) {
     setLoading(true);
@@ -206,7 +209,16 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
           {listings.map((listing) => {
             const priceDisplay = formatListingPrice(listing);
             return (
-              <li key={listing.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <li
+                key={listing.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedListing(listing)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") setSelectedListing(listing);
+                }}
+                className="flex cursor-pointer gap-3 py-3 first:pt-0 last:pb-0 hover:bg-surface-page"
+              >
                 <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-surface-page">
                   {listing.photo_urls[0] && (
                     // eslint-disable-next-line @next/next/no-img-element -- external CDN images, no next.config.js domain allowlist yet
@@ -236,6 +248,15 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
                         ↓ {formatPercent(listing.deal_pct)} дундажаас хямд
                       </span>
                     )}
+                    <a
+                      href={listing.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="ml-auto flex items-center gap-1 text-xs text-series-1 hover:underline"
+                    >
+                      Эх сурвалж <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
                 </div>
               </li>
@@ -243,6 +264,8 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
           })}
         </ul>
       )}
+
+      <ListingDetailModal listing={selectedListing} onClose={() => setSelectedListing(null)} />
     </div>
   );
 }

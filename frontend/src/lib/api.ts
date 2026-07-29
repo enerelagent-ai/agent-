@@ -53,12 +53,23 @@ export interface Listing {
   deal_status: "top_deal" | "needs_review" | "not_notable" | null;
   deal_reason: string | null;
   n_comparable: number | null;
+  // Same source as deal_pct — the group's own median price/m² as an
+  // absolute number, for showing "your price/m² vs the group's".
+  group_median_price_per_sqm: number | null;
 
   // From analytics.estimate_negotiable_price() — only ever set alongside
   // price_negotiable=true, never alongside a deal_pct.
   estimated_price: number | null;
   estimated_price_per_sqm: number | null;
   estimate_basis: "area_based" | "group_median_price" | null;
+
+  // From analytics.rental_yield_by_district_rooms() (Week 5), matched by
+  // (district, rooms) regardless of this listing's own listing_type — null
+  // when there's no comparable rent-side data for that district+room-count.
+  rental_yield_pct: number | null;
+  rental_yield_payback_years: number | null;
+  rental_yield_n_sale: number | null;
+  rental_yield_n_rent: number | null;
 }
 
 async function getJSON<T>(path: string): Promise<T> {
