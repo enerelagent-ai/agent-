@@ -1,6 +1,7 @@
 import random
 import re
 import time
+from typing import Callable
 from urllib.parse import urljoin
 
 from playwright.sync_api import Browser
@@ -54,6 +55,8 @@ def collect_ad_urls(
     *,
     delay_range: tuple[float, float] = (2.0, 3.0),
     stop_after_stale: int = 3,
+    known_urls_checker: Callable[[list[str]], set[str]] | None = None,
+    stop_after_known: int = 3,
 ) -> list[str]:
     """Walk pages 1..max_pages of a category listing and collect unique ad detail URLs.
 
@@ -63,9 +66,20 @@ def collect_ad_urls(
     empty or repeated content, and categories differ in page count so a shared
     max_pages overshoots the smaller one. The threshold (not a single empty
     page) keeps one transient bot-challenge failure from truncating the walk.
+
+    known_urls_checker is a separate, optional early stop for incremental runs:
+    given a page's ad urls it returns the subset already present in the
+    database (at any time, not just recently — see save.known_urls). Once
+    stop_after_known consecutive pages are entirely already-known, the walk
+    stops — listings are newest-first, so running back-to-back into pages of
+    nothing but already-scraped ads means everything newer has been collected
+    already, and continuing would only spend requests re-discovering the past.
+    This is distinct from stop_after_stale, which detects the unrelated case
+    of running off the end of the category's real page count.
     """
     seen: dict[str, None] = {}
     stale_pages = 0
+    known_streak = 0
     for page_num in range(1, max_pages + 1):
         page_url = build_page_url(category_url, page_num)
         ad_urls = fetch_ad_urls_from_page(browser, page_url)
@@ -77,5 +91,12 @@ def collect_ad_urls(
         if stale_pages >= stop_after_stale:
             print(f"    stopping: {stop_after_stale} consecutive pages with no new ads")
             break
+        if known_urls_checker is not None and ad_urls:
+            already_known = known_urls_checker(ad_urls)
+            all_known = len(already_known) == len(ad_urls)
+            known_streak = known_streak + 1 if all_known else 0
+            if known_streak >= stop_after_known:
+                print(f"    stopping: {stop_after_known} consecutive pages already fully in the database")
+                break
         time.sleep(random.uniform(*delay_range))
     return list(seen)

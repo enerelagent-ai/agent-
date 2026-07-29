@@ -17,7 +17,12 @@ from analytics.matches import match_new_listings
 from scraper.browser import launch_browser
 from scraper.detail_page import fetch_detail_html, parse_detail_page
 from scraper.list_pages import collect_ad_urls
-from scraper.save import listing_row_from_parsed, recently_scraped_urls, upsert_listings
+from scraper.save import (
+    known_urls_conn,
+    listing_row_from_parsed,
+    recently_scraped_urls,
+    upsert_listings,
+)
 
 # Scope is intentionally limited to these two categories — see CLAUDE.md.
 # /new-buildings/ and any other category must NOT be scraped.
@@ -77,11 +82,18 @@ def run_pipeline(
     max_pages: int,
     ads_per_category: int | None,
     skip_recent_days: float = 0.0,
+    stop_after_known_pages: int = 0,
 ) -> int:
     """Collect ad URLs from both categories, scrape details, upsert into Postgres.
 
     skip_recent_days > 0 skips ads already scraped within that window, so an
     interrupted long run can resume without re-fetching finished pages.
+    stop_after_known_pages > 0 additionally cuts the list-page walk itself
+    short once that many consecutive pages are entirely already-known ads —
+    see list_pages.collect_ad_urls for why this is a separate mechanism from
+    skip_recent_days (that one skips detail-page fetches; this one skips
+    list-page requests, which matters for a daily incremental run where most
+    of a generous --pages ceiling would otherwise be re-walking old pages).
     Returns the number of error entries encountered (0 means a clean run).
     """
     all_errors: list[str] = []
@@ -89,7 +101,18 @@ def run_pipeline(
         browser = launch_browser(p)
         for name, category_url in CATEGORIES.items():
             print(f"{name}: collecting ad urls (pages 1-{max_pages})")
-            ad_urls = collect_ad_urls(browser, category_url, max_pages=max_pages)
+            known_checker = (
+                (lambda urls: known_urls_conn(dsn, urls))
+                if stop_after_known_pages > 0
+                else None
+            )
+            ad_urls = collect_ad_urls(
+                browser,
+                category_url,
+                max_pages=max_pages,
+                known_urls_checker=known_checker,
+                stop_after_known=stop_after_known_pages or 3,
+            )
             if skip_recent_days > 0:
                 skip = recently_scraped_urls(dsn, ad_urls, skip_recent_days)
                 ad_urls = [u for u in ad_urls if u not in skip]
@@ -128,6 +151,15 @@ def main() -> None:
         default=0.0,
         help="skip ads already scraped within this many days (resume support); 0 disables",
     )
+    parser.add_argument(
+        "--stop-after-known-pages",
+        type=int,
+        default=0,
+        help=(
+            "stop a category's list-page walk after this many consecutive pages are "
+            "entirely already-known ads (for daily incremental runs); 0 disables"
+        ),
+    )
     args = parser.parse_args()
 
     dsn = os.environ.get("DATABASE_URL")
@@ -138,6 +170,7 @@ def main() -> None:
         max_pages=args.pages,
         ads_per_category=args.ads_per_category,
         skip_recent_days=args.skip_recent_days,
+        stop_after_known_pages=args.stop_after_known_pages,
     )
     sys.exit(1 if error_count else 0)
 
