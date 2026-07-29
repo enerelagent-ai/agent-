@@ -176,6 +176,32 @@ def recently_scraped_urls(dsn: str, urls: list[str], days: float) -> set[str]:
     return result
 
 
+def known_urls(cur: psycopg2.extensions.cursor, urls: list[str]) -> set[str]:
+    """Subset of urls that already exist in listings, at any scraped_at.
+
+    Unlike recently_scraped (a time window, for the detail-page fetch skip),
+    this is plain existence — it powers list_pages.collect_ad_urls' early
+    stop for incremental runs, where walking further pages that are entirely
+    already-known ads wastes requests without finding anything new. Expects
+    a RealDictCursor (the convention for cursor-taking helpers here).
+    """
+    if not urls:
+        return set()
+    cur.execute("SELECT source_url FROM listings WHERE source_url = ANY(%s)", (urls,))
+    return {row["source_url"] for row in cur.fetchall()}
+
+
+def known_urls_conn(dsn: str, urls: list[str]) -> set[str]:
+    """Connection-owning wrapper around known_urls() for the pipeline."""
+    if not urls:
+        return set()
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            result = known_urls(cur, urls)
+    conn.close()
+    return result
+
+
 def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
     """Upsert mapped rows on (source, source_url); returns rows actually saved.
 

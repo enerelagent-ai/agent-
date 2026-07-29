@@ -2,6 +2,7 @@
 
 from scraper.save import (
     compute_dedup_hash,
+    known_urls,
     listing_row_from_parsed,
     normalize_dsn,
     parse_area_sqm,
@@ -113,6 +114,19 @@ def test_recently_scraped_filters_by_window(cur) -> None:
     urls = ["test://fresh", "test://stale", "test://unknown"]
     assert recently_scraped(cur, urls, days=1.0) == {"test://fresh"}
     assert recently_scraped(cur, [], days=1.0) == set()
+
+
+def test_known_urls_ignores_scraped_at_age(cur) -> None:
+    """Unlike recently_scraped, existence alone counts, however old the row."""
+    for url, age in (("test://known-fresh", "0 seconds"), ("test://known-old", "60 days")):
+        cur.execute(
+            """INSERT INTO listings (source, source_url, title, dedup_hash, scraped_at)
+               VALUES ('unegui', %s, 't', 'x', now() - %s::interval)""",
+            (url, age),
+        )
+    urls = ["test://known-fresh", "test://known-old", "test://known-unseen"]
+    assert known_urls(cur, urls) == {"test://known-fresh", "test://known-old"}
+    assert known_urls(cur, []) == set()
 
 
 def test_normalize_dsn() -> None:
