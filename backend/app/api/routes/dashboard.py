@@ -6,6 +6,7 @@ from analytics.calculations import (
     investment_summary_by_district_conn,
     listing_counts_by_property_type_conn,
     price_trend_conn,
+    rental_yield_by_district_rooms_conn,
 )
 from analytics.matches import superseded_listing_ids_conn
 from fastapi import APIRouter, Query
@@ -42,11 +43,14 @@ def listing_counts_by_type() -> list[dict]:
     return listing_counts_by_property_type_conn(settings.database_url)
 
 
-def _attach_deal_fields(listing: Listing, deal: dict | None, estimate: dict | None) -> Listing:
+def _attach_computed_fields(
+    listing: Listing, deal: dict | None, estimate: dict | None, yield_info: dict | None
+) -> Listing:
     listing.deal_pct = float(deal["deal_pct"]) if deal else None
     listing.deal_status = deal["deal_status"] if deal else None
     listing.deal_reason = deal["deal_reason"] if deal else None
     listing.n_comparable = deal["n_comparable"] if deal else None
+    listing.group_median_price_per_sqm = float(deal["group_median_price_per_sqm"]) if deal else None
     listing.estimated_price = float(estimate["estimated_price"]) if estimate else None
     listing.estimated_price_per_sqm = (
         float(estimate["estimated_price_per_sqm"])
@@ -54,6 +58,10 @@ def _attach_deal_fields(listing: Listing, deal: dict | None, estimate: dict | No
         else None
     )
     listing.estimate_basis = estimate["estimate_basis"] if estimate else None
+    listing.rental_yield_pct = float(yield_info["gross_rental_yield_pct"]) if yield_info else None
+    listing.rental_yield_payback_years = float(yield_info["payback_years"]) if yield_info else None
+    listing.rental_yield_n_sale = yield_info["n_sale"] if yield_info else None
+    listing.rental_yield_n_rent = yield_info["n_rent"] if yield_info else None
     return listing
 
 
@@ -110,10 +118,24 @@ def list_dashboard_listings(
     placeholder the source shows (e.g. "170 ₮ Үнэ тохирно" parses to a
     token value like 169); callers must not treat it as real, and should
     prefer estimated_price with clear "estimated, unconfirmed" labeling.
+
+    Every listing also carries group_median_price_per_sqm (the same group
+    baseline deal_pct was computed against, as an absolute number — for a
+    detail view showing "your price/m² vs the group's") and
+    rental_yield_pct/_payback_years/_n_sale/_n_rent, matched by
+    (district, rooms) against analytics.rental_yield_by_district_rooms()
+    (Week 5, unchanged) regardless of this listing's own listing_type,
+    since that bucket already reflects a sale/rent pairing. Both are None
+    when there's no matching bucket (non-apartments, or no comparable
+    rent-side data for that district+room-count) — callers should say so
+    plainly rather than guessing a number.
     """
     excluded_ids = superseded_listing_ids_conn(settings.database_url)
     deals_by_id = {d["id"]: d for d in deal_percentages_conn(settings.database_url)}
     estimates_by_id = {e["id"]: e for e in estimate_negotiable_price_conn(settings.database_url)}
+    yield_by_district_rooms = {
+        (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
+    }
 
     if sort_by == "deal_pct":
         # deal_percentages() already excludes superseded listings itself, so
@@ -158,6 +180,11 @@ def list_dashboard_listings(
         )
 
     return [
-        _attach_deal_fields(listing, deals_by_id.get(listing.id), estimates_by_id.get(listing.id))
+        _attach_computed_fields(
+            listing,
+            deals_by_id.get(listing.id),
+            estimates_by_id.get(listing.id),
+            yield_by_district_rooms.get((listing.district, listing.rooms)),
+        )
         for listing in ordered
     ]

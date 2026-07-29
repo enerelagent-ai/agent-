@@ -38,6 +38,10 @@ class ListingOut(BaseModel):
     deal_status: str | None = None
     deal_reason: str | None = None
     n_comparable: int | None = None
+    # Also from deal_percentages() — the group's own median price/m², so a
+    # detail view can show "your price/m² vs the group's" as absolute
+    # numbers, not just the derived deal_pct.
+    group_median_price_per_sqm: float | None = None
 
     # From analytics.estimate_negotiable_price() — only ever set for
     # price_negotiable listings that also clear that function's own
@@ -47,3 +51,15 @@ class ListingOut(BaseModel):
     estimated_price: float | None = None
     estimated_price_per_sqm: float | None = None
     estimate_basis: str | None = None
+
+    # From analytics.rental_yield_by_district_rooms() (Week 5, unchanged) —
+    # matched by (district, rooms) regardless of this listing's own
+    # listing_type, since the bucket already reflects a sale/rent pairing.
+    # None when no bucket matches (non-apartments, or no comparable rent-side
+    # data for this district+room-count) — a detail view should say so
+    # plainly rather than guessing. n_sale/n_rent are that bucket's sample
+    # sizes, for judging how much to trust the figure.
+    rental_yield_pct: float | None = None
+    rental_yield_payback_years: float | None = None
+    rental_yield_n_sale: int | None = None
+    rental_yield_n_rent: int | None = None
