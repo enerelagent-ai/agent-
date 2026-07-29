@@ -12,10 +12,11 @@ import time
 
 from playwright.sync_api import Browser, sync_playwright
 
+from analytics.matches import match_new_listings
+
 from scraper.browser import launch_browser
 from scraper.detail_page import fetch_detail_html, parse_detail_page
 from scraper.list_pages import collect_ad_urls
-from scraper.matches import match_new_listings
 from scraper.save import listing_row_from_parsed, recently_scraped_urls, upsert_listings
 
 # Scope is intentionally limited to these two categories — see CLAUDE.md.
