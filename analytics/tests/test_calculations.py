@@ -228,6 +228,24 @@ def test_rental_yield_excludes_auto_resolved_duplicate(cur) -> None:
     assert float(row["avg_sale_price"]) == 300_000_000.0
 
 
+def test_rental_yield_filters_to_requested_district(cur) -> None:
+    _insert(cur, "test://yield-filter-a-sale", 100_000_000, 30.0,
+            district="Өгөөж Шүүлт А", property_subtype="1 өрөө", rooms=1)
+    _insert(cur, "test://yield-filter-a-rent", 1_000_000, 30.0, listing_type="rent",
+            property_type="Орон сууц түрээслүүлнэ",
+            district="Өгөөж Шүүлт А", property_subtype="1 өрөө", rooms=1)
+    _insert(cur, "test://yield-filter-b-sale", 200_000_000, 30.0,
+            district="Өгөөж Шүүлт Б", property_subtype="1 өрөө", rooms=1)
+    _insert(cur, "test://yield-filter-b-rent", 2_000_000, 30.0, listing_type="rent",
+            property_type="Орон сууц түрээслүүлнэ",
+            district="Өгөөж Шүүлт Б", property_subtype="1 өрөө", rooms=1)
+
+    rows = rental_yield_by_district_rooms(cur, district="Өгөөж Шүүлт А")
+    assert len(rows) == 1
+    assert rows[0]["district"] == "Өгөөж Шүүлт А"
+    assert float(rows[0]["avg_sale_price"]) == 100_000_000.0
+
+
 def test_yield_category_coverage_apartments_calculable_others_are_not(cur) -> None:
     rows = yield_category_coverage(cur)
     by_category = {r["category"]: r for r in rows}
@@ -420,6 +438,19 @@ def test_price_trend_weights_districts_by_their_own_n_listings(cur) -> None:
     # naive (100M + 500M) / 2 = 300M average across the two districts.
     assert float(row["avg_price"]) == 200_000_000.0
     assert row["n_listings"] == 4
+
+
+def test_price_trend_filters_to_requested_district(cur) -> None:
+    _insert_price_history(cur, district="Тренд Шүүлт А", n_listings=3, avg_price=100_000_000)
+    _insert_price_history(cur, district="Тренд Шүүлт Б", n_listings=1, avg_price=500_000_000)
+
+    rows = price_trend(cur, listing_type="sale", property_type="Орон сууц зарна", district="Тренд Шүүлт А")
+    row = next(r for r in rows if r["snapshot_date"] == _TEST_SNAPSHOT_DATE)
+
+    # only Тренд Шүүлт А's own row -- Тренд Шүүлт Б's 500M point must not
+    # pull the weighted average toward it.
+    assert float(row["avg_price"]) == 100_000_000.0
+    assert row["n_listings"] == 3
 
 
 def test_price_trend_real_data_smoke_check(cur) -> None:
@@ -671,6 +702,18 @@ def test_deal_percentages_excludes_auto_resolved_duplicate_from_group_median(cur
     # 18 filler + one of dup-a/dup-b (the other superseded) + dup-c = 20
     assert len(group_rows) == 20
     assert group_rows[0]["n_comparable"] == 20
+
+
+def test_deal_percentages_filters_to_requested_district(cur) -> None:
+    _insert_many(cur, "test://deal-filter-a", 20, 150_000_000, 50.0,
+                 district="Дил Шүүлт А", rooms=2)
+    _insert_many(cur, "test://deal-filter-b", 20, 900_000_000, 50.0,
+                 district="Дил Шүүлт Б", rooms=2)
+
+    rows = deal_percentages(cur, district="Дил Шүүлт А")
+    assert len(rows) == 20
+    assert all(r["district"] == "Дил Шүүлт А" for r in rows)
+    assert all(float(r["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01) for r in rows)
 
 
 def test_deal_percentages_real_data_smoke_check(cur) -> None:
