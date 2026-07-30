@@ -1,4 +1,20 @@
-const API_URL = "http://localhost:8000";
+// Two different paths to the same backend, depending on where this code
+// actually runs:
+//
+// - In the browser (client components, e.g. RecentListings' filters):
+//   relative + same-origin, through src/app/api/backend/[...path]/route.ts,
+//   which forwards server-side (see that file for why -- Basic Auth doesn't
+//   travel cross-origin, so a direct browser->Render call would 401 with no
+//   prompt).
+// - On the server (page.tsx is an `async function` Server Component that
+//   fetches at request time): Node's fetch() can't resolve a relative URL
+//   at all -- there's no browser origin to resolve it against -- so this
+//   calls the backend directly instead, attaching the same Basic Auth
+//   header the proxy route attaches for the browser path.
+const BROWSER_API_URL = "/api/backend";
+const SERVER_API_URL = process.env.BACKEND_API_URL ?? "http://localhost:8000";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export interface DistrictInvestmentSummary {
   district: string;
@@ -73,7 +89,13 @@ export interface Listing {
 }
 
 async function getJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+  const isServer = typeof window === "undefined";
+  const headers: HeadersInit = {};
+  if (isServer && ADMIN_USERNAME && ADMIN_PASSWORD) {
+    headers["Authorization"] = `Basic ${btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)}`;
+  }
+  const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
+  const res = await fetch(url, { cache: "no-store", headers });
   if (!res.ok) {
     throw new Error(`${path} returned ${res.status}`);
   }
