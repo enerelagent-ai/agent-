@@ -1,0 +1,45 @@
+name: Daily scrape
+
+# Replaces the local launchd job (scraper/bin/run_daily_scrape.sh) for the
+# deployed setup -- same flags, same incremental-stop behavior, just running
+# on GitHub's infra instead of a machine that has to stay awake with
+# Postgres.app open (see CLAUDE.md's "Known issues" on that limitation).
+on:
+  schedule:
+    # 03:00 Ulaanbaatar time (UTC+8) = 19:00 UTC the previous day.
+    - cron: "0 19 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    # Generous ceiling for an unusually high-volume day; a normal
+    # incremental run stops itself early via --stop-after-known-pages and
+    # finishes in minutes.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scraper + analytics
+        working-directory: scraper
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright's browser
+        working-directory: scraper
+        run: playwright install --with-deps chromium
+
+      - name: Run incremental scrape
+        working-directory: scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python -m scraper.main \
+            --pages 60 \
+            --skip-recent-days 1 \
+            --stop-after-known-pages 3
