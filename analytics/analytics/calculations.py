@@ -14,6 +14,15 @@ import psycopg2.extras
 from analytics.matches import superseded_listing_ids
 from analytics.db import normalize_dsn
 
+# Below this, a comparable group is dropped entirely rather than reported —
+# same discipline as investment_summary_by_district's district-level cutoff
+# (_MIN_SAMPLE_SIZE, same value). Verified against the real DB: a small
+# aimag like Дорноговь has only a handful of listings in some groups, and
+# without this a caller asking about it would get a confident-looking
+# average built from 1-2 listings. Shared by average_price_by_group,
+# deal_percentages, and estimate_negotiable_price.
+MIN_COMPARABLE_GROUP_SIZE = 20
+
 # listing_type is included in the group-by even though only property_type
 # and district were asked for: sale and rent prices differ by ~100x for the
 # same property_type (see db/schema.sql's listing_type comment, and the
@@ -32,14 +41,26 @@ _GROUP_STATS_SQL = """
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
       AND district IS NOT NULL
+      AND (%(district)s IS NULL OR district = %(district)s)
     GROUP BY listing_type, property_type, district
+    HAVING count(*) >= %(min_group_size)s
     ORDER BY listing_type, property_type, n_listings DESC
 """
 
 
-def average_price_by_group(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+def average_price_by_group(
+    cur: psycopg2.extensions.cursor, district: str | None = None
+) -> list[dict[str, Any]]:
     """Average price and price/m² per (listing_type, property_type, district)
     group, over canonical listings only.
+
+    district: optional exact-match filter to a single district; None
+    (default) returns every district. Groups smaller than
+    MIN_COMPARABLE_GROUP_SIZE are dropped entirely, same guard used by
+    deal_percentages/estimate_negotiable_price — without it, a thin group
+    (a small aimag like Дорноговь, or a rare property_type/district
+    combination) would report a confident-looking average built from a
+    handful of listings instead of coming back as unavailable.
 
     avg_price_per_sqm is computed over the stored generated column, so it
     only reflects listings that have both price and area_sqm; n_listings vs
@@ -47,15 +68,19 @@ def average_price_by_group(cur: psycopg2.extensions.cursor) -> list[dict[str, An
     for land/object listings).
     """
     excluded = list(superseded_listing_ids(cur))
-    cur.execute(_GROUP_STATS_SQL, {"excluded_ids": excluded})
+    cur.execute(_GROUP_STATS_SQL, {
+        "excluded_ids": excluded,
+        "district": district,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+    })
     return [dict(row) for row in cur.fetchall()]
 
 
-def average_price_by_group_conn(dsn: str) -> list[dict[str, Any]]:
+def average_price_by_group_conn(dsn: str, district: str | None = None) -> list[dict[str, Any]]:
     """Connection-owning wrapper for average_price_by_group()."""
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            return average_price_by_group(cur)
+            return average_price_by_group(cur, district)
 
 
 # Unegui's breadcrumb text for the same real-world category differs between
@@ -522,13 +547,11 @@ _OPEN_ENDED_ROOMS = 5
 MIN_NOTABLE_DEAL_PCT = 10.0
 MAX_CONFIDENT_DEAL_PCT = 50.0
 
-# Below this, a comparable group is dropped entirely rather than scored —
-# same discipline as investment_summary_by_district's district-level cutoff,
-# just at the finer (district, rooms, listing_type) grain this module uses.
-# Verified against the real DB: without this, a 2-listing group could put a
-# listing in the confident "top_deal" tier off a "median" that's really just
-# one other listing's price — no more trustworthy than a coin flip.
-MIN_COMPARABLE_GROUP_SIZE = 20
+# MIN_COMPARABLE_GROUP_SIZE (module-level, above) applies here too, at the
+# finer (district, rooms, listing_type) grain this module uses: without it,
+# a 2-listing group could put a listing in the confident "top_deal" tier off
+# a "median" that's really just one other listing's price — no more
+# trustworthy than a coin flip.
 
 _MISCLASSIFICATION_REVIEW_REASON = "магадгүй ангилал буруу — шалгах шаардлагатай"
 

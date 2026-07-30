@@ -56,51 +56,71 @@ def _group(rows, *, listing_type, property_type, district):
     )
 
 
+def _insert_many(cur, url_prefix, n, price, area, **kwargs):
+    for i in range(n):
+        _insert(cur, f"{url_prefix}-{i}", price, area, **kwargs)
+
+
 def test_average_price_by_group_computes_correct_stats(cur) -> None:
+    # 18 filler @ 150M/50sqm (matches the a/b average) to clear
+    # MIN_COMPARABLE_GROUP_SIZE=20: 18*150M + 100M + 200M = 3000M / 20 = 150M.
+    _insert_many(cur, "test://calc-filler", 18, 150_000_000, 50.0, district="Тест дүүрэг")
     _insert(cur, "test://calc-a", 100_000_000, 50.0)
     _insert(cur, "test://calc-b", 200_000_000, 50.0)
     # different district -> must not leak into the group above
-    _insert(cur, "test://calc-c", 999_000_000, 100.0, district="Өөр дүүрэг")
+    _insert_many(cur, "test://calc-c", 20, 999_000_000, 100.0, district="Өөр дүүрэг")
 
     rows = average_price_by_group(cur)
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Тест дүүрэг")
-    assert group["n_listings"] == 2
+    assert group["n_listings"] == 20
     assert float(group["avg_price"]) == 150_000_000.0
-    # price_per_sqm per row: 100M/50=2M, 200M/50=4M -> avg 3M
+    # price_per_sqm per row: 18*3M + 2M + 4M = 60M -> avg 3M
     assert float(group["avg_price_per_sqm"]) == 3_000_000.0
-    assert group["n_with_price_per_sqm"] == 2
+    assert group["n_with_price_per_sqm"] == 20
 
 
 def test_sale_and_rent_are_never_blended_in_one_average(cur) -> None:
+    # 19 filler per side (same price as the lone real row) to clear
+    # MIN_COMPARABLE_GROUP_SIZE=20 without moving the average.
+    _insert_many(cur, "test://calc-sale-filler", 19, 300_000_000, 50.0,
+                 listing_type="sale", district="Холимог дүүрэг")
+    _insert_many(cur, "test://calc-rent-filler", 19, 1_500_000, 50.0,
+                 listing_type="rent", district="Холимог дүүрэг")
     _insert(cur, "test://calc-sale", 300_000_000, 50.0, listing_type="sale", district="Холимог дүүрэг")
     _insert(cur, "test://calc-rent", 1_500_000, 50.0, listing_type="rent", district="Холимог дүүрэг")
 
     rows = average_price_by_group(cur)
     sale_group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Холимог дүүрэг")
     rent_group = _group(rows, listing_type="rent", property_type="Орон сууц зарна", district="Холимог дүүрэг")
-    assert sale_group["n_listings"] == 1 and float(sale_group["avg_price"]) == 300_000_000.0
-    assert rent_group["n_listings"] == 1 and float(rent_group["avg_price"]) == 1_500_000.0
+    assert sale_group["n_listings"] == 20 and float(sale_group["avg_price"]) == 300_000_000.0
+    assert rent_group["n_listings"] == 20 and float(rent_group["avg_price"]) == 1_500_000.0
 
 
 def test_missing_area_excluded_from_price_per_sqm_but_not_from_average_price(cur) -> None:
+    # 19 filler, all with no area too, so n_with_price_per_sqm stays 0
+    # while clearing MIN_COMPARABLE_GROUP_SIZE=20.
+    _insert_many(cur, "test://calc-noarea-filler", 19, 50_000_000, None, district="Талбайгүй дүүрэг")
     _insert(cur, "test://calc-noarea", 50_000_000, None, district="Талбайгүй дүүрэг")
 
     rows = average_price_by_group(cur)
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Талбайгүй дүүрэг")
-    assert group["n_listings"] == 1
+    assert group["n_listings"] == 20
     assert float(group["avg_price"]) == 50_000_000.0
     assert group["avg_price_per_sqm"] is None
     assert group["n_with_price_per_sqm"] == 0
 
 
 def test_auto_resolved_duplicate_counted_once(cur) -> None:
+    # 19 filler at the canonical price so the post-dedup count (19 filler +
+    # id_b, id_a superseded) still clears MIN_COMPARABLE_GROUP_SIZE=20.
+    _insert_many(cur, "test://dupcalc-filler", 19, 999_000_000, 50.0, district="Дубль дүүрэг")
     id_a = _insert(cur, "test://dupcalc-a", 100_000_000, 50.0, district="Дубль дүүрэг")
     id_b = _insert(cur, "test://dupcalc-b", 999_000_000, 50.0, district="Дубль дүүрэг")
     record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.95)])  # auto-resolve tier
 
     rows = average_price_by_group(cur)
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Дубль дүүрэг")
-    assert group["n_listings"] == 1
+    assert group["n_listings"] == 20
     # tie on completeness/posted_at -> pick_canonical keeps the higher id (id_b)
     assert float(group["avg_price"]) == 999_000_000.0
 
@@ -108,14 +128,36 @@ def test_auto_resolved_duplicate_counted_once(cur) -> None:
 def test_possible_duplicate_tier_does_not_reduce_the_count(cur) -> None:
     """A 0.60-0.80 match must not remove either listing from the average —
     only >=0.80 auto-resolves (see dedup.AUTO_RESOLVE_THRESHOLD)."""
+    # 18 filler @ 150M (matches the a/b average) to clear MIN_COMPARABLE_GROUP_SIZE=20.
+    _insert_many(cur, "test://reviewcalc-filler", 18, 150_000_000, 50.0, district="Хянах дүүрэг")
     id_a = _insert(cur, "test://reviewcalc-a", 100_000_000, 50.0, district="Хянах дүүрэг")
     id_b = _insert(cur, "test://reviewcalc-b", 200_000_000, 50.0, district="Хянах дүүрэг")
     record_matches(cur, [(min(id_a, id_b), max(id_a, id_b), 0.65)])  # review tier
 
     rows = average_price_by_group(cur)
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Хянах дүүрэг")
-    assert group["n_listings"] == 2
+    assert group["n_listings"] == 20
     assert float(group["avg_price"]) == 150_000_000.0
+
+
+def test_average_price_by_group_drops_groups_below_min_comparable_size(cur) -> None:
+    """19 listings, one short of MIN_COMPARABLE_GROUP_SIZE=20 -- the whole
+    group must be absent, not reported off a thin sample (see the real-DB
+    Дорноговь case this guard exists for)."""
+    _insert_many(cur, "test://calc-thin", 19, 100_000_000, 50.0, district="Нимгэн тоолол дүүрэг")
+
+    rows = average_price_by_group(cur)
+    assert all(r["district"] != "Нимгэн тоолол дүүрэг" for r in rows)
+
+
+def test_average_price_by_group_filters_to_requested_district(cur) -> None:
+    _insert_many(cur, "test://calc-filter-a", 20, 100_000_000, 50.0, district="Шүүлт А")
+    _insert_many(cur, "test://calc-filter-b", 20, 999_000_000, 100.0, district="Шүүлт Б")
+
+    rows = average_price_by_group(cur, district="Шүүлт А")
+    assert len(rows) == 1
+    assert rows[0]["district"] == "Шүүлт А"
+    assert float(rows[0]["avg_price"]) == 100_000_000.0
 
 
 def test_real_data_smoke_check(cur) -> None:
@@ -127,6 +169,7 @@ def test_real_data_smoke_check(cur) -> None:
     assert 0 < total_grouped <= 36_666
     for row in rows:
         assert row["avg_price"] is None or float(row["avg_price"]) > 0
+        assert row["n_listings"] >= MIN_COMPARABLE_GROUP_SIZE
 
 
 def _yield_row(rows, *, district, rooms):
@@ -216,11 +259,6 @@ def test_yield_category_coverage_apartments_calculable_others_are_not(cur) -> No
 
 def _district_row(rows, district):
     return next(r for r in rows if r["district"] == district)
-
-
-def _insert_many(cur, url_prefix, n, price, area, **kwargs):
-    for i in range(n):
-        _insert(cur, f"{url_prefix}-{i}", price, area, **kwargs)
 
 
 def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district(cur) -> None:
@@ -327,6 +365,10 @@ def _insert_price_history(cur, *, district, n_listings, avg_price, avg_price_per
 
 
 def test_snapshot_market_prices_inserts_a_row_per_group(cur) -> None:
+    # snapshot_market_prices reuses average_price_by_group(), so this group
+    # needs >= MIN_COMPARABLE_GROUP_SIZE=20 to produce a row at all: 18
+    # filler @ 150M (matches the a/b average) + a/b = 3000M / 20 = 150M.
+    _insert_many(cur, "test://snap-filler", 18, 150_000_000, 50.0, district="Түүх дүүрэг")
     _insert(cur, "test://snap-a", 100_000_000, 50.0, district="Түүх дүүрэг")
     _insert(cur, "test://snap-b", 200_000_000, 50.0, district="Түүх дүүрэг")
 
@@ -335,16 +377,20 @@ def test_snapshot_market_prices_inserts_a_row_per_group(cur) -> None:
 
     row = _price_history_row(cur, listing_type="sale", property_type="Орон сууц зарна", district="Түүх дүүрэг")
     assert row is not None
-    assert row["n_listings"] == 2
+    assert row["n_listings"] == 20
     assert float(row["avg_price"]) == 150_000_000.0
 
 
 def test_snapshot_market_prices_upserts_on_rerun_same_day(cur) -> None:
+    # 19 filler @ 100M so the first run already clears
+    # MIN_COMPARABLE_GROUP_SIZE=20 (19 filler + "a", all @ 100M -> avg 100M).
+    _insert_many(cur, "test://snap-rerun-filler", 19, 100_000_000, 50.0, district="Дахин дүүрэг")
     _insert(cur, "test://snap-rerun-a", 100_000_000, 50.0, district="Дахин дүүрэг")
     snapshot_market_prices(cur, snapshot_date=_TEST_SNAPSHOT_DATE)
 
-    # A second listing appears before the next run on the same day.
-    _insert(cur, "test://snap-rerun-b", 300_000_000, 50.0, district="Дахин дүүрэг")
+    # A second listing appears before the next run on the same day:
+    # (20*100M + 205M) / 21 = 105,000,000 exactly.
+    _insert(cur, "test://snap-rerun-b", 205_000_000, 50.0, district="Дахин дүүрэг")
     snapshot_market_prices(cur, snapshot_date=_TEST_SNAPSHOT_DATE)
 
     cur.execute(
@@ -355,8 +401,8 @@ def test_snapshot_market_prices_upserts_on_rerun_same_day(cur) -> None:
     assert cur.fetchone()["n"] == 1  # upserted, not duplicated
 
     row = _price_history_row(cur, listing_type="sale", property_type="Орон сууц зарна", district="Дахин дүүрэг")
-    assert row["n_listings"] == 2
-    assert float(row["avg_price"]) == 200_000_000.0
+    assert row["n_listings"] == 21
+    assert float(row["avg_price"]) == 105_000_000.0
 
 
 def test_price_trend_weights_districts_by_their_own_n_listings(cur) -> None:
