@@ -14,6 +14,15 @@ import psycopg2.extras
 from analytics.matches import superseded_listing_ids
 from analytics.db import normalize_dsn
 
+# Below this, a comparable group is dropped entirely rather than reported —
+# same discipline as investment_summary_by_district's district-level cutoff
+# (_MIN_SAMPLE_SIZE, same value). Verified against the real DB: a small
+# aimag like Дорноговь has only a handful of listings in some groups, and
+# without this a caller asking about it would get a confident-looking
+# average built from 1-2 listings. Shared by average_price_by_group,
+# deal_percentages, and estimate_negotiable_price.
+MIN_COMPARABLE_GROUP_SIZE = 20
+
 # listing_type is included in the group-by even though only property_type
 # and district were asked for: sale and rent prices differ by ~100x for the
 # same property_type (see db/schema.sql's listing_type comment, and the
@@ -32,14 +41,26 @@ _GROUP_STATS_SQL = """
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
       AND district IS NOT NULL
+      AND (%(district)s IS NULL OR district = %(district)s)
     GROUP BY listing_type, property_type, district
+    HAVING count(*) >= %(min_group_size)s
     ORDER BY listing_type, property_type, n_listings DESC
 """
 
 
-def average_price_by_group(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+def average_price_by_group(
+    cur: psycopg2.extensions.cursor, district: str | None = None
+) -> list[dict[str, Any]]:
     """Average price and price/m² per (listing_type, property_type, district)
     group, over canonical listings only.
+
+    district: optional exact-match filter to a single district; None
+    (default) returns every district. Groups smaller than
+    MIN_COMPARABLE_GROUP_SIZE are dropped entirely, same guard used by
+    deal_percentages/estimate_negotiable_price — without it, a thin group
+    (a small aimag like Дорноговь, or a rare property_type/district
+    combination) would report a confident-looking average built from a
+    handful of listings instead of coming back as unavailable.
 
     avg_price_per_sqm is computed over the stored generated column, so it
     only reflects listings that have both price and area_sqm; n_listings vs
@@ -47,15 +68,19 @@ def average_price_by_group(cur: psycopg2.extensions.cursor) -> list[dict[str, An
     for land/object listings).
     """
     excluded = list(superseded_listing_ids(cur))
-    cur.execute(_GROUP_STATS_SQL, {"excluded_ids": excluded})
+    cur.execute(_GROUP_STATS_SQL, {
+        "excluded_ids": excluded,
+        "district": district,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+    })
     return [dict(row) for row in cur.fetchall()]
 
 
-def average_price_by_group_conn(dsn: str) -> list[dict[str, Any]]:
+def average_price_by_group_conn(dsn: str, district: str | None = None) -> list[dict[str, Any]]:
     """Connection-owning wrapper for average_price_by_group()."""
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            return average_price_by_group(cur)
+            return average_price_by_group(cur, district)
 
 
 # Unegui's breadcrumb text for the same real-world category differs between
@@ -78,6 +103,7 @@ _RENTAL_YIELD_SQL = """
         WHERE id != ALL(%(excluded_ids)s)
           AND listing_type = 'sale' AND property_type = %(sale_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     ),
     rent AS (
@@ -88,6 +114,7 @@ _RENTAL_YIELD_SQL = """
         WHERE id != ALL(%(excluded_ids)s)
           AND listing_type = 'rent' AND property_type = %(rent_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     )
     SELECT
@@ -106,10 +133,19 @@ _RENTAL_YIELD_SQL = """
 """
 
 
-def rental_yield_by_district_rooms(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+def rental_yield_by_district_rooms(
+    cur: psycopg2.extensions.cursor, district: str | None = None
+) -> list[dict[str, Any]]:
     """Gross rental yield for apartments, matched sale-to-rent by (district,
     property_subtype, rooms) instead of a blunt property_type-level average,
     so a studio in one district isn't blended with a 5-room unit in another.
+
+    district: optional exact-match filter to a single district; None
+    (default) returns every district with a granular sale/rent match. Only
+    narrows which (district, property_subtype, rooms) buckets are computed
+    and returned — a filtered district's own buckets are built from exactly
+    the same sale/rent rows as an unfiltered call, so filtering never
+    changes a bucket's own numbers, only which ones come back.
 
     Apartments are the only property_type with this granular breakdown
     (see the module-level comment above and yield_category_coverage()), so
@@ -127,15 +163,16 @@ def rental_yield_by_district_rooms(cur: psycopg2.extensions.cursor) -> list[dict
         "excluded_ids": excluded,
         "sale_label": _APARTMENT_SALE_LABEL,
         "rent_label": _APARTMENT_RENT_LABEL,
+        "district": district,
     })
     return [dict(row) for row in cur.fetchall()]
 
 
-def rental_yield_by_district_rooms_conn(dsn: str) -> list[dict[str, Any]]:
+def rental_yield_by_district_rooms_conn(dsn: str, district: str | None = None) -> list[dict[str, Any]]:
     """Connection-owning wrapper for rental_yield_by_district_rooms()."""
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            return rental_yield_by_district_rooms(cur)
+            return rental_yield_by_district_rooms(cur, district)
 
 
 # (canonical label, sale-side raw property_type, rent-side raw property_type)
@@ -452,6 +489,7 @@ _PRICE_TREND_SQL = """
         round((sum(avg_price_per_sqm * n_listings) / NULLIF(sum(n_listings), 0))::numeric, 2) AS avg_price_per_sqm
     FROM price_history
     WHERE listing_type = %(listing_type)s AND property_type = %(property_type)s
+      AND (%(district)s IS NULL OR district = %(district)s)
     GROUP BY snapshot_date
     ORDER BY snapshot_date
 """
@@ -461,11 +499,18 @@ def price_trend(
     cur: psycopg2.extensions.cursor,
     listing_type: str = "sale",
     property_type: str = "Орон сууц зарна",
+    district: str | None = None,
 ) -> list[dict[str, Any]]:
     """Overall price trend for one (listing_type, property_type) slice: one
     point per snapshot_date, with districts recombined by each snapshot's own
     n_listings weight (mirroring investment_summary_by_district's approach)
     rather than a naive average across districts.
+
+    district: optional exact-match filter to a single district; None
+    (default) recombines every district's own snapshot into one market-wide
+    point per snapshot_date, same as before. Filtered, each point is just
+    that one district's own price_history row for the date (the weighted
+    sum/count formula still applies cleanly with a single row).
 
     Defaults to sale-side apartments — the closest analogue to the "average
     price / m²" headline figure a market dashboard usually leads with, and
@@ -474,17 +519,24 @@ def price_trend(
     a single point; it fills in as snapshot_market_prices() runs again over
     time, with no change needed here.
     """
-    cur.execute(_PRICE_TREND_SQL, {"listing_type": listing_type, "property_type": property_type})
+    cur.execute(_PRICE_TREND_SQL, {
+        "listing_type": listing_type,
+        "property_type": property_type,
+        "district": district,
+    })
     return [dict(row) for row in cur.fetchall()]
 
 
 def price_trend_conn(
-    dsn: str, listing_type: str = "sale", property_type: str = "Орон сууц зарна"
+    dsn: str,
+    listing_type: str = "sale",
+    property_type: str = "Орон сууц зарна",
+    district: str | None = None,
 ) -> list[dict[str, Any]]:
     """Connection-owning wrapper for price_trend()."""
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            return price_trend(cur, listing_type, property_type)
+            return price_trend(cur, listing_type, property_type, district)
 
 
 # Below this, an apartment listing's area is more likely a scraper parsing
@@ -522,13 +574,11 @@ _OPEN_ENDED_ROOMS = 5
 MIN_NOTABLE_DEAL_PCT = 10.0
 MAX_CONFIDENT_DEAL_PCT = 50.0
 
-# Below this, a comparable group is dropped entirely rather than scored —
-# same discipline as investment_summary_by_district's district-level cutoff,
-# just at the finer (district, rooms, listing_type) grain this module uses.
-# Verified against the real DB: without this, a 2-listing group could put a
-# listing in the confident "top_deal" tier off a "median" that's really just
-# one other listing's price — no more trustworthy than a coin flip.
-MIN_COMPARABLE_GROUP_SIZE = 20
+# MIN_COMPARABLE_GROUP_SIZE (module-level, above) applies here too, at the
+# finer (district, rooms, listing_type) grain this module uses: without it,
+# a 2-listing group could put a listing in the confident "top_deal" tier off
+# a "median" that's really just one other listing's price — no more
+# trustworthy than a coin flip.
 
 _MISCLASSIFICATION_REVIEW_REASON = "магадгүй ангилал буруу — шалгах шаардлагатай"
 
@@ -543,6 +593,7 @@ _DEAL_PERCENTAGES_SQL = """
           AND area_sqm >= %(min_area_sqm)s
           AND rooms != %(open_ended_rooms)s
           AND price_negotiable IS NOT TRUE
+          AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, rooms, listing_type
         HAVING count(*) >= %(min_group_size)s
     ),
@@ -562,6 +613,7 @@ _DEAL_PERCENTAGES_SQL = """
           AND l.area_sqm >= %(min_area_sqm)s
           AND l.rooms != %(open_ended_rooms)s
           AND l.price_negotiable IS NOT TRUE
+          AND (%(district)s IS NULL OR l.district = %(district)s)
     )
     -- Classification runs on the already-rounded deal_pct (not the raw
     -- expression) so it always agrees with the value callers actually see —
@@ -595,12 +647,21 @@ def classify_deal(deal_pct: float) -> str:
     return "not_notable"
 
 
-def deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+def deal_percentages(
+    cur: psycopg2.extensions.cursor, district: str | None = None
+) -> list[dict[str, Any]]:
     """How each listing's price/m² compares to its comparable group's
     median: (district, rooms, listing_type) — sale and rent never blended
     (same ~100x gap as everywhere else in this module), and rooms is part of
     the group for the same reason rental_yield_by_district_rooms uses it:
     a studio and a 5-room unit in the same district aren't comparable.
+
+    district: optional exact-match filter to a single district; None
+    (default) returns deals across every district. Since each group is
+    already scoped to one district, filtering only narrows which groups get
+    computed and returned — a filtered group's own median is built from
+    exactly the same comparables as an unfiltered call, never a shrunken
+    baseline (see the whole-market-baseline note below).
 
     Only ever populated for listings with rooms set — apartments, the one
     property_type with room-count data (see yield_category_coverage: every
@@ -643,6 +704,7 @@ def deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_DEAL_PERCENTAGES_SQL, {
         "excluded_ids": excluded,
+        "district": district,
         "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
         "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
         "open_ended_rooms": _OPEN_ENDED_ROOMS,
@@ -655,11 +717,11 @@ def deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
     return rows
 
 
-def deal_percentages_conn(dsn: str) -> list[dict[str, Any]]:
+def deal_percentages_conn(dsn: str, district: str | None = None) -> list[dict[str, Any]]:
     """Connection-owning wrapper for deal_percentages()."""
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            return deal_percentages(cur)
+            return deal_percentages(cur, district)
 
 
 _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
