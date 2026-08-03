@@ -1,5 +1,7 @@
 import { Bell } from "lucide-react";
 
+import { LogoutButton } from "@/components/LogoutButton";
+
 export function Topbar({ title }: { title: string }) {
   return (
     <header className="flex items-center justify-between border-b border-line-grid bg-surface-card px-8 py-5">
@@ -12,6 +14,7 @@ export function Topbar({ title }: { title: string }) {
           </div>
           <span className="text-sm text-ink-secondary">Админ хэрэглэгч</span>
         </div>
+        <LogoutButton />
       </div>
     </header>
   );
