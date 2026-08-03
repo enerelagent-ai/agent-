@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -25,3 +25,25 @@ class ListingTypeCount(BaseModel):
     bucket: str
     listing_type: str
     n: int
+
+
+class TodaysOpportunity(BaseModel):
+    # No investment_score/roi_pct here on purpose -- see
+    # analytics.calculations.todays_opportunity's docstring. Only the
+    # individually-labeled real component metrics a reader can check
+    # against the district table themselves.
+    district: str
+    n_sale: int
+    n_rent: int
+    avg_sale_price: float
+    avg_price_per_sqm: float | None
+    gross_rental_yield_pct: float
+    # None when the district's own comparable groups (deal_percentages(),
+    # grouped by district+rooms+listing_type) are all below
+    # MIN_COMPARABLE_GROUP_SIZE -- a stricter, independent gate from the
+    # n_sale/n_rent above, so this can be unavailable even when those
+    # aren't. n_deals_analyzed is always present so a caller can tell "zero
+    # comparables" apart from "no field returned".
+    top_deal_pct: float | None
+    n_deals_analyzed: int
+    last_scraped_at: datetime
