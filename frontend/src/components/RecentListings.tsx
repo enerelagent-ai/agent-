@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { getFilteredListings, type Listing } from "@/lib/api";
-import { formatListingPrice, formatPercent } from "@/lib/format";
+import { formatListingPrice, formatPercent, timeAgo } from "@/lib/format";
 import { ListingDetailModal } from "./ListingDetailModal";
 
 // Sale and rent listings use different raw property_type strings for the
@@ -42,14 +42,6 @@ const RENT_PROPERTY_TYPES = [
 ];
 
 type Tab = "recent" | "deals";
-
-function timeAgo(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffHours < 1) return "саяхан";
-  if (diffHours < 24) return `${diffHours} цагийн өмнө`;
-  return `${Math.floor(diffHours / 24)} өдрийн өмнө`;
-}
 
 interface RecentListingsProps {
   initialListings: Listing[];

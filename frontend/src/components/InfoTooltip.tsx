@@ -5,7 +5,17 @@ import { Info } from "lucide-react";
 
 // Hover OR click opens it (click makes it usable on touch devices too);
 // click-away and Escape both close it.
-export function InfoTooltip({ text }: { text: string }) {
+export function InfoTooltip({
+  text,
+  triggerClassName = "text-ink-muted hover:text-ink-primary",
+}: {
+  text: string;
+  // Default assumes a light card background; pass an override (e.g.
+  // "text-white/50 hover:text-white") when placing this on a dark surface
+  // like TodaysOpportunityCard -- the popover panel itself stays the same
+  // light styling either way, since it floats above whatever it's on.
+  triggerClassName?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -16,7 +26,7 @@ export function InfoTooltip({ text }: { text: string }) {
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-4 w-4 items-center justify-center rounded-full text-ink-muted hover:text-ink-primary"
+        className={`flex h-4 w-4 items-center justify-center rounded-full ${triggerClassName}`}
       >
         <Info className="h-4 w-4" aria-hidden />
       </button>
