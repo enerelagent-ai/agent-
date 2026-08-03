@@ -21,9 +21,10 @@ from analytics.calculations import (
     price_trend,
     rental_yield_by_district_rooms,
     snapshot_market_prices,
+    todays_opportunity,
     yield_category_coverage,
 )
-from analytics.matches import record_matches
+from analytics.matches import record_matches, superseded_listing_ids
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,
@@ -837,3 +838,135 @@ def test_estimate_negotiable_price_real_data_smoke_check(cur) -> None:
             assert row["estimated_price_per_sqm"] is not None
         else:
             assert row["estimated_price_per_sqm"] is None
+
+
+# The four tests below start with DELETE FROM listings, unlike every other
+# test in this file (which only ever adds non-colliding synthetic
+# districts and leaves real committed data alone -- see the module
+# docstring). That's deliberate here: todays_opportunity() always picks
+# investment_summary_by_district()'s #1-ranked row, and which real district
+# that is depends on live data this suite doesn't control, so there's no
+# way to make a synthetic district win deterministically -- or to exercise
+# "no district qualifies yet" at all -- without a clean slate. Safe because
+# (a) the cur fixture's transaction is always rolled back, real data is
+# never actually lost, and (b) duplicate_matches has ON DELETE CASCADE on
+# both listing_id columns (db/migrations/004), so this can't hit a
+# foreign-key error against any real committed matches.
+def test_todays_opportunity_uses_investment_summarys_top_ranked_district(cur) -> None:
+    cur.execute("DELETE FROM listings")
+    _insert_many(cur, "test://opp-cheap-sale", 20, 100_000_000, 30.0,
+                 district="Боломж Хямд", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-cheap-rent", 20, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Боломж Хямд", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-costly-sale", 20, 500_000_000, 30.0,
+                 district="Боломж Vнэтэй", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-costly-rent", 20, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Боломж Vнэтэй", property_subtype="1 өрөө", rooms=1)
+
+    ranked = investment_summary_by_district(cur)
+    result = todays_opportunity(cur)
+
+    # cheaper AND higher-yield -- must rank #1 deterministically.
+    assert ranked[0]["district"] == "Боломж Хямд"
+    assert result is not None
+    assert result["district"] == "Боломж Хямд"
+    assert result["n_sale"] == 20
+    assert result["n_rent"] == 20
+    assert float(result["avg_sale_price"]) == 100_000_000.0
+    assert float(result["gross_rental_yield_pct"]) == 12.0
+    # investment_score itself must never be surfaced by this function --
+    # see its docstring on why (avoids reading as an "AI score").
+    assert "investment_score" not in result
+
+
+def test_todays_opportunity_computes_deal_share_for_the_chosen_district_only(cur) -> None:
+    cur.execute("DELETE FROM listings")
+    # Winning district (cheaper + higher-yield than the other one below).
+    # The yield-qualifying inventory is deliberately split across TWO room
+    # sizes (10+10 sale, 10+10 rent) rather than one bucket of 20+20: a
+    # single bucket of exactly 20 would itself independently qualify as its
+    # own deal_percentages() comparable group (MIN_COMPARABLE_GROUP_SIZE is
+    # also 20) and inflate n_deals_analyzed beyond the rooms=2 group this
+    # test actually means to isolate -- caught this as a real test failure,
+    # not just in review (60 rows counted instead of the intended 20).
+    # rooms=2 is the one dedicated deal-comparison group: 20 comparables,
+    # 15 at the group's own median price/sqm (not a deal), 5 well under it
+    # (top_deal): 5/20 = 25%.
+    _insert_many(cur, "test://opp-deal-sale-1r", 10, 100_000_000, 30.0,
+                 district="Боломж Дил", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-deal-rent-1r", 10, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Боломж Дил", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-deal-sale-3r", 10, 100_000_000, 30.0,
+                 district="Боломж Дил", property_subtype="3 өрөө", rooms=3)
+    _insert_many(cur, "test://opp-deal-rent-3r", 10, 1_000_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Боломж Дил", property_subtype="3 өрөө", rooms=3)
+    _insert_many(cur, "test://opp-deal-normal", 15, 150_000_000, 50.0,
+                 district="Боломж Дил", rooms=2)
+    _insert_many(cur, "test://opp-deal-cheap", 5, 100_000_000, 50.0,
+                 district="Боломж Дил", rooms=2)
+    # A second, non-winning district -- confirms the deal share reflects
+    # only the chosen district, not a blend across both.
+    _insert_many(cur, "test://opp-other-sale", 20, 900_000_000, 30.0,
+                 district="Боломж Өөр", property_subtype="1 өрөө", rooms=1)
+    _insert_many(cur, "test://opp-other-rent", 20, 500_000, 30.0, listing_type="rent",
+                 property_type="Орон сууц түрээслүүлнэ",
+                 district="Боломж Өөр", property_subtype="1 өрөө", rooms=1)
+
+    result = todays_opportunity(cur)
+
+    assert result["district"] == "Боломж Дил"
+    assert result["n_deals_analyzed"] == 20
+    assert result["top_deal_pct"] == pytest.approx(25.0, abs=0.1)
+
+
+def test_todays_opportunity_deal_share_is_none_when_no_comparable_groups(cur) -> None:
+    """A district can clear investment_summary_by_district's district-wide
+    n_sale/n_rent >= 20 gate while every individual (rooms, listing_type)
+    group deal_percentages() groups by stays under ITS OWN >= 20 gate --
+    here, the same 20 sales (and 20 rents) spread across 4 room sizes, 5
+    each. top_deal_pct must come back None (not 0, not a crash) rather
+    than implying a confident answer from zero comparables."""
+    cur.execute("DELETE FROM listings")
+    for rooms in (1, 2, 3, 4):
+        _insert_many(cur, f"test://opp-thin-sale-{rooms}", 5, 100_000_000, 30.0,
+                     district="Боломж Тасархай", property_subtype=f"{rooms} өрөө", rooms=rooms)
+        _insert_many(cur, f"test://opp-thin-rent-{rooms}", 5, 1_000_000, 30.0, listing_type="rent",
+                     property_type="Орон сууц түрээслүүлнэ",
+                     district="Боломж Тасархай", property_subtype=f"{rooms} өрөө", rooms=rooms)
+
+    ranked = investment_summary_by_district(cur)
+    assert ranked and ranked[0]["district"] == "Боломж Тасархай"
+    assert ranked[0]["n_sale"] == 20 and ranked[0]["n_rent"] == 20
+
+    result = todays_opportunity(cur)
+    assert result["district"] == "Боломж Тасархай"
+    assert result["n_deals_analyzed"] == 0
+    assert result["top_deal_pct"] is None
+
+
+def test_todays_opportunity_returns_none_when_no_district_qualifies(cur) -> None:
+    """Exercises the one scenario real data can't: no district anywhere
+    clears investment_summary_by_district's threshold yet (e.g. a
+    freshly-seeded production DB before the scraper has repopulated it).
+    Must come back None -- never a crash, a zeroed result, or a placeholder
+    -- since that's exactly what a "Мэдээлэл хүрэлцэхгүй байна" UI state
+    needs to detect."""
+    cur.execute("DELETE FROM listings")
+    assert investment_summary_by_district(cur) == []
+    assert todays_opportunity(cur) is None
+
+
+def test_todays_opportunity_last_scraped_at_matches_the_districts_own_max(cur) -> None:
+    result = todays_opportunity(cur)
+    assert result is not None
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(
+        "SELECT max(scraped_at) AS last_scraped_at FROM listings"
+        " WHERE district = %s AND id != ALL(%s)",
+        (result["district"], excluded),
+    )
+    assert result["last_scraped_at"] == cur.fetchone()["last_scraped_at"]

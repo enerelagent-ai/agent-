@@ -822,3 +822,83 @@ def estimate_negotiable_price_conn(dsn: str) -> list[dict[str, Any]]:
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return estimate_negotiable_price(cur)
+
+
+_LAST_SCRAPED_AT_SQL = """
+    SELECT max(scraped_at) AS last_scraped_at
+    FROM listings
+    WHERE district = %(district)s
+      AND id != ALL(%(excluded_ids)s)
+"""
+
+
+def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None:
+    """"Which district looks like the best opportunity today" for a
+    dashboard headline, built entirely from investment_summary_by_district()
+    and deal_percentages() -- no separate scoring model, nothing invented.
+    Returns None when investment_summary_by_district() has no district at
+    all yet (e.g. a freshly-seeded DB the scraper hasn't populated enough
+    of), which callers must render as "not available", never as a zeroed
+    or placeholder result.
+
+    The featured district is simply investment_summary_by_district()'s own
+    top-ranked row (rows[0] -- already sorted by its documented, transparent
+    investment_score) rather than a new ranking rule. Deliberately not
+    returned here, though: investment_score is a 50/50 price-rank/yield-rank
+    blend meant for sorting a table, not a number to headline on its own --
+    surfacing it as an unlabeled score next to "today's opportunity" invites
+    exactly the "AI score" misreading this function exists to avoid, so
+    callers get only the real, individually-labeled component metrics
+    (price, yield, deal share, sample sizes) that a reader can check
+    against the district table themselves.
+
+    top_deal_pct is share of that district's own deal_percentages() rows
+    classified 'top_deal' -- a second, independently-thresholded comparable
+    check (grouped by district+rooms+listing_type, not just district), so
+    it can legitimately come back with zero comparable groups (None) even
+    for a district that clears investment_summary_by_district's own
+    n_sale/n_rent >= 20 gate, which is coarser. n_deals_analyzed is that
+    group's own size, so a caller can judge how much to trust the
+    percentage regardless.
+
+    last_scraped_at is real -- max(scraped_at) over the district's own
+    canonical listings -- never a guessed or "as of now" timestamp; None in
+    the (currently impossible, since investment_summary_by_district already
+    requires 20+ listings) edge case of no canonical listings at all.
+    """
+    ranked = investment_summary_by_district(cur)
+    if not ranked:
+        return None
+    top = ranked[0]
+    district = top["district"]
+
+    deals = deal_percentages(cur, district=district)
+    n_deals_analyzed = len(deals)
+    top_deal_pct = (
+        round(sum(1 for d in deals if d["deal_status"] == "top_deal") / n_deals_analyzed * 100, 1)
+        if n_deals_analyzed > 0
+        else None
+    )
+
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_LAST_SCRAPED_AT_SQL, {"district": district, "excluded_ids": excluded})
+    last_scraped_at = cur.fetchone()["last_scraped_at"]
+
+    return {
+        "district": district,
+        "n_sale": top["n_sale"],
+        "n_rent": top["n_rent"],
+        "avg_sale_price": top["avg_sale_price"],
+        "avg_price_per_sqm": top["avg_price_per_sqm"],
+        "gross_rental_yield_pct": top["gross_rental_yield_pct"],
+        "top_deal_pct": top_deal_pct,
+        "n_deals_analyzed": n_deals_analyzed,
+        "last_scraped_at": last_scraped_at,
+    }
+
+
+def todays_opportunity_conn(dsn: str) -> dict[str, Any] | None:
+    """Connection-owning wrapper for todays_opportunity()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return todays_opportunity(cur)
