@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REALM = "Ulaanbaatar Real Estate Analytics";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
 // Single-admin gate for the whole site (Week 8 deploy). Unset ADMIN_USERNAME/
 // ADMIN_PASSWORD (local dev's default -- see backend/app/config.py's same
-// opt-in pattern) leaves every route open. Once the browser has answered the
-// native Basic Auth prompt once, it resends the same header automatically on
-// every later request to this origin -- including the /api/backend/* proxy
-// calls the dashboard makes -- so this one check covers the whole app.
-export function middleware(request: NextRequest) {
+// opt-in pattern) leaves every route open.
+//
+// Session-cookie based rather than HTTP Basic Auth: Basic Auth's native
+// browser popup can't be styled or given Mongolian copy at all -- there's
+// no page behind it to redesign. /login (see app/login/page.tsx) collects
+// the same two credentials, and app/api/auth/login/route.ts issues a
+// signed cookie on success; this middleware just checks that cookie and
+// redirects to /login (preserving the originally-requested path via
+// ?next=) when it's missing or invalid. The backend's own Basic Auth
+// (require_admin) is unchanged and still re-checked on every proxied API
+// call regardless of what this cookie says.
+export async function middleware(request: NextRequest) {
   const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
 
@@ -16,18 +23,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Basic ")) {
-    const [user, pass] = atob(authHeader.slice(6)).split(":");
-    if (user === username && pass === password) {
-      return NextResponse.next();
-    }
+  const { pathname } = request.nextUrl;
+  // The login page and its own API routes must stay reachable *without* a
+  // session -- otherwise there's no way to ever reach the form that grants
+  // one, and every request loops back to itself.
+  if (pathname === "/login" || pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
   }
 
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": `Basic realm="${REALM}"` },
-  });
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (await verifySessionToken(token, password)) {
+    return NextResponse.next();
+  }
+
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("next", pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
