@@ -10,6 +10,14 @@ export function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
+export function timeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) return "саяхан";
+  if (diffHours < 24) return `${diffHours} цагийн өмнө`;
+  return `${Math.floor(diffHours / 24)} өдрийн өмнө`;
+}
+
 interface PriceLike {
   price: number | null;
   price_negotiable: boolean | null;

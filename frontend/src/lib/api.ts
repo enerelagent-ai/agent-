@@ -34,6 +34,21 @@ export interface PriceTrendPoint {
   avg_price_per_sqm: number | null;
 }
 
+// No investment_score/roi_pct -- see analytics.calculations.todays_opportunity's
+// docstring on why that composite ranking number is deliberately never
+// surfaced to a reader as its own figure.
+export interface TodaysOpportunity {
+  district: string;
+  n_sale: number;
+  n_rent: number;
+  avg_sale_price: number;
+  avg_price_per_sqm: number | null;
+  gross_rental_yield_pct: number;
+  top_deal_pct: number | null;
+  n_deals_analyzed: number;
+  last_scraped_at: string;
+}
+
 export interface ListingTypeCount {
   bucket: "apartments" | "other";
   listing_type: "sale" | "rent";
@@ -104,6 +119,13 @@ async function getJSON<T>(path: string): Promise<T> {
 
 export function getInvestmentSummary(): Promise<DistrictInvestmentSummary[]> {
   return getJSON("/dashboard/investment-summary");
+}
+
+// null when no district clears investment_summary_by_district's own
+// data-sufficiency threshold yet -- callers must render that as "not
+// available", never as a placeholder or zeroed card.
+export function getTodaysOpportunity(): Promise<TodaysOpportunity | null> {
+  return getJSON("/dashboard/todays-opportunity");
 }
 
 export function getPriceTrend(): Promise<PriceTrendPoint[]> {

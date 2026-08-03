@@ -7,6 +7,7 @@ from analytics.calculations import (
     listing_counts_by_property_type_conn,
     price_trend_conn,
     rental_yield_by_district_rooms_conn,
+    todays_opportunity_conn,
 )
 from analytics.matches import superseded_listing_ids_conn
 from fastapi import APIRouter, Query
@@ -14,7 +15,12 @@ from fastapi import APIRouter, Query
 from app.api.deps import DbSession
 from app.config import settings
 from app.models.listing import Listing
-from app.schemas.dashboard import DistrictInvestmentSummary, ListingTypeCount, PriceTrendPoint
+from app.schemas.dashboard import (
+    DistrictInvestmentSummary,
+    ListingTypeCount,
+    PriceTrendPoint,
+    TodaysOpportunity,
+)
 from app.schemas.listing import ListingOut
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -23,6 +29,17 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/investment-summary", response_model=list[DistrictInvestmentSummary])
 def investment_summary() -> list[dict]:
     return investment_summary_by_district_conn(settings.database_url)
+
+
+@router.get("/todays-opportunity", response_model=TodaysOpportunity | None)
+def todays_opportunity() -> dict | None:
+    """"Best available opportunity today" headline, or None when no
+    district clears investment_summary_by_district's own data-sufficiency
+    threshold yet (a thin or freshly-seeded DB) -- callers must render
+    that as "not available", never as a placeholder. See
+    analytics.calculations.todays_opportunity for the full derivation.
+    """
+    return todays_opportunity_conn(settings.database_url)
 
 
 @router.get("/price-trend", response_model=list[PriceTrendPoint])
