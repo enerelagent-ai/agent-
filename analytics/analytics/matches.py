@@ -8,6 +8,8 @@ duplicate_matches, so re-scoring a pair updates score and matched_at in
 place instead of duplicating it.
 """
 
+import threading
+import time
 from typing import Any
 
 import psycopg2
@@ -24,6 +26,36 @@ from analytics.dedup import (
 from analytics.db import normalize_dsn
 
 Match = tuple[int, int, float]
+
+# In-process TTL cache for superseded_listing_ids() -- see that function's
+# docstring for why (it was costing ~0.7s per call, one SQL round-trip per
+# duplicate group, and every /dashboard/* route calls it at least once, so
+# a single dashboard page load was paying that cost 5-6 times over).
+#
+# TTL, not push-invalidation-on-write: the writer (the scraper pipeline,
+# via record_matches()) and the reader (this backend process) are separate
+# OS processes with no shared memory, so there is no in-process event to
+# invalidate on -- time is the only signal available here. duplicate_matches
+# only changes once a day (the scheduled scrape), so any TTL from a few
+# minutes to a few hours is nowhere near stale relative to that cadence;
+# 10 minutes is just a round number comfortably inside that range. A lock
+# guards the compute-and-store step since FastAPI runs sync route functions
+# in a threadpool -- concurrent requests really can race here, not just in
+# theory.
+_CACHE_TTL_SECONDS = 600
+_cache_lock = threading.Lock()
+_cache: tuple[float, set[int]] | None = None  # (computed_at monotonic, ids)
+
+
+def reset_superseded_ids_cache() -> None:
+    """Clears the cache immediately, ignoring the TTL. Test fixtures call
+    this before every test (see conftest.py's `cur` fixture) -- pytest runs
+    the whole suite in one process, so without this, one test's cached
+    result (computed from its own synthetic, about-to-be-rolled-back data)
+    would leak into the next test's assertions via this module-level cache."""
+    global _cache
+    with _cache_lock:
+        _cache = None
 
 _LISTING_FIELDS = """
     SELECT id, source_url, title, listing_type, property_type, district,
@@ -76,22 +108,28 @@ def find_matches_for_listing(
 
 
 def record_matches(cur: psycopg2.extensions.cursor, matches: list[Match]) -> None:
-    """Upsert scored pairs into duplicate_matches."""
+    """Upsert scored pairs into duplicate_matches.
+
+    Resets superseded_listing_ids()'s cache -- this is the only function
+    that writes duplicate_matches, so it's the one place that can know the
+    cached set might now be wrong. In production this is a no-op in
+    practice (the scraper process that calls this and the backend API
+    process that reads the cache are different OS processes with separate
+    memory -- see that cache's own module-level comment), but it makes the
+    two always-consistent within one process, which matters for anything
+    (tests included) that writes a match and immediately expects the read
+    side to reflect it rather than up to _CACHE_TTL_SECONDS-stale data.
+    """
     for id_a, id_b, score in matches:
         cur.execute(_RECORD_SQL, (id_a, id_b, score))
+    if matches:
+        reset_superseded_ids_cache()
 
 
-def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
-    """Ids analytics must EXCLUDE so duplicate groups count once.
-
-    Only matches at or above AUTO_RESOLVE_THRESHOLD are used to build
-    groups: below that (the "Possible Duplicate" tier) precision is too low
-    to safely drop a listing from analytics — see dedup.match_status and
-    the fixture validation it cites. Those pairs surface via
-    possible_duplicate_pairs() for human review instead. Every group above
-    the bar keeps its canonical listing (dedup.pick_canonical) and
-    contributes the rest here. Consumers filter with e.g. WHERE id != ALL(%s).
-    """
+def _compute_superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
+    """The real computation, unconditionally fresh -- one query per
+    duplicate group (see module docstring on why superseded_listing_ids()
+    itself no longer calls this directly)."""
     cur.execute(
         "SELECT listing_id_a, listing_id_b FROM duplicate_matches WHERE score >= %s",
         (AUTO_RESOLVE_THRESHOLD,),
@@ -107,8 +145,41 @@ def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
     return superseded
 
 
+def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
+    """Ids analytics must EXCLUDE so duplicate groups count once.
+
+    Only matches at or above AUTO_RESOLVE_THRESHOLD are used to build
+    groups: below that (the "Possible Duplicate" tier) precision is too low
+    to safely drop a listing from analytics — see dedup.match_status and
+    the fixture validation it cites. Those pairs surface via
+    possible_duplicate_pairs() for human review instead. Every group above
+    the bar keeps its canonical listing (dedup.pick_canonical) and
+    contributes the rest here. Consumers filter with e.g. WHERE id != ALL(%s).
+
+    Cached in-process for _CACHE_TTL_SECONDS (see the module-level comment
+    above) -- a cache hit costs a lock acquisition and a dict lookup,
+    nothing on the DB.
+    """
+    global _cache
+    with _cache_lock:
+        if _cache is not None and time.monotonic() - _cache[0] < _CACHE_TTL_SECONDS:
+            return _cache[1]
+        ids = _compute_superseded_listing_ids(cur)
+        _cache = (time.monotonic(), ids)
+        return ids
+
+
 def superseded_listing_ids_conn(dsn: str) -> set[int]:
-    """Connection-owning wrapper for superseded_listing_ids()."""
+    """Connection-owning wrapper for superseded_listing_ids().
+
+    Checks the cache before opening a connection at all -- a warm cache
+    should cost nothing beyond a lock and a dict lookup, not even a trip to
+    open a DB connection just to hand back a value already sitting in
+    memory (Neon's serverless connections are not free/instant either).
+    """
+    with _cache_lock:
+        if _cache is not None and time.monotonic() - _cache[0] < _CACHE_TTL_SECONDS:
+            return _cache[1]
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return superseded_listing_ids(cur)
