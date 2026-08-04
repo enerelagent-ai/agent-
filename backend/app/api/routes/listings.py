@@ -13,9 +13,14 @@ def list_listings(
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
 ) -> list[Listing]:
+    # id as a tiebreaker: scraped_at alone ties across a batch insert (many
+    # rows share the exact timestamp), and Postgres doesn't guarantee a
+    # stable order for ties across separate queries -- offset pages could
+    # overlap or skip rows. Same fix already applied to /dashboard/listings
+    # (see dashboard.py) for the same reason.
     return (
         db.query(Listing)
-        .order_by(Listing.scraped_at.desc())
+        .order_by(Listing.scraped_at.desc(), Listing.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
