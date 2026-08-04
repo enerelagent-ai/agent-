@@ -13,10 +13,21 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    # Generous ceiling for an unusually high-volume day; a normal
-    # incremental run stops itself early via --stop-after-known-pages and
-    # finishes in minutes.
-    timeout-minutes: 180
+    # 180 was too tight during the current backfill period: Neon started
+    # empty (Week 8 deploy), so most list pages still contain listings this
+    # DB hasn't seen yet -- --stop-after-known-pages rarely triggers early,
+    # unlike a caught-up steady state. Confirmed via a cancelled run's own
+    # logs (2026-08-03): it was making steady progress, not stuck, but
+    # needed to fetch 2,772 detail pages that day -- at the scraper's
+    # deliberate ~4s/page rate limit (see scraper/scraper/main.py; not
+    # something to speed up, it exists to respect the source site's load),
+    # that's ~3.08h, just over the old 180min ceiling. 340 is comfortably
+    # under GitHub Actions' hard 360min (6h) per-job limit for hosted
+    # runners. Once Neon catches up to the site's full ~38k-listing
+    # inventory, early-stop should trigger reliably again and runs should
+    # drop back to the ~1h seen on lower-volume days -- this higher ceiling
+    # just sits unused at that point, not a problem to revisit.
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
 
