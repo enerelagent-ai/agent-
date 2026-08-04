@@ -4,7 +4,6 @@ Every query excludes matches.superseded_listing_ids() first, so an
 auto-resolved duplicate group is counted once, not once per repost.
 """
 
-import time
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -867,20 +866,13 @@ def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None
     the (currently impossible, since investment_summary_by_district already
     requires 20+ listings) edge case of no canonical listings at all.
     """
-    # TEMPORARY diagnostic timing -- tracking down a ~50s Render->Neon
-    # latency that isolated to DB-touching endpoints specifically (Render's
-    # own health check is fast even when this is slow). Remove once found.
-    t0 = time.perf_counter()
     ranked = investment_summary_by_district(cur)
-    print(f"DIAG: investment_summary_by_district took {time.perf_counter() - t0:.3f}s", flush=True)
     if not ranked:
         return None
     top = ranked[0]
     district = top["district"]
 
-    t0 = time.perf_counter()
     deals = deal_percentages(cur, district=district)
-    print(f"DIAG: deal_percentages took {time.perf_counter() - t0:.3f}s", flush=True)
     n_deals_analyzed = len(deals)
     top_deal_pct = (
         round(sum(1 for d in deals if d["deal_status"] == "top_deal") / n_deals_analyzed * 100, 1)
@@ -888,11 +880,9 @@ def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None
         else None
     )
 
-    t0 = time.perf_counter()
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_LAST_SCRAPED_AT_SQL, {"district": district, "excluded_ids": excluded})
     last_scraped_at = cur.fetchone()["last_scraped_at"]
-    print(f"DIAG: last_scraped_at query took {time.perf_counter() - t0:.3f}s", flush=True)
 
     return {
         "district": district,
@@ -909,10 +899,6 @@ def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None
 
 def todays_opportunity_conn(dsn: str) -> dict[str, Any] | None:
     """Connection-owning wrapper for todays_opportunity()."""
-    # TEMPORARY diagnostic timing -- see todays_opportunity()'s comment.
-    t0 = time.perf_counter()
-    conn = psycopg2.connect(normalize_dsn(dsn))
-    print(f"DIAG: psycopg2.connect took {time.perf_counter() - t0:.3f}s", flush=True)
-    with conn:
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return todays_opportunity(cur)
