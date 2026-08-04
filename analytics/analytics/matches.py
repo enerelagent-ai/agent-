@@ -163,8 +163,11 @@ def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
     global _cache
     with _cache_lock:
         if _cache is not None and time.monotonic() - _cache[0] < _CACHE_TTL_SECONDS:
+            print("DIAG: superseded_listing_ids cache HIT", flush=True)  # TEMPORARY
             return _cache[1]
+        t0 = time.perf_counter()  # TEMPORARY diagnostic timing
         ids = _compute_superseded_listing_ids(cur)
+        print(f"DIAG: superseded_listing_ids cache MISS, compute took {time.perf_counter() - t0:.3f}s", flush=True)
         _cache = (time.monotonic(), ids)
         return ids
 
