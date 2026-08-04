@@ -127,18 +127,36 @@ def record_matches(cur: psycopg2.extensions.cursor, matches: list[Match]) -> Non
 
 
 def _compute_superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
-    """The real computation, unconditionally fresh -- one query per
-    duplicate group (see module docstring on why superseded_listing_ids()
-    itself no longer calls this directly)."""
+    """The real computation, unconditionally fresh (see module docstring on
+    why superseded_listing_ids() itself no longer calls this directly).
+
+    Two queries total, regardless of how many duplicate groups exist --
+    not one query per group. That N+1 shape used to cost ~0.7s locally
+    (one round-trip per group is cheap on a local connection), but
+    diagnostic timing on the deployed Render->Neon path showed the exact
+    same computation taking 16.6s: each round-trip is far more expensive
+    over that network hop, and it was paying for one per group. Fetching
+    every group's rows in a single WHERE id = ANY(%s) call and grouping
+    them in Python removes the multiplier entirely -- this is what
+    actually fixed the production latency; the TTL cache alone only
+    helped requests after the first one in a 10-minute window.
+    """
     cur.execute(
         "SELECT listing_id_a, listing_id_b FROM duplicate_matches WHERE score >= %s",
         (AUTO_RESOLVE_THRESHOLD,),
     )
     pairs = [(r["listing_id_a"], r["listing_id_b"]) for r in cur.fetchall()]
+    groups = group_pairs(pairs)
+
+    all_ids = [listing_id for group in groups for listing_id in group]
+    if not all_ids:
+        return set()
+    cur.execute(_LISTING_FIELDS + " WHERE id = ANY(%s)", (all_ids,))
+    rows_by_id = {row["id"]: row for row in (dict(r) for r in cur.fetchall())}
+
     superseded: set[int] = set()
-    for group in group_pairs(pairs):
-        cur.execute(_LISTING_FIELDS + " WHERE id = ANY(%s)", (list(group),))
-        rows = [dict(r) for r in cur.fetchall()]
+    for group in groups:
+        rows = [rows_by_id[listing_id] for listing_id in group if listing_id in rows_by_id]
         if len(rows) < 2:
             continue
         superseded |= {row["id"] for row in rows} - {pick_canonical(rows)}
@@ -163,11 +181,8 @@ def superseded_listing_ids(cur: psycopg2.extensions.cursor) -> set[int]:
     global _cache
     with _cache_lock:
         if _cache is not None and time.monotonic() - _cache[0] < _CACHE_TTL_SECONDS:
-            print("DIAG: superseded_listing_ids cache HIT", flush=True)  # TEMPORARY
             return _cache[1]
-        t0 = time.perf_counter()  # TEMPORARY diagnostic timing
         ids = _compute_superseded_listing_ids(cur)
-        print(f"DIAG: superseded_listing_ids cache MISS, compute took {time.perf_counter() - t0:.3f}s", flush=True)
         _cache = (time.monotonic(), ids)
         return ids
 
