@@ -6,15 +6,39 @@ CLAUDE.md — Улаанбаатарын Үл Хөдлөх Хөрөнгийн А
 
 Үл хөдлөх хөрөнгийн олон эх сурвалжийн (Үнэгүй.мн, Facebook групп) зар мэдээллийг нэгтгэн цуглуулж, зах зээлийн дундаж үнэ, түрээсийн өгөөж, хөрөнгө оруулалтын өгөөжийн харьцаа зэрэг үзүүлэлтийг тооцоолсон веб аналитик платформ бий болгох. Хэрэглэгч энэ дата дээр үндэслэн хөрөнгө оруулалтын шийдвэр гаргана.
 
-Хувилбар 1.0 (одоогийн ажил, 8 долоо хоног): Үнэгүй.мн-с scraping, дублей илрүүлэлт, тооцооллын систем, dashboard. Хувилбар 2.0 (дараагийн 8 долоо хоног): Facebook нэгтгэл, барилгын төслийн мэдээллийн сан, AI-аар санал болгох/үнэлгээ хийх систем, дулааны зураг, мэдэгдлийн систем.
+Хувилбар 1.0 (✅ 8/8 долоо хоног дууссан, deploy хийгдсэн — доорх "Одоогийн статус" үз): Үнэгүй.мн-с scraping, дублей илрүүлэлт, тооцооллын систем, dashboard, deploy + auth. Хувилбар 2.0 (дараагийн үе шат, хараахан эхлээгvй): Facebook нэгтгэл, барилгын төслийн мэдээллийн сан, AI-аар санал болгох/үнэлгээ хийх систем, дулааны зураг, мэдэгдлийн систем.
 
 Tech stack
-Backend: FastAPI (Python) — одоогоор auth байхгүй (local, single-user tool; deploy хийхийн өмнө нэмнэ)
-Database: PostgreSQL (Postgres.app, local dev)
-Scraper: Playwright (Python)
-Frontend: Next.js
+Backend: FastAPI (Python) — Render дээр deploy хийгдсэн; Basic Auth opt-in (ADMIN_USERNAME/ADMIN_PASSWORD хоёуланг тохируулбал л асдаг, local dev-д унтраалттай — backend/app/api/deps.py:require_admin)
+Database: PostgreSQL — local dev: Postgres.app; production: Neon (serverless) — 2 тусдаа, өөр өөр хэмжээтэй өгөгдлийн сан гэдгийг анхаар (доорх "Системийн архитектур" хэсэгт)
+Scraper: Playwright (Python) — local dev: launchd (scraper/bin/run_daily_scrape.sh); production: GitHub Actions (.github/workflows/daily-scrape.yml)
+Frontend: Next.js — Vercel дээр deploy хийгдсэн; session-cookie login/logout, backend-ийн Basic Auth-тай ADMIN_USERNAME/ADMIN_PASSWORD-аар синхрон (frontend/src/middleware.ts, lib/session.ts)
 Version control: GitHub (enerelagent-ai/agent-), gh CLI ашиглан auth хийсэн
-Deployment: тогтмол ашиглагдах серверт байршуулна (V1.0-ийн эцэст)
+Deployment: ✅ Week 8-д хийгдсэн — GitHub (эх код) → Vercel (frontend) + Render (backend) + Neon (DB), 3 тусдаа cloud платформ (decoupled), GitHub-аар дамжин CI/CD-ээр автоматаар шинэчлэгддэг
+
+Системийн архитектур (9 давхарга — файлын зураглал)
+
+Дэд бүтэц (3 тусдаа cloud платформ, decoupled):
+| Платформ | Үүрэг | Холбогдох файл |
+|---|---|---|
+| GitHub | Эх код + өдөр тутмын scrape (GitHub Actions, 03:00 ЭТС) | .github/workflows/daily-scrape.yml |
+| Vercel | Frontend (Next.js), Edge Network, auto-deploy | frontend/src/app/, frontend/src/lib/api.ts |
+| Render | Backend (FastAPI), бизнес логик, тооцоолол | backend/app/main.py, analytics/analytics/calculations.py |
+| Neon | Serverless PostgreSQL (production DB) | db/schema.sql, db/migrations/001…008 |
+
+9 үе шат (өгөгдлийн урсгал: scraper → dedup → DB → analytics → API → frontend → auth → deployment):
+1. Scraper — scraper/scraper/main.py, list_pages.py, detail_page.py, browser.py — Unegui.mn-ээс татах, бот-чек даван гарах
+2. Parsing/Cleaning — detail_page.py, save.py — HTML → бүтэцтэй Dict, талбар/өрөө parse, dedup_hash үүсгэх
+3. Duplicate Detection — analytics/analytics/dedup.py (оноо тооцох), matches.py (дамжлага) — жин: title 0.45 / үнэ 0.35 / зураг 0.08 / огноо 0.12 (жишээ тооцоолол доор Week 4 тэмдэглэлд, ID 76 vs 14, score 0.879)
+4. Database — db/schema.sql, db/migrations/001…008 — listings, duplicate_matches, price_history хүснэгтүүд
+5. Analytics — analytics/analytics/calculations.py — дундаж үнэ, түрээсийн өгөөж, ROI (давхардсан заруудыг үргэлж хасна)
+6. Backend API — backend/app/main.py, api/router.py, api/routes/*.py, api/deps.py — Pydantic моделоор шалгаж JSON буцаана
+7. Frontend — frontend/src/app/, components/*.tsx — API-аас JSON татаж интерактив график/хүснэгт үзүүлнэ
+8. Authentication — backend/app/api/deps.py (Basic Auth) + frontend/src/middleware.ts, lib/session.ts (session-cookie login) — хоёул ADMIN_USERNAME/ADMIN_PASSWORD-аар синхрон, тохируулаагүй бол local dev шиг нээлттэй
+9. Deployment — .github/workflows/daily-scrape.yml (production), scraper/bin/run_daily_scrape.sh (local dev fallback, launchd)
+
+Анхаар: production (Neon) DB нь local dev (Postgres.app)-ээс өөр, тусдаа, харьцангуй бага өгөгдөлтэй сан — GitHub Actions scrape эхэлснээс хойш аажмаар нөхөгдөж байгаа (жишээ: 2026-07-31-ний байдлаар Сонгинохайрхан local дээр n_sale=484 байхад production дээр n_sale=52). Production дээр тоо баримт баталгаажуулахдаа "жижиг байна" гэдгийг санаарай — алдаа биш.
+
 Кодын дүрэм / conventions
 Python: PEP8, type hints ашиглах, функц бүрт docstring
 Commit бүр жижиг, нэг л зорилготой байх; feature бүр тусдаа commit
@@ -40,15 +64,15 @@ https://www.unegui.mn/l-hdlh/l-hdlh-treesllne/ (Үл хөдлөх түрээсл
 Зургууд (баталгаажсан): зөвхөн div.announcement__images доторх img[itemprop=image]-ийн data-full — хуудсанд төстэй зарын ~50 thumbnail байдаг тул container-оор хязгаарлах заавал
 Ангилал (баталгаажсан): breadcrumb (schema.org BreadcrumbList) position 3 = зарах/түрээслэх, 4 = үл хөдлөхийн төрөл, 5 = дэд төрөл (орон сууцанд өрөөний тоо); АНХААР — slug нь зарах/түрээслэхэд өөр өөр (oron-suuts-zarna vs oron-suuts) тул бүлэглэхдээ үргэлж (listing_type, property_type) хосоор; URL slug-д огт итгэхгүй (хуучин зарыг дахин ашигласнаас slug худал байж болно, ж: audi-a6 slug-тай орон сууцны зар)
 Pagination (баталгаажсан): ?page=N query param, 1-р хуудас параметргүй
-Долоо хоногийн бүтэц (V1.0)
+Долоо хоногийн бүтэц (V1.0) — 8/8 долоо хоног дууссан ✅
 ✅ Суурь бэлтгэл — architecture, GitHub, Claude Code тохиргоо, DB schema (бодит Postgres дээр туршиж баталгаажуулсан)
-✅ FastAPI дотоод систем (routes, models, DB холболт) — баталгаажуулсан, auth Week 8 хүртэл хойшлуулсан
-🔄 Playwright scraper (Үнэгүй.мн, дээрх тодорхой хамрах хүрээгээр) — явцад байна
-Дублей илрүүлэлт, өгөгдөл цэвэрлэгээ (>95% нарийвчлал зорилт)
-Тооцооллын систем: дундаж үнэ, м.кв үнэ, түрээсийн өгөөж, ROI
-Next.js dashboard, хайлт/шүүлт
-Нэгтгэл ба туршилт
-Deploy, аюулгүй байдал, баримт бичиг, auth нэмэх
+✅ FastAPI дотоод систем (routes, models, DB холболт)
+✅ Playwright scraper (Үнэгүй.мн, дээрх тодорхой хамрах хүрээгээр) — 36,666 зар бүрэн scrape хийгдсэн
+✅ Дублей илрүүлэлт, өгөгдөл цэвэрлэгээ
+✅ Тооцооллын систем: дундаж үнэ, м.кв үнэ, түрээсийн өгөөж, ROI
+✅ Next.js dashboard, хайлт/шүүлт
+✅ Нэгтгэл ба туршилт (scheduled scraping)
+✅ Deploy (Vercel + Render + Neon), auth (Basic Auth + session login)
 Claude Code-той ажиллах зарчим
 Даалгаврыг өдрийн хэмжээнд задалж өгөх — том context нэг дор өгөхгүй
 Нарийн/эрсдэлтэй логик (dedup, тооцоолол, scraper-ийн бодит бүтэц)-ыг эхлээд шалгуулж/төлөвлүүлж, дараа нь бичүүлэх — таамаглал биш баталгаажсан мэдээллээр ажиллах
@@ -75,16 +99,21 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
    Confidence tier ✅ (2026-07-27, Week 4 spec A.1): dedup.CANDIDATE_THRESHOLD=0.60 (match гэж бүртгэх), AUTO_RESOLVE_THRESHOLD=0.80 (автоматаар duplicate гэж шийдэх); classify_pair() duplicate/possible_duplicate/distinct 3 төлөвтэй. Баталгаажуулалт: 48,855 бодит match-аас 20-ыг (10×0.60-0.70, 10×0.90+) гараар шалгасан — 0.90+ 10/10 зөв, 0.60-0.70 ердөө ~8/10 зөв. **Чухал засвар**: matches.superseded_listing_ids() өмнө нь БҮХ match (>=0.60)-ыг canonical бүлэглэлтэд ашигладаг байсан нь 36,666-с 13,355 (36%) ЖИНХЭНЭ ялгаатай заруудыг Week 5 тооцооллоос БУРУУГААР хасах байсан; одоо зөвхөн >=0.80 tier ашигладаг (4,312 хасагдана, өмнөх бол 17,667). 0.60-0.80 tier нь matches.possible_duplicate_pairs() — 41,661 хос, Week 6 review queue-д зориулсан, автоматаар юу ч хийхгүй. Test 24/24, labeled fixture 34 хос (14 анхны + 20 бодит масштабаас). Одоо Week 5 тооцоолол эхлэхэд бэлэн: listings WHERE id != ALL(superseded_listing_ids())
    Тооцооллын систем ✅: dedup/matches/calculations.py-г scraper-с тусдаа analytics/ package болгож салгасан (шинэ analytics/analytics/db.py, өөрийн pyproject.toml, тестийн conftest.py — 21/21 тест). average_price_by_group(): дундаж үнэ + м.кв үнэ (listing_type, property_type, district) бүрээр, superseded listing-үүдийг үргэлж хасна. rental_yield_by_district_rooms() (2026-07-27): түрээсийн өгөөж = (дундаж сарын түрээс×12) / дундаж зарах үнэ, (district, property_subtype, rooms) түвшинд яг тохируулж (category-level дундажлахгүй) — учир нь зөвхөн "Орон сууц" ангилалд room count (property_subtype/rooms) бүрэн бөглөгдсөн байдаг (бодит DB-ээр баталгаажсан, бусад 14 ангилалд хоёул NULL). 36 district×өрөө bucket, өгөөж 4.8%-13.4%, payback_years хамт гардаг. yield_category_coverage(): 15 ангилал тус бүрийг calculable эсэхийг мэдээллийн сангаас амьд тоолж, эсэхгүй бол шалтгааныг тэмдэглэдэг (subtype/rooms байхгүй, зөвхөн нэг талд байгаа — түрээслэх л боломжтой, эсвэл Хашаа байшин/Монгол гэр шиг ангиллын нэр өөрөө таарахгүй тохиолдол) — ямар ч ангиллыг ойролцоолж нийлүүлээгүй. investment_summary_by_district() (2026-07-27): rental_yield_by_district_rooms()-г district түвшинд жинтэйгээр (sample size-ээр) нэгтгэж, roi_pct (=gross_rental_yield_pct — зээл/зардлын дата байхгүй тул тусдаа томьёогүй, ил нэрлэсэн alias) болон investment_score (0-100, үнэ+өгөөжийн rank-ийн 50/50 хольц) гаргадаг. n_sale/n_rent < 20 дүүргийг ranking-аас бүрэн хасдаг (жишээ нь Багануур n=1 нь Хан-Уул n=4308-г давахаас сэргийлнэ). Бодит DB: 11 дүүргээс 6 нь босго давж, Сонгинохайрхан (хямд, өгөөж өндөр) тэргүүлж, Хан-Уул (үнэтэй, өгөөж бага) сүүлд. Test 29/29. **Week 5 дууссан** — Week 6 (Dashboard) руу шилжихэд бэлэн.
  Week 6: Dashboard ✅ — KPI/donut/price-trend/district table/listings feed, шүүлт+эрэмбэлэлт, "Хямд боломж" deal-finder (confidence tier: top_deal/needs_review), тохиролцоотой үнийн тооцоолол (estimate_negotiable_price), methodology tooltip, listing detail modal, source линк — бүгд main-д нэгдсэн.
- Week 7: Integration & testing (явцад, 2026-07-29 эхэлсэн) — scheduled scraping:
+ Week 7: Integration & testing ✅ — scheduled scraping:
    - **Чухал алдаа олж засав**: scraper/scraper/main.py Week 4→5 package-split-ийн дараа эвдэрсэн байсан (`from scraper.matches import match_new_listings` — matches.py analytics/ руу нүүсэн ч scraper-ийн импорт шинэчлэгдээгүй, scraper-ийн .venv-д analytics суулгаагүй байсан тул `python -m scraper.main` огт ажиллахгvй байв). Ямар ч тест scraper.main-г import хийдэггvй байсан тул алдаа нуугдмал байсан. Засвар: analytics-ийг scraper/.venv-д editable dependency болгож суулгав (`pip install -e ../analytics`, requirements.txt-д `-e ../analytics` нэмсэн), импортыг `analytics.matches`-руу шилжүүлсэн. Регресс хамгаалалт: tests/test_main.py (шинэ, import + CLI flag smoke test).
    - --skip-recent-days audit ✅: detail-page дахин татахаас зайлсхийхэд зөв ажилладаг (save.recently_scraped, days цонхоор шалгадаг), гэхдээ list-page явалт өөрөө "аль хэдийн мэдэгдэж буй" зартай хуудсуудыг зогсоох механизмгvй байсан (зөвхөн category-ийн жинхэнэ төгсгөлийг илрvvлдэг stop_after_stale — өдөр тутмын incremental ажиллагаанд хамааралгvй). Шинээр нэмсэн: save.known_urls()/known_urls_conn() (scraped_at-аас vл хамааран URL DB-д байгаа эсэхийг шалгана) + list_pages.collect_ad_urls-д known_urls_checker/stop_after_known параметр (analytical, opt-in) + main.py-д --stop-after-known-pages CLI flag (0 = idle). 3 дараалсан хуудас бvгд аль хэдийн мэдэгдэж буй бол зогсоно. Тест: tests/test_list_pages.py (шинэ, 3 тест, monkeypatch-ээр браузергvйгээр), tests/test_save.py +1 тест. Бодит амьд шалгалтаар (2026-07-29): нэг хуудсанд 60 зар байгааг баталгаажуулсан (өмнө нь тодорхойгvй байсан).
-   - Хуваарьт scrape ✅ (2026-07-29): scraper/bin/run_daily_scrape.sh — macOS-д flock(1) байхгvй тул mkdir-based atomic lock (амьд эсэхийг kill -0-ээр шалгаж, "хатсан" lock-ийг сэргээдэг), backend/.env-ээс DATABASE_URL ачаалдаг, scraper/logs/daily_scrape_*.log-д бичдэг (30 хоногийн хадгалалт). launchd job `ai.enerelagent.unegui-scraper.daily` (~/Library/LaunchAgents/-д symlink, эх сурвалж нь repo-д) — өдөр бvр 03:00, ачаалагдсан нь launchctl list-ээр баталгаажсан. Production параметр: --pages 60 --skip-recent-days 1 --stop-after-known-pages 3. Бодит жижиг scope (1 хуудас, 2 зар/категори)-оор E2E шалгасан: жинхэнэ хадгалалт (2+2 мөр), жинхэнэ dedup match бичигдсэн (analytics.matches-ээр — засвар зөв ажиллаж байгааг нотолсон), lock/env/logging бvгд ажилласан. Overlap guard тусад нь шалгасан: амьд pid-тэй lock үед 2 дахь ажиллуулалт зогсдог, үхсэн pid-тэй "хатсан" lock-ийг сэргээдэг. Postgres.app биет daemon биш (menu-bar app) тул хуваарьт ажиллагаа явахын тулд компьютер сэрvvн, Postgres.app асаалттай байх шаардлагатай — мэдэгдэж буй хязгаарлалт (доор бичив).
- Week 8: Deploy + auth нэмэх
+   - Хуваарьт scrape ✅ (2026-07-29, дараа нь Week 8-д GitHub Actions-аар орлуулсан): scraper/bin/run_daily_scrape.sh — macOS-д flock(1) байхгvй тул mkdir-based atomic lock, backend/.env-ээс DATABASE_URL ачаалдаг, scraper/logs/daily_scrape_*.log-д бичдэг. launchd job `ai.enerelagent.unegui-scraper.daily` — өдөр бvр 03:00. Одоо зөвхөн **local dev fallback**, production нь Week 8-ийн GitHub Actions ажиллагаанд шилжсэн (доор).
+ Week 8: Deploy + auth ✅ (PR #10 week8-deploy, PR #11 login-redesign — 2026-07-31 main-д нэгдсэн):
+   - **Deploy**: Render (backend), Vercel (frontend), Neon (serverless PostgreSQL production DB) — 3 тусдаа cloud платформ, дэлгэрэнгүйг дээрх "Системийн архитектур" хэсгээс үз.
+   - **Scheduled scrape**: .github/workflows/daily-scrape.yml — 03:00 ЭТС (`cron: "0 19 * * *"` UTC) GitHub-ийн дэд бүтэц дээр ажилладаг тул компьютер/Postgres.app сэрvvн байх шаардлагагvй болсон (Week 7-ийн мэдэгдэж байсан хязгаарлалт шийдэгдсэн).
+   - **Auth**: Эхлээд backend-д opt-in single-admin Basic Auth (ADMIN_USERNAME/ADMIN_PASSWORD тохируулбал л асна — b515481), дараа нь frontend-г ижил login-ээр хаасан same-origin API proxy-гоор (0805609), эцэст нь Basic Auth-ийн browser popup-ыг premium split-screen login хуудас + session-cookie урсгал болгож сайжруулсан, logout товч нэмсэн (3699b0b, d6dad83, 5525c9c). Тохируулаагvй бол local dev шиг бvрэн нээлттэй хэвээр.
+   - **Алдаа олж засав** (production Render дээрх ажиллагаанаас): matches.superseded_listing_ids() Render→Neon холболтоор ~50 сек зарцуулж байсныг оношилж (DIAG timing instrumentation-оор), N+1 query pattern (бvлэг тус бvрт тусдаа query) байсныг олж, upfront нэг WHERE id=ANY(%s) query болгож 0.65с→0.199с болгосон (451b4a9, branch: fix-n-plus-1-superseded-query — **main-д хараахан merge хийгдээгvй, PR хvлээгдэж байна**).
+   - **/listings pagination tiebreaker**: id-г нэмэлт эрэмбийн шалгуур болгож нэмсэн (90a0a82, main-д нэгдсэн) — Week 7-ийн мэдэгдэж байсан асуудал шийдэгдсэн.
 
 Мэдэгдэж буй асуудлууд (Known issues)
 
- - backend/app/api/routes/listings.py-ийн /listings endpoint: /dashboard/listings-д олдож засагдсан ижил pagination тогтворгүй байдлын алдаатай (2026-07-28) — ORDER BY зөвхөн scraped_at дээр байдаг тул (batch insert-ийн улмаас олон мөр ижил timestamp-тай) offset хуудаснууд давхцаж болно. Засвар: id-г нэмэлт tiebreaker болгож нэмэх (жишээ нь .order_by(Listing.scraped_at.desc(), Listing.id.desc())) — хараахан хийгдээгүй.
- - matches.superseded_listing_ids(): дуудалт бүрт ~0.7 сек зарцуулдаг (дублей бүлэг тус бүрт тусдаа SQL query хийдэг дизайн). /dashboard/* route бүр энэ функцийг request бүрт дахин тооцоолдог (кэшлэдэггүй). Local single-user хэрэглээнд OK, гэхдээ бодит deployment/traffic-ийн өмнө (Week 8-ийн санаа зовнил) кэшлэх эсвэл урьдчилан тооцоолох (precompute/materialize) шаардлагатай.
- - Хуваарьт scrape (launchd, 03:00) нь Postgres.app болон компьютер сэрvvн байхаас хамаарна — Postgres.app menu-bar app бөгөөд системийн daemon биш тул унтарсан бол холболт амжилтгvй болно; компьютер бvрэн унтарсан (deep sleep) vед launchd тухайн триггерийг алгасаад дараагийн сэрэхэд ажиллуулна (олон удаа биш, нэг л удаа). Week 8 deploy vед энэ асуудал арилна (сервер тасралтгvй ажиллана).
+ - **matches.superseded_listing_ids() Render→Neon latency**: root cause олдож (N+1 query pattern, бvлэг тус бvрт тусдаа query), fix хийгдсэн (upfront нэг WHERE id=ANY(%s) query, ~50с→0.2с) — commit 451b4a9, branch `fix-n-plus-1-superseded-query`. **Main-д хараахан merge хийгдээгvй** — PR vvсгэж merge хийх шаардлагатай.
  - deal_percentages()-ийг real DB дээр баталгаажуулах явцад олдсон, ховор тохиолддог per-listing өгөгдлийн чанарын асуудлууд (2026-07-28): (1) өрөөний тоо буруу ангилагдсан ховор тохиолдол — listing-ийн title өөр өрөөний тоо заасан ч rooms талбар өөр байх нь бий (ж: id 17500, гарчигт "5 өрөө" гэсэн ч rooms=2 гэж хадгалагдсан); (2) title/талбай (area) зөрүүтэй ховор тохиолдол, scraper талын area parsing-ийн асуудлаас үүдэлтэй (ж: id 2226, 27067 — гарчигт нэг талбай дурдсан ч хадгалагдсан area өөр). Хоёул тус тусдаа ховор бөгөөд нэгтгэсэн тооцооллыг (aggregate calculations) гажуудуулахгүй байгааг баталгаажуулсан, гэхдээ ирээдүйд хайлт/жагсаалт (search/browse) feature дээр ажиллахад анхаарах зүйл.
+
+Шийдэгдсэн асуудлууд (архивт, лавлагаанд): /listings pagination tiebreaker (90a0a82, main), Хуваарьт scrape-ийн Postgres.app/компьютер сэрvvн байх шаардлага (Week 8 GitHub Actions deploy-ээр production талд бvрэн арилсан).
  
