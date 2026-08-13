@@ -10,6 +10,7 @@ import pytest
 from analytics.calculations import (
     MAX_CONFIDENT_DEAL_PCT,
     MIN_COMPARABLE_GROUP_SIZE,
+    _MAX_PLAUSIBLE_PRICE,
     _MIN_AREA_SQM_FOR_DEAL,
     _OPEN_ENDED_ROOMS,
     average_price_by_group,
@@ -29,21 +30,25 @@ from analytics.matches import record_matches, superseded_listing_ids
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,
                           district, listing_type, property_type,
-                          property_subtype, rooms, photo_urls, dedup_hash)
+                          property_subtype, rooms, photo_urls, dedup_hash,
+                          price_negotiable, is_active)
     VALUES ('unegui', %(source_url)s, 'test', %(price)s, %(area_sqm)s,
             %(district)s, %(listing_type)s, %(property_type)s,
-            %(property_subtype)s, %(rooms)s, '{}', 'test-hash')
+            %(property_subtype)s, %(rooms)s, '{}', 'test-hash',
+            %(price_negotiable)s, %(is_active)s)
     RETURNING id
 """
 
 
 def _insert(cur, url, price, area, *, listing_type="sale",
             property_type="Орон сууц зарна", district="Тест дүүрэг",
-            property_subtype=None, rooms=None) -> int:
+            property_subtype=None, rooms=None, price_negotiable=None,
+            is_active=True) -> int:
     cur.execute(_INSERT_SQL, {
         "source_url": url, "price": price, "area_sqm": area,
         "district": district, "listing_type": listing_type, "property_type": property_type,
         "property_subtype": property_subtype, "rooms": rooms,
+        "price_negotiable": price_negotiable, "is_active": is_active,
     })
     return cur.fetchone()["id"]
 
@@ -139,6 +144,55 @@ def test_possible_duplicate_tier_does_not_reduce_the_count(cur) -> None:
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Хянах дүүрэг")
     assert group["n_listings"] == 20
     assert float(group["avg_price"]) == 150_000_000.0
+
+
+def test_average_price_by_group_excludes_negotiable_listings(cur) -> None:
+    """A price_negotiable=true row is a placeholder ('Vнэ тохирно'), never a
+    real price -- it must not enter the average (2026-08 audit: this
+    function had fallen out of sync with deal_percentages/
+    estimate_negotiable_price, which already excluded it)."""
+    _insert_many(cur, "test://negotiable-filler", 20, 100_000_000, 50.0,
+                 district="Тохиролцоо дүүрэг")
+    # An absurd negotiable "asking price" that would badly skew the average
+    # if counted -- mirrors the real 3.5-trillion-MNT Газар зарна case.
+    _insert(cur, "test://negotiable-outlier", 999_000_000_000, 50.0,
+            district="Тохиролцоо дүүрэг", price_negotiable=True)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Тохиролцоо дүүрэг")
+    assert group["n_listings"] == 20  # the negotiable row excluded, not counted
+    assert float(group["avg_price"]) == 100_000_000.0
+
+
+def test_average_price_by_group_excludes_prices_above_plausible_ceiling(cur) -> None:
+    """Defense-in-depth for the same failure on a *non*-negotiable row (a
+    typo'd extra zero or two) -- see _GROUP_STATS_SQL's comment for how the
+    ceiling was derived from the real DB."""
+    _insert_many(cur, "test://ceiling-filler", 20, 100_000_000, 50.0,
+                 district="Дээвэр дүүрэг")
+    _insert(cur, "test://ceiling-outlier", _MAX_PLAUSIBLE_PRICE + 1, 50.0,
+            district="Дээвэр дүүрэг", price_negotiable=False)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Дээвэр дүүрэг")
+    assert group["n_listings"] == 20
+    assert float(group["avg_price"]) == 100_000_000.0
+
+
+def test_average_price_by_group_excludes_inactive_listings(cur) -> None:
+    """A sold/rented/removed listing (is_active=false, migration 009) is
+    soft-deleted, not dropped from the table -- it must still be excluded
+    from every *current* market figure, the same way a superseded duplicate
+    already is."""
+    _insert_many(cur, "test://inactive-filler", 20, 100_000_000, 50.0,
+                 district="Хаагдсан дүүрэг")
+    _insert(cur, "test://inactive-outlier", 999_000_000, 50.0,
+            district="Хаагдсан дүүрэг", is_active=False)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Хаагдсан дүүрэг")
+    assert group["n_listings"] == 20  # the inactive row excluded, not counted
+    assert float(group["avg_price"]) == 100_000_000.0
 
 
 def test_average_price_by_group_drops_groups_below_min_comparable_size(cur) -> None:
@@ -638,6 +692,26 @@ def test_deal_percentages_excludes_negotiable_price_listings(cur) -> None:
     group_rows = [r for r in rows if r["district"] == "Тохиролцоот дил дүүрэг"]
     assert {r["id"] for r in group_rows} == set(ids_real)
     assert group_rows[0]["n_comparable"] == 20  # the negotiable listing isn't in the group either
+    assert float(group_rows[0]["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+
+
+def test_deal_percentages_excludes_inactive_listings(cur) -> None:
+    """A closed listing (is_active=false, migration 009) must be excluded
+    from both sides, same as a negotiable one: neither scored itself (it's
+    not for sale/rent any more) nor counted toward anyone else's group
+    median baseline."""
+    ids_real = [
+        _insert(cur, f"test://deal-inactive-real-{i}", 150_000_000, 50.0,
+                district="Хаагдсан дил дүүрэг", rooms=2)
+        for i in range(20)
+    ]
+    _insert(cur, "test://deal-inactive-closed", 30_000_000, 50.0,
+            district="Хаагдсан дил дүүрэг", rooms=2, is_active=False)
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Хаагдсан дил дүүрэг"]
+    assert {r["id"] for r in group_rows} == set(ids_real)
+    assert group_rows[0]["n_comparable"] == 20  # the closed listing isn't in the group either
     assert float(group_rows[0]["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
 
 

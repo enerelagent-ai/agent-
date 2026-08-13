@@ -1,7 +1,12 @@
 """Core market calculation queries over canonical (non-duplicate) listings.
 
 Every query excludes matches.superseded_listing_ids() first, so an
-auto-resolved duplicate group is counted once, not once per repost.
+auto-resolved duplicate group is counted once, not once per repost. Every
+query also filters WHERE is_active (migration 009): a sold/rented/removed
+listing must never count as live inventory in a *current* market figure —
+it stays in the table (soft-deleted, not dropped) purely for closure-trend
+analysis over time, which is a different, deliberately separate concern
+from anything in this module.
 """
 
 from datetime import date
@@ -27,6 +32,23 @@ MIN_COMPARABLE_GROUP_SIZE = 20
 # and district were asked for: sale and rent prices differ by ~100x for the
 # same property_type (see db/schema.sql's listing_type comment, and the
 # Week 4 investigation) — blending them would make the average meaningless.
+#
+# price_negotiable IS NOT TRUE: a "Vнэ тохирно" placeholder is never a real
+# price (same policy as deal_percentages/estimate_negotiable_price below —
+# this function had fallen out of sync with that policy; 2026-08 audit).
+# Real-DB impact was severe, not theoretical: a single negotiable "Газар
+# зарна" land ad with a literal but absurd asking price (3.5 trillion MNT
+# for one Баянзvрх plot, 2 trillion for one Сонгинохайрхан plot) inflated
+# those districts' average land price 7.9x and 4.5x respectively before
+# this fix.
+#
+# price <= _MAX_PLAUSIBLE_PRICE is defense-in-depth for the same failure on
+# a future *non*-negotiable row (a typo'd extra zero or two): verified
+# against the full DB that nothing legitimate is anywhere close to this
+# ceiling — the highest genuine listing is ~51B MNT (a large commercial
+# object), the next tier up is those same two negotiable errors at 2-3.5
+# TRILLION, a >40x gap either direction, so the ceiling has wide margin and
+# won't clip real high-value commercial/land listings.
 _GROUP_STATS_SQL = """
     SELECT
         listing_type,
@@ -38,14 +60,21 @@ _GROUP_STATS_SQL = """
         count(price_per_sqm) AS n_with_price_per_sqm
     FROM listings
     WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
       AND district IS NOT NULL
+      AND price_negotiable IS NOT TRUE
+      AND price <= %(max_plausible_price)s
       AND (%(district)s IS NULL OR district = %(district)s)
     GROUP BY listing_type, property_type, district
     HAVING count(*) >= %(min_group_size)s
     ORDER BY listing_type, property_type, n_listings DESC
 """
+
+# See _GROUP_STATS_SQL comment above for how this value and its safety
+# margin were derived from the real DB.
+_MAX_PLAUSIBLE_PRICE = Decimal("100000000000")  # 100 billion MNT
 
 
 def average_price_by_group(
@@ -66,12 +95,18 @@ def average_price_by_group(
     only reflects listings that have both price and area_sqm; n_listings vs
     n_with_price_per_sqm shows how many of the group lack area data (common
     for land/object listings).
+
+    Excludes price_negotiable listings (a placeholder price, never a real
+    one) and anything above _MAX_PLAUSIBLE_PRICE (a data-entry-error
+    ceiling) before averaging — see _GROUP_STATS_SQL's comment for why both
+    guards are needed and how the ceiling was derived.
     """
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_GROUP_STATS_SQL, {
         "excluded_ids": excluded,
         "district": district,
         "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
     })
     return [dict(row) for row in cur.fetchall()]
 
@@ -101,6 +136,7 @@ _RENTAL_YIELD_SQL = """
                round(avg(price_per_sqm)::numeric, 2) AS avg_sale_price_per_sqm
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND listing_type = 'sale' AND property_type = %(sale_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
           AND (%(district)s IS NULL OR district = %(district)s)
@@ -112,6 +148,7 @@ _RENTAL_YIELD_SQL = """
                round(avg(price)::numeric, 2) AS avg_rent_price
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND listing_type = 'rent' AND property_type = %(rent_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
           AND (%(district)s IS NULL OR district = %(district)s)
@@ -215,7 +252,7 @@ _SPECIAL_REASONS: dict[str, str] = {
 _COVERAGE_COUNT_SQL = """
     SELECT count(*) AS n, count(rooms) AS n_rooms
     FROM listings
-    WHERE listing_type = %(listing_type)s AND property_type = %(label)s
+    WHERE is_active AND listing_type = %(listing_type)s AND property_type = %(label)s
 """
 
 
@@ -292,6 +329,7 @@ _LISTING_COUNTS_SQL = """
         count(*) AS n
     FROM listings
     WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
     GROUP BY listing_type, bucket
@@ -589,6 +627,7 @@ _DEAL_PERCENTAGES_SQL = """
                count(*) AS n_comparable
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
           AND area_sqm >= %(min_area_sqm)s
           AND rooms != %(open_ended_rooms)s
@@ -609,6 +648,7 @@ _DEAL_PERCENTAGES_SQL = """
         JOIN group_medians gm
           ON l.district = gm.district AND l.rooms = gm.rooms AND l.listing_type = gm.listing_type
         WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
           AND l.district IS NOT NULL AND l.rooms IS NOT NULL AND l.price_per_sqm IS NOT NULL
           AND l.area_sqm >= %(min_area_sqm)s
           AND l.rooms != %(open_ended_rooms)s
@@ -732,6 +772,7 @@ _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
                count(*) AS n_comparable
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
           AND area_sqm >= %(min_area_sqm)s
           AND rooms != %(open_ended_rooms)s
@@ -764,6 +805,7 @@ _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
       ON l.district = gm.district AND l.rooms = gm.rooms
      AND l.listing_type = gm.listing_type AND l.property_type = gm.property_type
     WHERE l.id != ALL(%(excluded_ids)s)
+      AND l.is_active
       AND l.price_negotiable IS TRUE
       AND l.district IS NOT NULL AND l.rooms IS NOT NULL
       AND l.rooms != %(open_ended_rooms)s
@@ -829,6 +871,7 @@ _LAST_SCRAPED_AT_SQL = """
     FROM listings
     WHERE district = %(district)s
       AND id != ALL(%(excluded_ids)s)
+      AND is_active
 """
 
 

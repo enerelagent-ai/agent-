@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, Numeric, SmallInteger, String, Text
+from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, Numeric, SmallInteger, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -48,6 +48,21 @@ class Listing(Base):
     photo_urls: Mapped[list[str]] = mapped_column(ARRAY(Text))
 
     dedup_hash: Mapped[str] = mapped_column(Text)
+
+    # False once a previously-scraped listing is found gone from the site
+    # (sold/rented/removed) -- soft-deleted, not dropped, so its history
+    # stays queryable for closure-trend analysis. Every current market
+    # calculation in analytics/analytics/calculations.py filters on this
+    # (migration 009); delisted_at stays NULL until that happens.
+    # server_default (not a Python-side default): matches migration 009's
+    # DB-level DEFAULT true, and tells SQLAlchemy to omit this column from
+    # INSERT when unset rather than sending an explicit NULL that would
+    # violate the NOT NULL constraint -- the same reason nothing here
+    # bothered with a default before this column, since every prior
+    # NOT-NULL-with-a-DB-default column (photo_urls, scraped_at, ...) is
+    # always set explicitly by callers today.
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    delisted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
