@@ -44,7 +44,7 @@ const RENT_PROPERTY_TYPES = [
   { value: "Хурлын өрөө, заал түрээслүүлнэ", label: "Хурлын өрөө, заал" },
 ];
 
-type Tab = "recent" | "deals";
+type Tab = "recent" | "deals" | "review";
 
 interface RecentListingsProps {
   initialListings: Listing[];
@@ -120,6 +120,7 @@ export function RecentListings({
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         sortBy: nextTab === "deals" ? "deal_pct" : undefined,
+        dealStatus: nextTab === "review" ? "needs_review" : undefined,
         limit: pageSize,
         offset: nextOffset,
       });
@@ -160,6 +161,17 @@ export function RecentListings({
           }`}
         >
           Хямд боломж
+        </button>
+        <button
+          type="button"
+          onClick={() => selectTab("review")}
+          className={`border-b-2 px-3 py-2 text-sm font-medium ${
+            tab === "review"
+              ? "border-amber-500 text-ink-primary"
+              : "border-transparent text-ink-muted hover:text-ink-secondary"
+          }`}
+        >
+          Шалгах шаардлагатай
         </button>
       </div>
 
@@ -261,10 +273,19 @@ export function RecentListings({
           алдаа биш гэж тодорхой итгэлтэй үнэлэгдсэн зарууд эхэнд жагсаана.
         </p>
       )}
+      {tab === "review" && (
+        <p className="mb-3 rounded-md bg-amber-500/10 p-2.5 text-xs leading-relaxed text-amber-800">
+          Ижил бүлгийн медианаас 50%-иас их зөрсөн тул шууд “хямд боломж” гэж батлах боломжгүй зарууд. Ангилал, талбай, placeholder үнэ эсвэл эх өгөгдлийг гараар шалгана уу.
+        </p>
+      )}
 
       {listings.length === 0 ? (
         <p className="py-4 text-sm text-ink-muted">
-          {tab === "deals" ? "Энэ шүүлтээр хямд боломж олдсонгүй." : "Энэ шүүлтээр зар олдсонгүй."}
+          {tab === "deals"
+            ? "Энэ шүүлтээр хямд боломж олдсонгүй."
+            : tab === "review"
+              ? "Энэ шүүлтээр шалгах шаардлагатай зар олдсонгүй."
+              : "Энэ шүүлтээр зар олдсонгүй."}
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-line-grid">

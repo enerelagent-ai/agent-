@@ -1,12 +1,24 @@
 from datetime import datetime, timezone
 
 from app.models.listing import Listing
+from app.api.routes.dashboard import _deal_candidate_ids
 
 # Far enough in the future that these synthetic rows always sort first in
 # the endpoint's `scraped_at DESC` order, ahead of whatever real committed
 # data also exists in this DB -- /listings has no district/filter param to
 # otherwise isolate a test's own rows from it.
 _FUTURE_SCRAPED_AT = datetime(2099, 1, 1, tzinfo=timezone.utc)
+
+
+def test_deal_candidate_filter_keeps_needs_review_separate_from_top_deals() -> None:
+    deals = {
+        1: {"deal_status": "needs_review", "district": "A", "property_type": "Apartment", "complex_id": None, "price": 10},
+        2: {"deal_status": "top_deal", "district": "A", "property_type": "Apartment", "complex_id": None, "price": 20},
+        3: {"deal_status": "needs_review", "district": "B", "property_type": "Apartment", "complex_id": None, "price": 30},
+    }
+
+    assert _deal_candidate_ids(deals, "needs_review", "A", None, None, None, None) == [1]
+    assert _deal_candidate_ids(deals, "top_deal", "A", None, None, None, None) == [2]
 
 
 def _insert_tied_listings(db_session, n: int) -> list[int]:

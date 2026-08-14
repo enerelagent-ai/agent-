@@ -171,6 +171,7 @@ export interface ListingFilters {
   minPrice?: number;
   maxPrice?: number;
   sortBy?: "recent" | "deal_pct";
+  dealStatus?: "top_deal" | "needs_review" | "not_notable";
   limit?: number;
   offset?: number;
 }
@@ -185,6 +186,7 @@ export function getFilteredListings(filters: ListingFilters = {}): Promise<Listi
   if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
+  if (filters.dealStatus) params.set("deal_status", filters.dealStatus);
   params.set("limit", String(filters.limit ?? 6));
   if (filters.offset !== undefined) params.set("offset", String(filters.offset));
   return getJSON(`/dashboard/listings?${params.toString()}`);

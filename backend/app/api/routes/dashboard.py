@@ -32,6 +32,28 @@ from app.schemas.listing import ListingOut
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
+def _deal_candidate_ids(
+    deals_by_id: dict[int, dict],
+    status: str,
+    district: str | None,
+    property_type: str | None,
+    complex_id: int | None,
+    min_price: float | None,
+    max_price: float | None,
+) -> list[int]:
+    """Preserve analytics deal ranking while applying browse filters."""
+    return [
+        deal_id
+        for deal_id, deal in deals_by_id.items()
+        if deal["deal_status"] == status
+        and (district is None or deal["district"] == district)
+        and (property_type is None or deal["property_type"] == property_type)
+        and (complex_id is None or deal["complex_id"] == complex_id)
+        and (min_price is None or float(deal["price"]) >= min_price)
+        and (max_price is None or float(deal["price"]) <= max_price)
+    ]
+
+
 @router.get("/investment-summary", response_model=list[DistrictInvestmentSummary])
 def investment_summary() -> list[dict]:
     return investment_summary_by_district_conn(settings.database_url)
@@ -140,6 +162,7 @@ def list_dashboard_listings(
     complex_id: int | None = Query(None, ge=1),
     min_price: float | None = Query(None, ge=0),
     max_price: float | None = Query(None, ge=0),
+    deal_status: Literal["top_deal", "needs_review", "not_notable"] | None = Query(None),
     sort_by: Literal["recent", "deal_pct"] = Query("recent"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
@@ -166,6 +189,11 @@ def list_dashboard_listings(
     deviation that a wrong comparison group is a more likely explanation
     than a genuine bargain — deal_reason then explains why), 'not_notable',
     or None when not applicable.
+
+    deal_status optionally restricts the browse result to one of those
+    explicit confidence classes. In particular, needs_review remains a
+    manual data-quality queue and is never folded into the default
+    sort_by="deal_pct" top-deal list.
 
     sort_by="deal_pct" ranks best-deal-first using that same precomputed,
     already-sorted dataset, filtered down to listings matching the other
@@ -212,6 +240,20 @@ def list_dashboard_listings(
         (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
     }
 
+    status_candidate_ids = (
+        _deal_candidate_ids(
+            deals_by_id,
+            deal_status,
+            district,
+            property_type,
+            complex_id,
+            min_price,
+            max_price,
+        )
+        if deal_status is not None
+        else None
+    )
+
     if sort_by == "deal_pct":
         # deal_percentages() already excludes superseded listings itself, so
         # every id in deals_by_id is already canonical -- no need to filter
@@ -223,16 +265,19 @@ def list_dashboard_listings(
         # (test ads, "170 ₮ Үнэ тохирно" placeholders, area-parsing bugs --
         # exactly the noise the confidence tiers exist to keep out of a
         # confident deals list) at the very top, ahead of every genuine deal.
-        candidate_ids = [
-            deal_id
-            for deal_id, deal in deals_by_id.items()
-            if deal["deal_status"] == "top_deal"
-            and (district is None or deal["district"] == district)
-            and (property_type is None or deal["property_type"] == property_type)
-            and (complex_id is None or deal["complex_id"] == complex_id)
-            and (min_price is None or float(deal["price"]) >= min_price)
-            and (max_price is None or float(deal["price"]) <= max_price)
-        ]
+        candidate_ids = (
+            status_candidate_ids
+            if status_candidate_ids is not None
+            else _deal_candidate_ids(
+                deals_by_id,
+                "top_deal",
+                district,
+                property_type,
+                complex_id,
+                min_price,
+                max_price,
+            )
+        )
         page_ids = candidate_ids[offset:offset + limit]
         if not page_ids:
             return []
@@ -243,6 +288,10 @@ def list_dashboard_listings(
             Listing.id.notin_(excluded_ids),
             Listing.is_active.is_(True),
         )
+        if status_candidate_ids is not None:
+            if not status_candidate_ids:
+                return []
+            query = query.filter(Listing.id.in_(status_candidate_ids))
         if district is not None:
             query = query.filter(Listing.district == district)
         if property_type is not None:
