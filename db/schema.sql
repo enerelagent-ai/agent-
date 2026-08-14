@@ -106,6 +106,12 @@ CREATE TABLE IF NOT EXISTS duplicate_matches (
 
 CREATE INDEX IF NOT EXISTS idx_duplicate_matches_b ON duplicate_matches (listing_id_b);
 
+CREATE TABLE IF NOT EXISTS notification_state (
+    id              SMALLINT PRIMARY KEY CHECK (id = 1),
+    last_seen_at    TIMESTAMPTZ NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

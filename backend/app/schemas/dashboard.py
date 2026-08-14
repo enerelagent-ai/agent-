@@ -37,6 +37,27 @@ class MonthlyDelistingPoint(BaseModel):
     n_delisted: int
 
 
+class DealAlertItem(BaseModel):
+    id: int
+    title: str
+    source_url: str
+    price: float | None
+    district: str | None
+    complex_name: str | None
+    scraped_at: datetime
+    deal_pct: float
+
+
+class DealAlertFeed(BaseModel):
+    items: list[DealAlertItem]
+    unseen_count: int
+    last_seen_at: datetime
+
+
+class NotificationReadState(BaseModel):
+    last_seen_at: datetime
+
+
 class ComplexPriceSummary(BaseModel):
     complex_id: int
     complex_name: str

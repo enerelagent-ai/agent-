@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Literal
 
 from analytics.calculations import (
@@ -17,13 +18,15 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Complex, Listing
+from app.models.listing import Complex, Listing, NotificationState
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
+    DealAlertFeed,
     ComplexPriceSummary,
     ComplexOption,
     ListingTypeCount,
     MonthlyDelistingPoint,
+    NotificationReadState,
     PriceTrendPoint,
     TodaysOpportunity,
 )
@@ -95,6 +98,71 @@ def delisting_trend(
 ) -> list[dict]:
     """Monthly removed-ad counts; removal does not necessarily mean a sale."""
     return monthly_delisting_trend_conn(settings.database_url, listing_type, district)
+
+
+def _notification_state(db: DbSession) -> NotificationState:
+    state = db.get(NotificationState, 1)
+    if state is None:
+        now = datetime.now(timezone.utc)
+        state = NotificationState(id=1, last_seen_at=now, updated_at=now)
+        db.add(state)
+        db.commit()
+        db.refresh(state)
+    return state
+
+
+@router.get("/deal-alerts", response_model=DealAlertFeed)
+def deal_alerts(db: DbSession, limit: int = Query(20, ge=1, le=100)) -> dict:
+    """Current confident deals plus a single-admin unread count."""
+    state = _notification_state(db)
+    deals = {
+        row["id"]: row
+        for row in deal_percentages_conn(settings.database_url)
+        if row["deal_status"] == "top_deal"
+    }
+    if not deals:
+        return {"items": [], "unseen_count": 0, "last_seen_at": state.last_seen_at}
+
+    rows = (
+        db.query(Listing)
+        .filter(Listing.id.in_(deals), Listing.is_active.is_(True))
+        .order_by(Listing.scraped_at.desc(), Listing.id.desc())
+        .all()
+    )
+    unseen_count = sum(1 for row in rows if row.scraped_at > state.last_seen_at)
+    page = rows[:limit]
+    complex_ids = {row.complex_id for row in page if row.complex_id is not None}
+    complex_names = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+    return {
+        "items": [
+            {
+                "id": row.id,
+                "title": row.title,
+                "source_url": row.source_url,
+                "price": float(row.price) if row.price is not None else None,
+                "district": row.district,
+                "complex_name": complex_names.get(row.complex_id),
+                "scraped_at": row.scraped_at,
+                "deal_pct": float(deals[row.id]["deal_pct"]),
+            }
+            for row in page
+        ],
+        "unseen_count": unseen_count,
+        "last_seen_at": state.last_seen_at,
+    }
+
+
+@router.post("/deal-alerts/mark-seen", response_model=NotificationReadState)
+def mark_deal_alerts_seen(db: DbSession) -> dict:
+    state = _notification_state(db)
+    now = datetime.now(timezone.utc)
+    state.last_seen_at = now
+    state.updated_at = now
+    db.commit()
+    return {"last_seen_at": now}
 
 
 @router.get("/complex-prices", response_model=list[ComplexPriceSummary])

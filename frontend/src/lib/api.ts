@@ -63,6 +63,23 @@ export interface ComplexOption {
   canonical_name: string;
 }
 
+export interface DealAlertItem {
+  id: number;
+  title: string;
+  source_url: string;
+  price: number | null;
+  district: string | null;
+  complex_name: string | null;
+  scraped_at: string;
+  deal_pct: number;
+}
+
+export interface DealAlertFeed {
+  items: DealAlertItem[];
+  unseen_count: number;
+  last_seen_at: string;
+}
+
 export interface Listing {
   id: number;
   source: string;
@@ -135,6 +152,26 @@ async function getJSON<T>(path: string): Promise<T> {
     throw new Error(`${path} returned ${res.status}`);
   }
   return res.json();
+}
+
+async function postJSON<T>(path: string): Promise<T> {
+  const isServer = typeof window === "undefined";
+  const headers: HeadersInit = {};
+  if (isServer && ADMIN_USERNAME && ADMIN_PASSWORD) {
+    headers["Authorization"] = `Basic ${btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)}`;
+  }
+  const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
+  const res = await fetch(url, { method: "POST", cache: "no-store", headers });
+  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
+  return res.json();
+}
+
+export function getDealAlerts(limit = 20): Promise<DealAlertFeed> {
+  return getJSON(`/dashboard/deal-alerts?limit=${limit}`);
+}
+
+export function markDealAlertsSeen(): Promise<{ last_seen_at: string }> {
+  return postJSON("/dashboard/deal-alerts/mark-seen");
 }
 
 export function getInvestmentSummary(): Promise<DistrictInvestmentSummary[]> {

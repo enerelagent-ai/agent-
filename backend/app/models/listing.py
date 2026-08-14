@@ -19,6 +19,16 @@ class Complex(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class NotificationState(Base):
+    """Singleton read cursor for the V1.5 single-admin deal feed."""
+
+    __tablename__ = "notification_state"
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class Listing(Base):
     """Mirrors the `listings` table defined in db/schema.sql."""
 

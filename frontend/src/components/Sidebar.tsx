@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: "/calculator" },
   { label: "Түрээсийн өгөөж", icon: KeyRound, href: null },
   { label: "Дүрслэл & Тайлан", icon: FileBarChart, href: null },
-  { label: "Мэдэгдэл", icon: Bell, href: null },
+  { label: "Мэдэгдэл", icon: Bell, href: "/notifications" },
   { label: "Тохиргоо", icon: Settings, href: null },
 ];
 
