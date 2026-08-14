@@ -53,8 +53,8 @@ def price_trend(
 ) -> list[dict]:
     """Overall price trend for one (listing_type, property_type) slice, one
     point per price_history snapshot. Defaults to sale-side apartments — see
-    analytics.calculations.price_trend for why. Only ever has as many points
-    as snapshot_market_prices() has been run; today that's a single point.
+    analytics.calculations.price_trend for why. It has one point per day that
+    the scheduled scraper pipeline has completed a market-price snapshot.
     """
     return price_trend_conn(settings.database_url, listing_type, property_type)
 

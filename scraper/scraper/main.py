@@ -12,6 +12,7 @@ import time
 
 from playwright.sync_api import Browser, sync_playwright
 
+from analytics.calculations import snapshot_market_prices_conn
 from analytics.matches import match_new_listings
 
 from scraper.browser import launch_browser
@@ -127,6 +128,9 @@ def run_pipeline(
                 print(f"    duplicate match: listings {id_a} <-> {id_b} (score {score:.2f})")
             print(flush=True)
         browser.close()
+
+    snapshot_count = snapshot_market_prices_conn(dsn)
+    print(f"market snapshot: {snapshot_count} price groups recorded", flush=True)
 
     if all_errors:
         print("errors:")
