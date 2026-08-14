@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, Eye, GitCompareArrows } from "lucide-react";
 import { getFilteredListings, type ComplexOption, type Listing } from "@/lib/api";
 import { formatListingPrice, formatPercent, timeAgo } from "@/lib/format";
 import { ListingDetailModal } from "./ListingDetailModal";
+import { CompareTray, MAX_COMPARE_LISTINGS } from "./CompareTray";
+
+const COMPARE_STORAGE_KEY = "enerelagent.compare-listings.v1";
 
 // Sale and rent listings use different raw property_type strings for the
 // same real-world category (see analytics.calculations' _PROPERTY_TYPE_GROUPS
@@ -70,6 +73,42 @@ export function RecentListings({
   const [loading, setLoading] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [offset, setOffset] = useState(0);
+  const [compareListings, setCompareListings] = useState<Listing[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY) ?? "[]");
+      if (Array.isArray(saved)) {
+        setCompareListings(
+          saved
+            .filter((row): row is Listing => typeof row === "object" && row !== null && typeof row.id === "number")
+            .slice(0, MAX_COMPARE_LISTINGS),
+        );
+      }
+    } catch {
+      localStorage.removeItem(COMPARE_STORAGE_KEY);
+    }
+  }, []);
+
+  function updateCompare(next: Listing[]) {
+    setCompareListings(next);
+    try {
+      localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Private browsing/storage quotas must not break in-memory comparison.
+    }
+    if (next.length < 2) setCompareOpen(false);
+  }
+
+  function toggleCompare(listing: Listing) {
+    const selected = compareListings.some((row) => row.id === listing.id);
+    if (selected) {
+      updateCompare(compareListings.filter((row) => row.id !== listing.id));
+    } else if (compareListings.length < MAX_COMPARE_LISTINGS) {
+      updateCompare([...compareListings, listing]);
+    }
+  }
 
   async function runFetch(nextTab: Tab, nextOffset = 0) {
     setLoading(true);
@@ -231,6 +270,7 @@ export function RecentListings({
         <ul className="flex flex-col divide-y divide-line-grid">
           {listings.map((listing) => {
             const priceDisplay = formatListingPrice(listing);
+            const selectedForCompare = compareListings.some((row) => row.id === listing.id);
             return (
               <li
                 key={listing.id}
@@ -288,12 +328,27 @@ export function RecentListings({
                         Өгөөж {formatPercent(listing.rental_yield_pct)}
                       </span>
                     )}
-                    {listing.view_count !== null && (
+                    {listing.view_count != null && (
                       <span className="flex items-center gap-1 text-xs text-ink-muted" title="Эх сурвалж дээрх нийт үзэлт">
                         <Eye className="h-3 w-3" aria-hidden />
                         {listing.view_count.toLocaleString("mn-MN")}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleCompare(listing);
+                      }}
+                      disabled={!selectedForCompare && compareListings.length >= MAX_COMPARE_LISTINGS}
+                      title={!selectedForCompare && compareListings.length >= MAX_COMPARE_LISTINGS ? "Дээд тал нь 3 зар харьцуулна" : undefined}
+                      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${
+                        selectedForCompare ? "bg-series-1 text-white" : "bg-series-1/10 text-series-1"
+                      }`}
+                    >
+                      {selectedForCompare ? <Check className="h-3 w-3" aria-hidden /> : <GitCompareArrows className="h-3 w-3" aria-hidden />}
+                      {selectedForCompare ? "Сонгосон" : "Харьцуулах"}
+                    </button>
                     <a
                       href={listing.source_url}
                       target="_blank"
@@ -338,6 +393,14 @@ export function RecentListings({
       )}
 
       <ListingDetailModal listing={selectedListing} onClose={() => setSelectedListing(null)} />
+      <CompareTray
+        listings={compareListings}
+        open={compareOpen}
+        onOpen={() => setCompareOpen(true)}
+        onClose={() => setCompareOpen(false)}
+        onRemove={(id) => updateCompare(compareListings.filter((row) => row.id !== id))}
+        onClear={() => updateCompare([])}
+      />
     </div>
   );
 }
