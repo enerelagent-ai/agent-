@@ -83,6 +83,7 @@ export interface Listing {
   lng: number | null;
   contact_phone: string | null;
   photo_urls: string[];
+  view_count: number | null;
   scraped_at: string;
   created_at: string;
   updated_at: string;
@@ -168,6 +169,7 @@ export interface ListingFilters {
   maxPrice?: number;
   sortBy?: "recent" | "deal_pct";
   limit?: number;
+  offset?: number;
 }
 
 // Client-side counterpart to getRecentListings, for the interactive filter
@@ -181,6 +183,7 @@ export function getFilteredListings(filters: ListingFilters = {}): Promise<Listi
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   params.set("limit", String(filters.limit ?? 6));
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset));
   return getJSON(`/dashboard/listings?${params.toString()}`);
 }
 

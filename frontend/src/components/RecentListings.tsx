@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Eye } from "lucide-react";
 import { getFilteredListings, type ComplexOption, type Listing } from "@/lib/api";
 import { formatListingPrice, formatPercent, timeAgo } from "@/lib/format";
 import { ListingDetailModal } from "./ListingDetailModal";
@@ -48,9 +48,18 @@ interface RecentListingsProps {
   districts: string[];
   complexes: ComplexOption[];
   onDistrictApplied?: (district: string | null) => void;
+  pageSize?: number;
+  paginated?: boolean;
 }
 
-export function RecentListings({ initialListings, districts, complexes, onDistrictApplied }: RecentListingsProps) {
+export function RecentListings({
+  initialListings,
+  districts,
+  complexes,
+  onDistrictApplied,
+  pageSize = 6,
+  paginated = false,
+}: RecentListingsProps) {
   const [tab, setTab] = useState<Tab>("recent");
   const [listings, setListings] = useState(initialListings);
   const [district, setDistrict] = useState("");
@@ -60,8 +69,9 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
   const [maxPrice, setMaxPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [offset, setOffset] = useState(0);
 
-  async function runFetch(nextTab: Tab) {
+  async function runFetch(nextTab: Tab, nextOffset = 0) {
     setLoading(true);
     try {
       const rows = await getFilteredListings({
@@ -71,9 +81,11 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         sortBy: nextTab === "deals" ? "deal_pct" : undefined,
-        limit: 6,
+        limit: pageSize,
+        offset: nextOffset,
       });
       setListings(rows);
+      setOffset(nextOffset);
       onDistrictApplied?.(district || null);
     } finally {
       setLoading(false);
@@ -82,7 +94,7 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
 
   function selectTab(nextTab: Tab) {
     setTab(nextTab);
-    runFetch(nextTab);
+    runFetch(nextTab, 0);
   }
 
   return (
@@ -196,7 +208,7 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
 
         <button
           type="button"
-          onClick={() => runFetch(tab)}
+          onClick={() => runFetch(tab, 0)}
           disabled={loading}
           className="rounded-md bg-series-1 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
         >
@@ -268,6 +280,20 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
                         Хотхоноос ↓ {formatPercent(listing.complex_deal_pct)}
                       </span>
                     )}
+                    {listing.rental_yield_pct !== null && (
+                      <span
+                        title={`Ижил дүүрэг, өрөөний бүлгийн gross rental yield · ${listing.rental_yield_n_sale ?? 0} худалдах / ${listing.rental_yield_n_rent ?? 0} түрээслэх зар`}
+                        className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700"
+                      >
+                        Өгөөж {formatPercent(listing.rental_yield_pct)}
+                      </span>
+                    )}
+                    {listing.view_count !== null && (
+                      <span className="flex items-center gap-1 text-xs text-ink-muted" title="Эх сурвалж дээрх нийт үзэлт">
+                        <Eye className="h-3 w-3" aria-hidden />
+                        {listing.view_count.toLocaleString("mn-MN")}
+                      </span>
+                    )}
                     <a
                       href={listing.source_url}
                       target="_blank"
@@ -283,6 +309,32 @@ export function RecentListings({ initialListings, districts, complexes, onDistri
             );
           })}
         </ul>
+      )}
+
+      {paginated && (offset > 0 || listings.length === pageSize) && (
+        <div className="mt-5 flex items-center justify-between border-t border-line-grid pt-4">
+          <p className="text-xs text-ink-muted">
+            {offset + 1}–{offset + listings.length} дахь зар
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => runFetch(tab, Math.max(0, offset - pageSize))}
+              disabled={loading || offset === 0}
+              className="flex items-center gap-1 rounded-md border border-line-grid px-3 py-1.5 text-sm text-ink-secondary disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden /> Өмнөх
+            </button>
+            <button
+              type="button"
+              onClick={() => runFetch(tab, offset + pageSize)}
+              disabled={loading || listings.length < pageSize}
+              className="flex items-center gap-1 rounded-md border border-line-grid px-3 py-1.5 text-sm text-ink-secondary disabled:opacity-40"
+            >
+              Дараах <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
       )}
 
       <ListingDetailModal listing={selectedListing} onClose={() => setSelectedListing(null)} />
