@@ -55,6 +55,17 @@ npm run dev
 
 `db/schema.sql`-д schema, `db/migrations/`-д migration файлууд байрлана.
 
+Pending migration-уудыг checksum болон advisory lock-той дарааллаар ажиллуулах:
+
+```bash
+DATABASE_URL=postgresql://... python db/apply_migrations.py
+```
+
+Production release хийхдээ GitHub Actions-ийн **Apply database migrations**
+workflow-г эхэлж ажиллуулаад, дараа нь backend/frontend deploy хийнэ. Аль хэдийн
+бүртгэгдсэн migration өөрчлөгдсөн бол runner алдаа өгч зогсоно; шинэ өөрчлөлтийг
+хуучин SQL-д засварлах биш дараагийн дугаартай migration болгож нэмнэ.
+
 ## Нууц мэдээлэл
 
 Нууц түлхүүр, DB нэвтрэх мэдээллийг код дотор бичихгүй. Тус бүрийн хавтсанд `.env` файл ашиглана (`.gitignore`-д орсон).

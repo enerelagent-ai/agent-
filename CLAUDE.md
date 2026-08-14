@@ -6,7 +6,7 @@ CLAUDE.md — Улаанбаатарын Үл Хөдлөх Хөрөнгийн А
 
 Үл хөдлөх хөрөнгийн олон эх сурвалжийн (Үнэгүй.мн, Facebook групп) зар мэдээллийг нэгтгэн цуглуулж, зах зээлийн дундаж үнэ, түрээсийн өгөөж, хөрөнгө оруулалтын өгөөжийн харьцаа зэрэг үзүүлэлтийг тооцоолсон веб аналитик платформ бий болгох. Хэрэглэгч энэ дата дээр үндэслэн хөрөнгө оруулалтын шийдвэр гаргана.
 
-Хувилбар 1.0 (✅ 8/8 долоо хоног дууссан, deploy хийгдсэн — доорх "Одоогийн статус" үз): Үнэгүй.мн-с scraping, дублей илрүүлэлт, тооцооллын систем, dashboard, deploy + auth. Хувилбар 2.0 (дараагийн үе шат, хараахан эхлээгvй): Facebook нэгтгэл, барилгын төслийн мэдээллийн сан, AI-аар санал болгох/үнэлгээ хийх систем, дулааны зураг, мэдэгдлийн систем.
+Хувилбар 1.0 (✅ deploy хийгдсэн): Үнэгүй.мн scraping, дублей илрүүлэлт, analytics dashboard, auth. Хувилбар 1.5 (✅ код дууссан, release verification шат): хотхон extraction/analytics/filter, lifecycle ба view count, өдөр тутмын price snapshot, бүтэн listings browse, investment calculator, compare shortlist, үнийн тархалт, needs-review queue, dashboard deal notification. Хувилбар 2.0 (дараагийн үе шат, хараахан эхлээгүй): Facebook нэгтгэл, төслийн баяжуулсан мэдээлэл, найдвартай дата бүрдсэний дараах forecast судалгаа.
 
 Tech stack
 Backend: FastAPI (Python) — Render дээр deploy хийгдсэн; Basic Auth opt-in (ADMIN_USERNAME/ADMIN_PASSWORD хоёуланг тохируулбал л асдаг, local dev-д унтраалттай — backend/app/api/deps.py:require_admin)
@@ -24,18 +24,18 @@ Deployment: ✅ Week 8-д хийгдсэн — GitHub (эх код) → Vercel (
 | GitHub | Эх код + өдөр тутмын scrape (GitHub Actions, 03:00 ЭТС) | .github/workflows/daily-scrape.yml |
 | Vercel | Frontend (Next.js), Edge Network, auto-deploy | frontend/src/app/, frontend/src/lib/api.ts |
 | Render | Backend (FastAPI), бизнес логик, тооцоолол | backend/app/main.py, analytics/analytics/calculations.py |
-| Neon | Serverless PostgreSQL (production DB) | db/schema.sql, db/migrations/001…008 |
+| Neon | Serverless PostgreSQL (production DB) | db/schema.sql, db/migrations/001…012 |
 
 9 үе шат (өгөгдлийн урсгал: scraper → dedup → DB → analytics → API → frontend → auth → deployment):
 1. Scraper — scraper/scraper/main.py, list_pages.py, detail_page.py, browser.py — Unegui.mn-ээс татах, бот-чек даван гарах
 2. Parsing/Cleaning — detail_page.py, save.py — HTML → бүтэцтэй Dict, талбар/өрөө parse, dedup_hash үүсгэх
 3. Duplicate Detection — analytics/analytics/dedup.py (оноо тооцох), matches.py (дамжлага) — жин: title 0.45 / үнэ 0.35 / зураг 0.08 / огноо 0.12 (жишээ тооцоолол доор Week 4 тэмдэглэлд, ID 76 vs 14, score 0.879)
-4. Database — db/schema.sql, db/migrations/001…008 — listings, duplicate_matches, price_history хүснэгтүүд
+4. Database — db/schema.sql, db/migrations/001…012 — listings, duplicate_matches, price_history, complexes, lifecycle/view/notification state
 5. Analytics — analytics/analytics/calculations.py — дундаж үнэ, түрээсийн өгөөж, ROI (давхардсан заруудыг үргэлж хасна)
 6. Backend API — backend/app/main.py, api/router.py, api/routes/*.py, api/deps.py — Pydantic моделоор шалгаж JSON буцаана
 7. Frontend — frontend/src/app/, components/*.tsx — API-аас JSON татаж интерактив график/хүснэгт үзүүлнэ
 8. Authentication — backend/app/api/deps.py (Basic Auth) + frontend/src/middleware.ts, lib/session.ts (session-cookie login) — хоёул ADMIN_USERNAME/ADMIN_PASSWORD-аар синхрон, тохируулаагүй бол local dev шиг нээлттэй
-9. Deployment — .github/workflows/daily-scrape.yml (production), scraper/bin/run_daily_scrape.sh (local dev fallback, launchd)
+9. Deployment — .github/workflows/apply-migrations.yml → Render/Vercel deploy; daily-scrape.yml + weekly-inventory-reconcile.yml (production), scraper/bin/run_daily_scrape.sh (local dev fallback)
 
 Анхаар: production (Neon) DB нь local dev (Postgres.app)-ээс өөр, тусдаа, харьцангуй бага өгөгдөлтэй сан — GitHub Actions scrape эхэлснээс хойш аажмаар нөхөгдөж байгаа (жишээ: 2026-07-31-ний байдлаар Сонгинохайрхан local дээр n_sale=484 байхад production дээр n_sale=52). Production дээр тоо баримт баталгаажуулахдаа "жижиг байна" гэдгийг санаарай — алдаа биш.
 
@@ -116,4 +116,3 @@ Feature шилжихдээ context цэвэрлэх (/clear эсвэл шинэ 
  - deal_percentages()-ийг real DB дээр баталгаажуулах явцад олдсон, ховор тохиолддог per-listing өгөгдлийн чанарын асуудлууд (2026-07-28): (1) өрөөний тоо буруу ангилагдсан ховор тохиолдол — listing-ийн title өөр өрөөний тоо заасан ч rooms талбар өөр байх нь бий (ж: id 17500, гарчигт "5 өрөө" гэсэн ч rooms=2 гэж хадгалагдсан); (2) title/талбай (area) зөрүүтэй ховор тохиолдол, scraper талын area parsing-ийн асуудлаас үүдэлтэй (ж: id 2226, 27067 — гарчигт нэг талбай дурдсан ч хадгалагдсан area өөр). Хоёул тус тусдаа ховор бөгөөд нэгтгэсэн тооцооллыг (aggregate calculations) гажуудуулахгүй байгааг баталгаажуулсан, гэхдээ ирээдүйд хайлт/жагсаалт (search/browse) feature дээр ажиллахад анхаарах зүйл.
 
 Шийдэгдсэн асуудлууд (архивт, лавлагаанд): /listings pagination tiebreaker (90a0a82, main), Хуваарьт scrape-ийн Postgres.app/компьютер сэрvvн байх шаардлага (Week 8 GitHub Actions deploy-ээр production талд бvрэн арилсан).
- 
