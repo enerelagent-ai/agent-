@@ -15,6 +15,8 @@ from analytics.calculations import (
     _OPEN_ENDED_ROOMS,
     average_price_by_group,
     classify_deal,
+    complex_average_price,
+    complex_deal_percentages,
     deal_percentages,
     estimate_negotiable_price,
     investment_summary_by_district,
@@ -31,11 +33,11 @@ _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,
                           district, listing_type, property_type,
                           property_subtype, rooms, photo_urls, dedup_hash,
-                          price_negotiable, is_active)
+                          price_negotiable, is_active, complex_id)
     VALUES ('unegui', %(source_url)s, 'test', %(price)s, %(area_sqm)s,
             %(district)s, %(listing_type)s, %(property_type)s,
             %(property_subtype)s, %(rooms)s, '{}', 'test-hash',
-            %(price_negotiable)s, %(is_active)s)
+            %(price_negotiable)s, %(is_active)s, %(complex_id)s)
     RETURNING id
 """
 
@@ -43,12 +45,13 @@ _INSERT_SQL = """
 def _insert(cur, url, price, area, *, listing_type="sale",
             property_type="Орон сууц зарна", district="Тест дүүрэг",
             property_subtype=None, rooms=None, price_negotiable=None,
-            is_active=True) -> int:
+            is_active=True, complex_id=None) -> int:
     cur.execute(_INSERT_SQL, {
         "source_url": url, "price": price, "area_sqm": area,
         "district": district, "listing_type": listing_type, "property_type": property_type,
         "property_subtype": property_subtype, "rooms": rooms,
         "price_negotiable": price_negotiable, "is_active": is_active,
+        "complex_id": complex_id,
     })
     return cur.fetchone()["id"]
 
@@ -65,6 +68,90 @@ def _group(rows, *, listing_type, property_type, district):
 def _insert_many(cur, url_prefix, n, price, area, **kwargs):
     for i in range(n):
         _insert(cur, f"{url_prefix}-{i}", price, area, **kwargs)
+
+
+def _complex(cur, name: str) -> int:
+    cur.execute(
+        """
+        INSERT INTO complexes (canonical_name, normalized_name)
+        VALUES (%s, %s)
+        ON CONFLICT (canonical_name) DO UPDATE SET updated_at = now()
+        RETURNING id
+        """,
+        (name, name.lower()),
+    )
+    return cur.fetchone()["id"]
+
+
+def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
+    complex_id = _complex(cur, "Тест Phase 3 хотхон")
+    _insert_many(
+        cur, "test://complex-average", 20, 150_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+    )
+    _insert(
+        cur, "test://complex-negotiable", 99_000_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        price_negotiable=True,
+    )
+    _insert(
+        cur, "test://complex-inactive", 900_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        is_active=False,
+    )
+    _insert(
+        cur, "test://complex-ceiling", _MAX_PLAUSIBLE_PRICE + 1, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        price_negotiable=False,
+    )
+
+    rows = complex_average_price(cur, complex_id)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["complex_name"] == "Тест Phase 3 хотхон"
+    assert row["n_listings"] == 20
+    assert float(row["avg_price"]) == 150_000_000.0
+    assert float(row["median_price_per_sqm"]) == 3_000_000.0
+
+
+def test_complex_average_price_keeps_transaction_and_property_type_separate(cur) -> None:
+    complex_id = _complex(cur, "Тест Холихгүй хотхон")
+    _insert_many(cur, "test://complex-sale-apartment", 20, 100_000_000, 50.0,
+                 complex_id=complex_id)
+    _insert_many(cur, "test://complex-rent-apartment", 20, 1_000_000, 50.0,
+                 listing_type="rent", property_type="Орон сууц түрээслүүлнэ",
+                 complex_id=complex_id)
+    _insert_many(cur, "test://complex-sale-garage", 20, 30_000_000, 15.0,
+                 property_type="Гараж, контейнер, з-сууц зарна", complex_id=complex_id)
+
+    rows = complex_average_price(cur, complex_id)
+    assert len(rows) == 3
+    assert {(r["listing_type"], r["property_type"]) for r in rows} == {
+        ("sale", "Орон сууц зарна"),
+        ("rent", "Орон сууц түрээслүүлнэ"),
+        ("sale", "Гараж, контейнер, з-сууц зарна"),
+    }
+
+
+def test_complex_deal_uses_20_pct_threshold_and_median(cur) -> None:
+    complex_id = _complex(cur, "Тест Онцгой хотхон")
+    _insert_many(cur, "test://complex-deal-baseline", 20, 150_000_000, 50.0,
+                 rooms=2, complex_id=complex_id)
+    deal_id = _insert(cur, "test://complex-deal-target", 120_000_000, 50.0,
+                      rooms=2, complex_id=complex_id)
+
+    row = next(r for r in complex_deal_percentages(cur) if r["id"] == deal_id)
+    assert float(row["complex_median_price_per_sqm"]) == 3_000_000.0
+    assert float(row["complex_deal_pct"]) == 20.0
+    assert row["complex_deal_status"] == "top_deal"
+    assert row["complex_n_comparable"] == 21
+
+
+def test_complex_deal_drops_thin_complex_groups(cur) -> None:
+    complex_id = _complex(cur, "Тест Нимгэн хотхон")
+    _insert_many(cur, "test://complex-thin", 19, 150_000_000, 50.0,
+                 rooms=2, complex_id=complex_id)
+    assert all(r["complex_id"] != complex_id for r in complex_deal_percentages(cur))
 
 
 def test_average_price_by_group_computes_correct_stats(cur) -> None:

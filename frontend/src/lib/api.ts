@@ -66,6 +66,10 @@ export interface Listing {
   area_sqm: number | null;
   price_per_sqm: number | null;
   rooms: number | null;
+  floor: number | null;
+  total_floors: number | null;
+  complex_id: number | null;
+  complex_name: string | null;
   listing_type: string | null;
   property_type: string | null;
   district: string | null;
@@ -87,6 +91,13 @@ export interface Listing {
   // Same source as deal_pct — the group's own median price/m² as an
   // absolute number, for showing "your price/m² vs the group's".
   group_median_price_per_sqm: number | null;
+
+  // Independent, stricter comparison within the same canonical complex.
+  complex_deal_pct: number | null;
+  complex_deal_status: "top_deal" | "needs_review" | "not_notable" | null;
+  complex_deal_reason: string | null;
+  complex_n_comparable: number | null;
+  complex_median_price_per_sqm: number | null;
 
   // From analytics.estimate_negotiable_price() — only ever set alongside
   // price_negotiable=true, never alongside a deal_pct.

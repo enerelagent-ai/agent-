@@ -27,6 +27,19 @@ class ListingTypeCount(BaseModel):
     n: int
 
 
+class ComplexPriceSummary(BaseModel):
+    complex_id: int
+    complex_name: str
+    listing_type: str
+    property_type: str
+    n_listings: int
+    avg_price: float
+    median_price: float
+    avg_price_per_sqm: float | None
+    median_price_per_sqm: float | None
+    n_with_price_per_sqm: int
+
+
 class TodaysOpportunity(BaseModel):
     # No investment_score/roi_pct here on purpose -- see
     # analytics.calculations.todays_opportunity's docstring. Only the

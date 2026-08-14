@@ -1,6 +1,8 @@
 from typing import Literal
 
 from analytics.calculations import (
+    complex_average_price_conn,
+    complex_deal_percentages_conn,
     deal_percentages_conn,
     estimate_negotiable_price_conn,
     investment_summary_by_district_conn,
@@ -17,6 +19,7 @@ from app.config import settings
 from app.models.listing import Listing
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
+    ComplexPriceSummary,
     ListingTypeCount,
     PriceTrendPoint,
     TodaysOpportunity,
@@ -60,14 +63,34 @@ def listing_counts_by_type() -> list[dict]:
     return listing_counts_by_property_type_conn(settings.database_url)
 
 
+@router.get("/complex-prices", response_model=list[ComplexPriceSummary])
+def complex_prices(complex_id: int | None = Query(None, ge=1)) -> list[dict]:
+    """Current canonical price statistics, optionally for one complex."""
+    return complex_average_price_conn(settings.database_url, complex_id)
+
+
 def _attach_computed_fields(
-    listing: Listing, deal: dict | None, estimate: dict | None, yield_info: dict | None
+    listing: Listing,
+    deal: dict | None,
+    complex_deal: dict | None,
+    estimate: dict | None,
+    yield_info: dict | None,
 ) -> Listing:
     listing.deal_pct = float(deal["deal_pct"]) if deal else None
     listing.deal_status = deal["deal_status"] if deal else None
     listing.deal_reason = deal["deal_reason"] if deal else None
     listing.n_comparable = deal["n_comparable"] if deal else None
     listing.group_median_price_per_sqm = float(deal["group_median_price_per_sqm"]) if deal else None
+    listing.complex_name = complex_deal["complex_name"] if complex_deal else None
+    listing.complex_deal_pct = float(complex_deal["complex_deal_pct"]) if complex_deal else None
+    listing.complex_deal_status = complex_deal["complex_deal_status"] if complex_deal else None
+    listing.complex_deal_reason = complex_deal["complex_deal_reason"] if complex_deal else None
+    listing.complex_n_comparable = complex_deal["complex_n_comparable"] if complex_deal else None
+    listing.complex_median_price_per_sqm = (
+        float(complex_deal["complex_median_price_per_sqm"])
+        if complex_deal
+        else None
+    )
     listing.estimated_price = float(estimate["estimated_price"]) if estimate else None
     listing.estimated_price_per_sqm = (
         float(estimate["estimated_price_per_sqm"])
@@ -100,8 +123,14 @@ def list_dashboard_listings(
     repost doesn't show up twice; there's no query param to turn this off,
     since nothing has asked for the raw including-duplicates view yet.
 
-    Every listing carries deal_pct/deal_status/deal_reason/n_comparable
-    from analytics.deal_percentages() regardless of sort_by — None for
+    Every listing carries the independent district-level
+    deal_pct/deal_status/deal_reason/n_comparable fields from
+    analytics.deal_percentages(), plus complex_deal_pct/status/reason/
+    n_comparable and complex_name from complex_deal_percentages(). The
+    district signal uses a 10% notable threshold; the tighter complex signal
+    uses 20%. Either comparison can be None while the other is available.
+
+    District fields are None for
     listings deal_percentages() doesn't cover (non-apartments, apartments
     below its area floor, or the open-ended "5+ өрөө" bucket; see that
     function's docstring for the full list of exclusions and why each
@@ -149,6 +178,7 @@ def list_dashboard_listings(
     """
     excluded_ids = superseded_listing_ids_conn(settings.database_url)
     deals_by_id = {d["id"]: d for d in deal_percentages_conn(settings.database_url)}
+    complex_deals_by_id = {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
     estimates_by_id = {e["id"]: e for e in estimate_negotiable_price_conn(settings.database_url)}
     yield_by_district_rooms = {
         (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
@@ -200,6 +230,7 @@ def list_dashboard_listings(
         _attach_computed_fields(
             listing,
             deals_by_id.get(listing.id),
+            complex_deals_by_id.get(listing.id),
             estimates_by_id.get(listing.id),
             yield_by_district_rooms.get((listing.district, listing.rooms)),
         )

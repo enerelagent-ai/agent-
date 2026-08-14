@@ -764,6 +764,154 @@ def deal_percentages_conn(dsn: str, district: str | None = None) -> list[dict[st
             return deal_percentages(cur, district)
 
 
+# A complex is a much tighter comparison than a whole district. We require
+# a larger discount before presenting a separate "complex-level opportunity"
+# signal, while retaining the same 50% data-quality review ceiling.
+MIN_COMPLEX_DEAL_PCT = 20.0
+
+_COMPLEX_AVERAGE_PRICE_SQL = """
+    SELECT
+        l.complex_id,
+        c.canonical_name AS complex_name,
+        l.listing_type,
+        l.property_type,
+        count(*) AS n_listings,
+        round(avg(l.price)::numeric, 2) AS avg_price,
+        round(percentile_cont(0.5) WITHIN GROUP (ORDER BY l.price)::numeric, 2) AS median_price,
+        round(avg(l.price_per_sqm)::numeric, 2) AS avg_price_per_sqm,
+        round(percentile_cont(0.5) WITHIN GROUP (ORDER BY l.price_per_sqm)::numeric, 2)
+            AS median_price_per_sqm,
+        count(l.price_per_sqm) AS n_with_price_per_sqm
+    FROM listings l
+    JOIN complexes c ON c.id = l.complex_id
+    WHERE l.id != ALL(%(excluded_ids)s)
+      AND l.is_active
+      AND l.complex_id IS NOT NULL
+      AND l.listing_type IS NOT NULL
+      AND l.property_type IS NOT NULL
+      AND l.price IS NOT NULL
+      AND l.price_negotiable IS NOT TRUE
+      AND l.price <= %(max_plausible_price)s
+      AND (%(complex_id)s IS NULL OR l.complex_id = %(complex_id)s)
+    GROUP BY l.complex_id, c.canonical_name, l.listing_type, l.property_type
+    HAVING count(*) >= %(min_group_size)s
+    ORDER BY n_listings DESC, c.canonical_name, l.listing_type, l.property_type
+"""
+
+
+def complex_average_price(
+    cur: psycopg2.extensions.cursor, complex_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Price statistics within canonical complex + transaction + property type.
+
+    Reuses every Phase 0 current-market guard: superseded duplicates,
+    inactive rows, negotiable placeholders, prices above the verified 100B
+    ceiling, and groups below MIN_COMPARABLE_GROUP_SIZE are excluded. Sale
+    and rent, or apartments and garages in the same complex, are never mixed.
+    Both mean and median are returned; callers should use the median for a
+    per-listing deal badge because it resists one otherwise-valid extreme.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_COMPLEX_AVERAGE_PRICE_SQL, {
+        "excluded_ids": excluded,
+        "complex_id": complex_id,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+    })
+    return [dict(row) for row in cur.fetchall()]
+
+
+def complex_average_price_conn(dsn: str, complex_id: int | None = None) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for complex_average_price()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return complex_average_price(cur, complex_id)
+
+
+_COMPLEX_DEAL_PERCENTAGES_SQL = """
+    WITH group_medians AS (
+        SELECT complex_id, listing_type, property_type,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm)
+                   AS complex_median_price_per_sqm,
+               count(*) AS n_comparable
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
+          AND complex_id IS NOT NULL
+          AND listing_type IS NOT NULL AND property_type IS NOT NULL
+          AND price_per_sqm IS NOT NULL AND area_sqm >= %(min_area_sqm)s
+          AND price_negotiable IS NOT TRUE
+          AND price <= %(max_plausible_price)s
+        GROUP BY complex_id, listing_type, property_type
+        HAVING count(*) >= %(min_group_size)s
+    ),
+    priced AS (
+        SELECT l.id, l.complex_id, c.canonical_name AS complex_name,
+               l.district, l.rooms, l.listing_type, l.property_type,
+               l.price, l.price_per_sqm, l.area_sqm,
+               round(gm.complex_median_price_per_sqm::numeric, 2)
+                   AS complex_median_price_per_sqm,
+               gm.n_comparable AS complex_n_comparable,
+               round((((gm.complex_median_price_per_sqm - l.price_per_sqm)
+                       / gm.complex_median_price_per_sqm) * 100)::numeric, 2)
+                   AS complex_deal_pct
+        FROM listings l
+        JOIN group_medians gm
+          ON l.complex_id = gm.complex_id
+         AND l.listing_type = gm.listing_type
+         AND l.property_type = gm.property_type
+        JOIN complexes c ON c.id = l.complex_id
+        WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
+          AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+          AND l.price_negotiable IS NOT TRUE
+          AND l.price <= %(max_plausible_price)s
+    )
+    SELECT *,
+        CASE
+            WHEN complex_deal_pct > %(max_confident_pct)s THEN 'needs_review'
+            WHEN complex_deal_pct >= %(min_complex_deal_pct)s THEN 'top_deal'
+            ELSE 'not_notable'
+        END AS complex_deal_status
+    FROM priced
+    ORDER BY complex_deal_pct DESC
+"""
+
+
+def complex_deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """Compare listings with the median price/m² inside their own complex.
+
+    Groups are (complex_id, listing_type, property_type), with the same
+    current-market/data-quality guards as complex_average_price(). A 20%
+    discount is required for the complex-level top-deal signal; values above
+    the existing 50% confidence ceiling remain needs_review, never a badge.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_COMPLEX_DEAL_PERCENTAGES_SQL, {
+        "excluded_ids": excluded,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+        "min_complex_deal_pct": MIN_COMPLEX_DEAL_PCT,
+        "max_confident_pct": MAX_CONFIDENT_DEAL_PCT,
+    })
+    rows = [dict(row) for row in cur.fetchall()]
+    for row in rows:
+        row["complex_deal_reason"] = (
+            _MISCLASSIFICATION_REVIEW_REASON
+            if row["complex_deal_status"] == "needs_review"
+            else None
+        )
+    return rows
+
+
+def complex_deal_percentages_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for complex_deal_percentages()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return complex_deal_percentages(cur)
+
+
 _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
     WITH group_medians AS (
         SELECT district, rooms, listing_type, property_type,
