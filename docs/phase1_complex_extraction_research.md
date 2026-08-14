@@ -184,6 +184,21 @@ inference бөгөөд CSV дотор тусдаа `verified` багана ба�
 | Alias, spelling эсвэл гараар шалгах шаардлагатай | 124 |
 | Одоогийн DB-д URL байхгүй | 597 |
 
+Энэ нь alias review хийхээс өмнөх raw exact-match audit. Curated
+transliteration/typo alias болон reused-URL conflict дүрмийг хэрэглэсний
+дараах эцсийн Phase 1 ангилал:
+
+| Эцсийн төлөв | Мөр | Gold fixture-д орсон эсэх |
+|---|---:|---|
+| `confirmed_positive` | 327 | Тийм |
+| `confirmed_negative` (landmark/building/location) | 10 | Тийм |
+| `reused_url_mismatch` | 25 | Тийм, hard negative |
+| `excluded_insufficient_evidence` | 8 | Үгүй |
+| `source_unavailable` | 597 | Үгүй |
+
+Ингэснээр одоогийн title evidence-тэй 362 мөр regression fixture болсон.
+Нотолгоогүй 8 мөрийг хүчээр positive/negative болгоогүй.
+
 URL match өөрөө label-ийн нотолгоо биш гэдэг бодит жишээ гарсан. CSV-д
 `Akoya Residence` гэж тэмдэглэсэн URL-ийн одоогийн title `Aqua Garden`,
 `Global Town` URL-ийн title `Хүннү 2222`, `Hansvill` URL-ийн title мөн
@@ -229,10 +244,18 @@ building/location label. Иймд баганын нэрийг semantics гэж �
 7. Regression fixture-д raw title, expected canonical name/null, relation,
    verification source хадгална. Production DB id-г цорын ганц key болгохгүй.
 
-## Phase 2 руу орохын өмнөх ажил
+## Phase 1 гарах үр дүн
 
-CSV олдсон тул файл өөрөө blocker биш болсон. Харин `verified` баганагүй
-учраас “DB-д URL байна”, “CSV label одоогийн title-д байна”, “entity үнэхээр
-complex мөн” гэсэн гурван тусдаа шалгалт хэрэгтэй. Raw CSV нь хэрэглэгчийн
-Downloads дотор хэвээр; утасны дугаар агуулдаг тул repo-д хуулж эсвэл commit
-хийгээгүй.
+- Reproducible audit: `analytics/scripts/audit_complex_ground_truth.py`
+- Privacy-safe gold/negative fixture:
+  `analytics/tests/fixtures/complex_ground_truth.json`
+- Audit дүрмийн unit test:
+  `analytics/tests/test_complex_ground_truth_audit.py`
+- Raw CSV нь хэрэглэгчийн Downloads дотор хэвээр. Утас, үнэ fixture-д
+  ороогүй бөгөөд raw файлыг repo-д хуулж/commit хийгээгүй.
+- Phase 2 extractor нь 327 positive дээр canonical accuracy/recall, 35
+  negative дээр false-positive rate хэмжинэ. `source_unavailable` болон
+  `excluded_insufficient_evidence` мөр metric-д орохгүй.
+
+Эдгээр deliverable бүрдсэнээр Phase 1 дууссан; Phase 2 extraction +
+normalization эхлэхэд дата талын blocker үлдээгүй.
