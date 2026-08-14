@@ -21,6 +21,9 @@ export interface DistrictInvestmentSummary {
   n_sale: number;
   n_rent: number;
   avg_sale_price: number;
+  min_sale_price: number;
+  median_sale_price: number;
+  max_sale_price: number;
   avg_price_per_sqm: number | null;
   gross_rental_yield_pct: number;
   roi_pct: number;

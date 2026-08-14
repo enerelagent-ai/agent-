@@ -8,6 +8,9 @@ class DistrictInvestmentSummary(BaseModel):
     n_sale: int
     n_rent: int
     avg_sale_price: float
+    min_sale_price: float
+    median_sale_price: float
+    max_sale_price: float
     avg_price_per_sqm: float | None
     gross_rental_yield_pct: float
     roi_pct: float

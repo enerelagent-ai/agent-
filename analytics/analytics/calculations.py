@@ -139,6 +139,8 @@ _RENTAL_YIELD_SQL = """
           AND is_active
           AND listing_type = 'sale' AND property_type = %(sale_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
           AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     ),
@@ -151,6 +153,8 @@ _RENTAL_YIELD_SQL = """
           AND is_active
           AND listing_type = 'rent' AND property_type = %(rent_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
           AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     )
@@ -201,6 +205,7 @@ def rental_yield_by_district_rooms(
         "sale_label": _APARTMENT_SALE_LABEL,
         "rent_label": _APARTMENT_RENT_LABEL,
         "district": district,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
     })
     return [dict(row) for row in cur.fetchall()]
 
@@ -378,6 +383,49 @@ def listing_counts_by_property_type_conn(dsn: str) -> list[dict[str, Any]]:
 _MIN_SAMPLE_SIZE = 20
 
 
+_DISTRICT_SALE_DISTRIBUTION_SQL = """
+    WITH eligible_rent_groups AS (
+        SELECT DISTINCT district, property_subtype, rooms
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
+          AND listing_type = 'rent' AND property_type = %(rent_label)s
+          AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
+    )
+    SELECT s.district,
+           min(s.price) AS min_sale_price,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY s.price) AS median_sale_price,
+           max(s.price) AS max_sale_price
+    FROM listings s
+    JOIN eligible_rent_groups r
+      ON s.district = r.district
+     AND s.property_subtype IS NOT DISTINCT FROM r.property_subtype
+     AND s.rooms = r.rooms
+    WHERE s.id != ALL(%(excluded_ids)s)
+      AND s.is_active
+      AND s.listing_type = 'sale' AND s.property_type = %(sale_label)s
+      AND s.price_negotiable IS NOT TRUE
+      AND s.price > 0 AND s.price <= %(max_plausible_price)s
+    GROUP BY s.district
+"""
+
+
+def district_sale_price_distribution(
+    cur: psycopg2.extensions.cursor,
+) -> dict[str, dict[str, Any]]:
+    """Min/median/max sale price for the same eligible apartment groups as yield."""
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_DISTRICT_SALE_DISTRIBUTION_SQL, {
+        "excluded_ids": excluded,
+        "sale_label": _APARTMENT_SALE_LABEL,
+        "rent_label": _APARTMENT_RENT_LABEL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+    })
+    return {row["district"]: dict(row) for row in cur.fetchall()}
+
+
 def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
     """Week 6 dashboard input: one row per district, built on top of
     rental_yield_by_district_rooms() rather than a fresh query, so it always
@@ -410,6 +458,7 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     dashboard users actually weigh price vs. yield.
     """
     buckets = rental_yield_by_district_rooms(cur)
+    distributions = district_sale_price_distribution(cur)
 
     totals: dict[str, dict[str, Any]] = {}
     for b in buckets:
@@ -446,6 +495,9 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
             "avg_price_per_sqm": round(avg_price_per_sqm, 2) if avg_price_per_sqm is not None else None,
             "gross_rental_yield_pct": round(gross_yield_pct, 2),
             "roi_pct": round(gross_yield_pct, 2),
+            "min_sale_price": distributions[district]["min_sale_price"],
+            "median_sale_price": distributions[district]["median_sale_price"],
+            "max_sale_price": distributions[district]["max_sale_price"],
         })
 
     n = len(rows)

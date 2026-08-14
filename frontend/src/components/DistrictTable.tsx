@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DistrictInvestmentSummary } from "@/lib/api";
 import { formatMnt, formatPercent } from "@/lib/format";
 import { InfoTooltip } from "./InfoTooltip";
+import { PriceDistributionBar } from "./PriceDistributionBar";
 
 const METHODOLOGY_TEXT =
   "Эдгээр нь тухайн дүүргийн ДУНДАЖ үзүүлэлт — аль нэг тодорхой байрны мэдээлэл биш. " +
@@ -69,6 +70,12 @@ export function DistrictTable({ rows, highlightedDistrict }: DistrictTableProps)
                 onSort={handleSort}
               />
               <th className="py-2 pr-4 font-medium">Үнэ / мкв</th>
+              <th className="py-2 pr-4 font-medium">
+                <span className="flex items-center gap-1.5">
+                  Үнийн тархалт
+                  <InfoTooltip text="Ижил дүүрэг, өрөөний бүлгийн идэвхтэй орон сууцны зарлах үнэ: хамгийн бага, медиан, хамгийн их. M тэмдэг нь медиан; бодит хэлцлийн үнэ биш." />
+                </span>
+              </th>
               <SortableHeader
                 column={SORTABLE_COLUMNS[1]}
                 activeKey={sortKey}
@@ -100,6 +107,13 @@ export function DistrictTable({ rows, highlightedDistrict }: DistrictTableProps)
                 </td>
                 <td className="py-2.5 pr-4 tabular-nums text-ink-secondary">
                   {row.avg_price_per_sqm !== null ? formatMnt(row.avg_price_per_sqm) : "—"}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <PriceDistributionBar
+                    min={row.min_sale_price}
+                    median={row.median_sale_price}
+                    max={row.max_sale_price}
+                  />
                 </td>
                 <td className="py-2.5 pr-4 tabular-nums text-ink-secondary">
                   {formatPercent(row.gross_rental_yield_pct)}

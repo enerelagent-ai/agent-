@@ -464,6 +464,9 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
     assert row["roi_pct"] == row["gross_rental_yield_pct"]
     assert row["n_sale"] == 20
     assert row["n_rent"] == 20
+    assert float(row["min_sale_price"]) == 100_000_000
+    assert float(row["median_sale_price"]) == 100_000_000
+    assert float(row["max_sale_price"]) == 300_000_000
 
 
 def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:
@@ -510,6 +513,7 @@ def test_investment_summary_real_data_smoke_check(cur) -> None:
     assert len(rows) > 0
     for row in rows:
         assert row["avg_sale_price"] > 0
+        assert 0 < row["min_sale_price"] <= row["median_sale_price"] <= row["max_sale_price"]
         assert row["roi_pct"] == row["gross_rental_yield_pct"]
         assert 0.0 <= row["investment_score"] <= 100.0
         assert row["n_sale"] > 0 and row["n_rent"] > 0
