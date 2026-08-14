@@ -40,6 +40,11 @@ class ComplexPriceSummary(BaseModel):
     n_with_price_per_sqm: int
 
 
+class ComplexOption(BaseModel):
+    id: int
+    canonical_name: str
+
+
 class TodaysOpportunity(BaseModel):
     # No investment_score/roi_pct here on purpose -- see
     # analytics.calculations.todays_opportunity's docstring. Only the

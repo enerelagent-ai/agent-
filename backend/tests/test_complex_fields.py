@@ -1,6 +1,8 @@
 from types import SimpleNamespace
+from datetime import datetime, timezone
 
 from app.api.routes.dashboard import _attach_computed_fields
+from app.models.listing import Complex, Listing
 from app.schemas.dashboard import ComplexPriceSummary
 
 
@@ -15,7 +17,7 @@ def test_attach_computed_fields_keeps_complex_comparison_independent() -> None:
         "complex_median_price_per_sqm": 4_000_000,
     }
 
-    result = _attach_computed_fields(listing, None, complex_deal, None, None)
+    result = _attach_computed_fields(listing, None, complex_deal, "Buti Town", None, None)
 
     assert result.deal_pct is None  # district comparison can be unavailable
     assert result.complex_name == "Buti Town"
@@ -41,3 +43,40 @@ def test_complex_price_summary_schema_accepts_calculation_row() -> None:
     assert summary.complex_name == "Buti Town"
     assert summary.n_listings == 24
 
+
+def test_complex_options_and_listing_filter_use_same_canonical_name(client, db_session) -> None:
+    now = datetime(2099, 2, 1, tzinfo=timezone.utc)
+    complex_row = Complex(
+        canonical_name="Phase 4 Test Complex",
+        normalized_name="phase 4 test complex",
+        aliases=[],
+        created_at=now,
+        updated_at=now,
+    )
+    db_session.add(complex_row)
+    db_session.flush()
+    listing = Listing(
+        source="unegui",
+        source_url="test://phase4-complex-filter",
+        title="Phase 4 Test Complex байр",
+        dedup_hash="phase4-complex-filter",
+        complex_id=complex_row.id,
+        scraped_at=now,
+        created_at=now,
+        updated_at=now,
+        photo_urls=[],
+    )
+    db_session.add(listing)
+    db_session.flush()
+
+    options = client.get("/dashboard/complexes").json()
+    assert {"id": complex_row.id, "canonical_name": complex_row.canonical_name} in options
+
+    response = client.get(
+        "/dashboard/listings",
+        params={"complex_id": complex_row.id, "limit": 10},
+    )
+    assert response.status_code == 200
+    rows = response.json()
+    assert [row["id"] for row in rows] == [listing.id]
+    assert rows[0]["complex_name"] == complex_row.canonical_name

@@ -55,6 +55,11 @@ export interface ListingTypeCount {
   n: number;
 }
 
+export interface ComplexOption {
+  id: number;
+  canonical_name: string;
+}
+
 export interface Listing {
   id: number;
   source: string;
@@ -147,6 +152,10 @@ export function getListingCountsByType(): Promise<ListingTypeCount[]> {
   return getJSON("/dashboard/listing-counts-by-type");
 }
 
+export function getComplexes(): Promise<ComplexOption[]> {
+  return getJSON("/dashboard/complexes");
+}
+
 export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
 }
@@ -154,6 +163,7 @@ export function getRecentListings(limit = 5): Promise<Listing[]> {
 export interface ListingFilters {
   district?: string;
   propertyType?: string;
+  complexId?: number;
   minPrice?: number;
   maxPrice?: number;
   sortBy?: "recent" | "deal_pct";
@@ -166,6 +176,7 @@ export function getFilteredListings(filters: ListingFilters = {}): Promise<Listi
   const params = new URLSearchParams();
   if (filters.district) params.set("district", filters.district);
   if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
   if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
   if (filters.sortBy) params.set("sort_by", filters.sortBy);

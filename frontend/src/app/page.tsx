@@ -7,6 +7,7 @@ import { PriceTrendChart } from "@/components/PriceTrendChart";
 import { TodaysOpportunityCard } from "@/components/TodaysOpportunityCard";
 import {
   getInvestmentSummary,
+  getComplexes,
   getListingCountsByType,
   getPriceTrend,
   getRecentListings,
@@ -15,13 +16,14 @@ import {
 } from "@/lib/api";
 
 export default async function DashboardPage() {
-  const [todaysOpportunity, investmentSummary, listingCounts, priceTrend, recentListings] =
+  const [todaysOpportunity, investmentSummary, listingCounts, priceTrend, recentListings, complexes] =
     await Promise.all([
       getTodaysOpportunity(),
       getInvestmentSummary(),
       getListingCountsByType(),
       getPriceTrend(),
       getRecentListings(6),
+      getComplexes(),
     ]);
 
   const totals = summarizeInvestment(investmentSummary);
@@ -38,7 +40,11 @@ export default async function DashboardPage() {
             <DonutChart data={listingCounts} />
             <PriceTrendChart data={priceTrend} />
           </div>
-          <DashboardBody investmentSummary={investmentSummary} initialListings={recentListings} />
+          <DashboardBody
+            investmentSummary={investmentSummary}
+            initialListings={recentListings}
+            complexes={complexes}
+          />
         </main>
       </div>
     </div>

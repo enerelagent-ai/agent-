@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { getFilteredListings, type Listing } from "@/lib/api";
+import { getFilteredListings, type ComplexOption, type Listing } from "@/lib/api";
 import { formatListingPrice, formatPercent, timeAgo } from "@/lib/format";
 import { ListingDetailModal } from "./ListingDetailModal";
 
@@ -46,14 +46,16 @@ type Tab = "recent" | "deals";
 interface RecentListingsProps {
   initialListings: Listing[];
   districts: string[];
+  complexes: ComplexOption[];
   onDistrictApplied?: (district: string | null) => void;
 }
 
-export function RecentListings({ initialListings, districts, onDistrictApplied }: RecentListingsProps) {
+export function RecentListings({ initialListings, districts, complexes, onDistrictApplied }: RecentListingsProps) {
   const [tab, setTab] = useState<Tab>("recent");
   const [listings, setListings] = useState(initialListings);
   const [district, setDistrict] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [complexId, setComplexId] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,7 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
       const rows = await getFilteredListings({
         district: district || undefined,
         propertyType: propertyType || undefined,
+        complexId: complexId ? Number(complexId) : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         sortBy: nextTab === "deals" ? "deal_pct" : undefined,
@@ -121,6 +124,22 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
             {districts.map((d) => (
               <option key={d} value={d}>
                 {d}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Хотхон
+          <select
+            value={complexId}
+            onChange={(e) => setComplexId(e.target.value)}
+            className="max-w-48 rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          >
+            <option value="">Бүгд</option>
+            {complexes.map((complex) => (
+              <option key={complex.id} value={complex.id}>
+                {complex.canonical_name}
               </option>
             ))}
           </select>
@@ -229,15 +248,24 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
                     </span>
                   </div>
                   <p className="truncate text-xs text-ink-secondary">
+                    {listing.complex_name ? `${listing.complex_name} · ` : ""}
                     {listing.district ?? "Байршил тодорхойгүй"}
                     {listing.rooms ? ` · ${listing.rooms} өрөө` : ""}
                     {listing.area_sqm ? ` · ${listing.area_sqm} мкв` : ""}
                   </p>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     <p className="text-xs text-ink-muted">{timeAgo(listing.scraped_at)}</p>
                     {listing.deal_status === "top_deal" && listing.deal_pct !== null && (
                       <span className="rounded-full bg-[#0ca30c]/10 px-2 py-0.5 text-xs font-medium text-[#0ca30c]">
-                        ↓ {formatPercent(listing.deal_pct)} дундажаас хямд
+                        Дүүргээс ↓ {formatPercent(listing.deal_pct)}
+                      </span>
+                    )}
+                    {listing.complex_deal_status === "top_deal" && listing.complex_deal_pct !== null && (
+                      <span
+                        title={`${listing.complex_name ?? "Хотхон"}-ы медиан үнээс хямд`}
+                        className="rounded-full bg-series-1/10 px-2 py-0.5 text-xs font-medium text-series-1"
+                      >
+                        Хотхоноос ↓ {formatPercent(listing.complex_deal_pct)}
                       </span>
                     )}
                     <a

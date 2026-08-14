@@ -16,10 +16,11 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Listing
+from app.models.listing import Complex, Listing
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
     ComplexPriceSummary,
+    ComplexOption,
     ListingTypeCount,
     PriceTrendPoint,
     TodaysOpportunity,
@@ -69,10 +70,25 @@ def complex_prices(complex_id: int | None = Query(None, ge=1)) -> list[dict]:
     return complex_average_price_conn(settings.database_url, complex_id)
 
 
+@router.get("/complexes", response_model=list[ComplexOption])
+def complexes(db: DbSession) -> list[dict]:
+    """Canonical complexes that currently have at least one active listing."""
+    rows = (
+        db.query(Complex.id, Complex.canonical_name)
+        .join(Listing, Listing.complex_id == Complex.id)
+        .filter(Listing.is_active.is_(True))
+        .distinct()
+        .order_by(Complex.canonical_name)
+        .all()
+    )
+    return [{"id": row.id, "canonical_name": row.canonical_name} for row in rows]
+
+
 def _attach_computed_fields(
     listing: Listing,
     deal: dict | None,
     complex_deal: dict | None,
+    complex_name: str | None,
     estimate: dict | None,
     yield_info: dict | None,
 ) -> Listing:
@@ -81,7 +97,7 @@ def _attach_computed_fields(
     listing.deal_reason = deal["deal_reason"] if deal else None
     listing.n_comparable = deal["n_comparable"] if deal else None
     listing.group_median_price_per_sqm = float(deal["group_median_price_per_sqm"]) if deal else None
-    listing.complex_name = complex_deal["complex_name"] if complex_deal else None
+    listing.complex_name = complex_name
     listing.complex_deal_pct = float(complex_deal["complex_deal_pct"]) if complex_deal else None
     listing.complex_deal_status = complex_deal["complex_deal_status"] if complex_deal else None
     listing.complex_deal_reason = complex_deal["complex_deal_reason"] if complex_deal else None
@@ -110,6 +126,7 @@ def list_dashboard_listings(
     db: DbSession,
     district: str | None = Query(None),
     property_type: str | None = Query(None),
+    complex_id: int | None = Query(None, ge=1),
     min_price: float | None = Query(None, ge=0),
     max_price: float | None = Query(None, ge=0),
     sort_by: Literal["recent", "deal_pct"] = Query("recent"),
@@ -201,6 +218,7 @@ def list_dashboard_listings(
             if deal["deal_status"] == "top_deal"
             and (district is None or deal["district"] == district)
             and (property_type is None or deal["property_type"] == property_type)
+            and (complex_id is None or deal["complex_id"] == complex_id)
             and (min_price is None or float(deal["price"]) >= min_price)
             and (max_price is None or float(deal["price"]) <= max_price)
         ]
@@ -210,11 +228,16 @@ def list_dashboard_listings(
         rows_by_id = {row.id: row for row in db.query(Listing).filter(Listing.id.in_(page_ids)).all()}
         ordered = [rows_by_id[i] for i in page_ids if i in rows_by_id]
     else:
-        query = db.query(Listing).filter(Listing.id.notin_(excluded_ids))
+        query = db.query(Listing).filter(
+            Listing.id.notin_(excluded_ids),
+            Listing.is_active.is_(True),
+        )
         if district is not None:
             query = query.filter(Listing.district == district)
         if property_type is not None:
             query = query.filter(Listing.property_type == property_type)
+        if complex_id is not None:
+            query = query.filter(Listing.complex_id == complex_id)
         if min_price is not None:
             query = query.filter(Listing.price >= min_price)
         if max_price is not None:
@@ -226,11 +249,18 @@ def list_dashboard_listings(
             .all()
         )
 
+    complex_ids = {listing.complex_id for listing in ordered if listing.complex_id is not None}
+    complex_names_by_id = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+
     return [
         _attach_computed_fields(
             listing,
             deals_by_id.get(listing.id),
             complex_deals_by_id.get(listing.id),
+            complex_names_by_id.get(listing.complex_id),
             estimates_by_id.get(listing.id),
             yield_by_district_rooms.get((listing.district, listing.rooms)),
         )

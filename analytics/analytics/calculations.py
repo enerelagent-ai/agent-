@@ -638,7 +638,7 @@ _DEAL_PERCENTAGES_SQL = """
     ),
     priced AS (
         SELECT
-            l.id, l.district, l.rooms, l.listing_type, l.property_type,
+            l.id, l.complex_id, l.district, l.rooms, l.listing_type, l.property_type,
             l.price, l.price_per_sqm, l.area_sqm,
             round(gm.group_median_price_per_sqm::numeric, 2) AS group_median_price_per_sqm,
             gm.n_comparable,
