@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/" },
   { label: "Зар мэдээлэл", icon: ListChecks, href: "/listings" },
   { label: "Зах зээлийн тойм", icon: TrendingUp, href: null },
-  { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: null },
+  { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: "/calculator" },
   { label: "Түрээсийн өгөөж", icon: KeyRound, href: null },
   { label: "Дүрслэл & Тайлан", icon: FileBarChart, href: null },
   { label: "Мэдэгдэл", icon: Bell, href: null },
@@ -74,7 +74,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 pb-5 text-xs text-white/30">V1.0 — Хувилбар 1.0.0</div>
+      <div className="px-3 pb-5 text-xs text-white/30">V1.5 — Хувилбар 1.5.0</div>
     </aside>
   );
 }
