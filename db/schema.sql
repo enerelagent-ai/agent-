@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS listings (
     property_subtype TEXT,
 
     rooms           SMALLINT,
+    -- Normalized from generic specs ("Хэдэн давхарт" / "Барилгын давхар").
+    floor           SMALLINT,
+    total_floors    SMALLINT,
     district        TEXT,
     address         TEXT,
     lat             DOUBLE PRECISION,
@@ -69,8 +72,22 @@ CREATE TABLE IF NOT EXISTS listings (
     CONSTRAINT uq_listings_source_url UNIQUE (source, source_url)
 );
 
+CREATE TABLE IF NOT EXISTS complexes (
+    id              BIGSERIAL PRIMARY KEY,
+    canonical_name  TEXT NOT NULL UNIQUE,
+    normalized_name TEXT NOT NULL UNIQUE,
+    aliases         TEXT[] NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS complex_id BIGINT
+    REFERENCES complexes(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_listings_dedup_hash ON listings (dedup_hash);
 CREATE INDEX IF NOT EXISTS idx_listings_property_type ON listings (property_type);
+CREATE INDEX IF NOT EXISTS idx_listings_complex_id ON listings (complex_id);
+CREATE INDEX IF NOT EXISTS idx_listings_floor ON listings (floor);
 
 -- Scored duplicate-candidate pairs (see migration 004): kept separate from
 -- listings so match decisions stay auditable and re-scorable. One row per

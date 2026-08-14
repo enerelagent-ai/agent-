@@ -1,9 +1,22 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, Numeric, SmallInteger, String, Text, text
+from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, ForeignKey, Numeric, SmallInteger, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+class Complex(Base):
+    """Canonical complex identity introduced by migration 010."""
+
+    __tablename__ = "complexes"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    canonical_name: Mapped[str] = mapped_column(Text, unique=True)
+    normalized_name: Mapped[str] = mapped_column(Text, unique=True)
+    aliases: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Listing(Base):
@@ -37,6 +50,11 @@ class Listing(Base):
     )
 
     rooms: Mapped[int | None] = mapped_column(SmallInteger)
+    floor: Mapped[int | None] = mapped_column(SmallInteger)
+    total_floors: Mapped[int | None] = mapped_column(SmallInteger)
+    complex_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("complexes.id", ondelete="SET NULL")
+    )
     listing_type: Mapped[str | None] = mapped_column(Text)
     property_type: Mapped[str | None] = mapped_column(Text)
     district: Mapped[str | None] = mapped_column(Text)

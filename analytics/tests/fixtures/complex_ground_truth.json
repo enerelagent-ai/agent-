@@ -4,9 +4,9 @@
   "privacy": "Phone and price columns intentionally omitted.",
   "selection": "Only rows with current-title evidence; unavailable/insufficient rows excluded.",
   "counts": {
-    "confirmed_negative": 10,
-    "confirmed_positive": 327,
-    "reused_url_mismatch": 25
+    "confirmed_negative": 12,
+    "confirmed_positive": 320,
+    "reused_url_mismatch": 26
   },
   "rows": [
     {
@@ -1157,17 +1157,23 @@
       "source_url": "https://www.unegui.mn/adv/10262432_river-towert-6-oroo-bair-khudaldana/",
       "csv_label": "River Plaza",
       "current_title": "River tower-т 6 өрөө 366.7мкв байр",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "reviewed_alias_in_title"
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "River Tower"
+      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10342506_river-plaza-d-8-oroo/",
       "csv_label": "River Plaza",
       "current_title": "River tower-д 8 өрөө 366мкв байр",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "reviewed_alias_in_title"
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "River Tower"
+      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/9861099_luxury-river-tower-366m2-8-oroo/",
@@ -2232,41 +2238,50 @@
       "source_url": "https://www.unegui.mn/adv/10501571_khud-udirdlagyn-akademi-urd-tokhilog-4-oroo-159-mkv-bair-2-grazh-khamt/",
       "csv_label": "Академи",
       "current_title": "Худ удирдлагын академи урд 4 өрөө 159 мкв байр 2 гараж хамт",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "canonical_in_title"
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
     },
     {
       "source_url": "https://www.unegui.mn/adv/10471611_udirdlagyn-akademi-baruun-tald-tsetseg-khotkhon-4-oroo/",
       "csv_label": "Академи",
       "current_title": "Удирдлагын академи баруун талд цэцэг хотхон 4 өрөө 112мкв",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "canonical_in_title"
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Цэцэг"
+      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10400099_akademi-2-khotkhond/",
       "csv_label": "Академи",
       "current_title": "Академи 2 хотхонд 2 өрөө 50.0mkv",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "canonical_in_title"
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Академи 2"
+      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10472645_udirdlagyn-akademid-4n-oroo-bair-zarna/",
       "csv_label": "Академи",
       "current_title": "Удирдлагын академид 4 өрөө 119,8мкв",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "canonical_in_title"
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
     },
     {
       "source_url": "https://www.unegui.mn/adv/10411857_akademi-2-khotkhond-80mkv-mastertai-3-oroo-bair-khudaldana/",
       "csv_label": "Академи",
       "current_title": "Академи 2 хотхонд 80мкв мастертай 3 өрөө байр",
-      "entity_type": "complex",
-      "status": "confirmed_positive",
-      "evidence": "canonical_in_title"
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Академи 2"
+      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10386672_akademi-1-khotkhond-70mkv-3-oroo-khudaldana/",
@@ -2285,45 +2300,12 @@
       "evidence": "canonical_in_title"
     },
     {
-      "source_url": "https://www.unegui.mn/adv/10441165_akademi-khotkhond-3-oroo-oron-suuts-khudaldana/",
-      "csv_label": "Академи 1",
-      "current_title": "Академи хотхонд 3 өрөө 70мкв",
-      "entity_type": "invalid",
-      "status": "reused_url_mismatch",
-      "evidence": "current_title_matches_other_complex",
-      "current_complex_candidates": [
-        "Академи"
-      ]
-    },
-    {
       "source_url": "https://www.unegui.mn/adv/10423844_khud-18-r-khoroo-udirdlagyn-akademiin-khoid-tald-akademi-1-khotkhond-3-oroo-oron-suu/",
       "csv_label": "Академи 1",
       "current_title": "Худ 18-р хороо, удирдлагын академийн хойд талд академи-1 хотхонд 3 өрөө 79.98мкв",
       "entity_type": "complex",
       "status": "confirmed_positive",
       "evidence": "canonical_in_title"
-    },
-    {
-      "source_url": "https://www.unegui.mn/adv/10444822_akademi-khotkhony-2-r-eelzhind-2-oroo-oron-suuts-khudaldana/",
-      "csv_label": "Академи 1",
-      "current_title": "Академи хотхоны 2-р ээлжинд 2 өрөө 55мкв",
-      "entity_type": "invalid",
-      "status": "reused_url_mismatch",
-      "evidence": "current_title_matches_other_complex",
-      "current_complex_candidates": [
-        "Академи"
-      ]
-    },
-    {
-      "source_url": "https://www.unegui.mn/adv/10195970_akademi-khotkhond-70mkv-3-oroo/",
-      "csv_label": "Академи 1",
-      "current_title": "Академи хотхонд 70мкв 3 өрөө",
-      "entity_type": "invalid",
-      "status": "reused_url_mismatch",
-      "evidence": "current_title_matches_other_complex",
-      "current_complex_candidates": [
-        "Академи"
-      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10488677_gegeenten-3-oroo/",
@@ -2930,17 +2912,6 @@
       "entity_type": "complex",
       "status": "confirmed_positive",
       "evidence": "canonical_in_title"
-    },
-    {
-      "source_url": "https://www.unegui.mn/adv/10376378_khud-n-11-r-khoroo-udirdlagyn-akademiin-urd-103mkv-4-oroo-oron-suuts-khudaldana/",
-      "csv_label": "Цэцэг",
-      "current_title": "Худ 11-р хороо удирдлагын академийн урд 103мкв 4 өрөө",
-      "entity_type": "invalid",
-      "status": "reused_url_mismatch",
-      "evidence": "current_title_matches_other_complex",
-      "current_complex_candidates": [
-        "Академи"
-      ]
     },
     {
       "source_url": "https://www.unegui.mn/adv/10451603_khud-15-r-khoroo-36-bairand-gal-togoo-tusdaa-3-oroo-khudaldana/",

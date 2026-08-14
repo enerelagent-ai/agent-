@@ -7,6 +7,8 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
+from analytics.complexes import COMPLEX_ALIASES, extract_complex, normalize_complex_name
+
 AREA_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")
 LEADING_INT_RE = re.compile(r"^(\d+)")
 NEGOTIABLE_MARKER = "үнэ тохирно"
@@ -18,14 +20,15 @@ _DEDUP_FIELDS = ("listing_type", "property_type", "district", "address", "rooms"
 _UPSERT_SQL = """
     INSERT INTO listings (
         source, source_url, title, description, price, price_raw, price_negotiable,
-        area_sqm, rooms,
+        area_sqm, rooms, floor, total_floors, complex_id,
         district, address, lat, lng, contact_phone, photo_urls,
         dedup_hash, listing_type, property_type, property_subtype,
         posted_at, posted_raw, specs
     )
     VALUES (
         %(source)s, %(source_url)s, %(title)s, %(description)s, %(price)s, %(price_raw)s,
-        %(price_negotiable)s, %(area_sqm)s, %(rooms)s,
+        %(price_negotiable)s, %(area_sqm)s, %(rooms)s, %(floor)s, %(total_floors)s,
+        %(complex_id)s,
         %(district)s, %(address)s, %(lat)s, %(lng)s, %(contact_phone)s, %(photo_urls)s,
         %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s,
         %(posted_at)s, %(posted_raw)s, %(specs)s
@@ -38,6 +41,9 @@ _UPSERT_SQL = """
         price_negotiable = EXCLUDED.price_negotiable,
         area_sqm = EXCLUDED.area_sqm,
         rooms = EXCLUDED.rooms,
+        floor = EXCLUDED.floor,
+        total_floors = EXCLUDED.total_floors,
+        complex_id = EXCLUDED.complex_id,
         district = EXCLUDED.district,
         address = EXCLUDED.address,
         lat = EXCLUDED.lat,
@@ -94,6 +100,14 @@ def parse_rooms(subcategory: str | None) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def parse_floor(raw: str | None) -> int | None:
+    """Leading floor number from specs values such as "4" or "25+"."""
+    if not raw:
+        return None
+    match = LEADING_INT_RE.match(raw.strip())
+    return int(match.group(1)) if match else None
+
+
 def compute_dedup_hash(row: dict[str, Any]) -> str:
     """Deterministic sha256 over the coarse duplicate-candidate fields.
 
@@ -119,6 +133,18 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         return None
     specs = parsed.get("specs") or {}
     phones = parsed.get("phones") or []
+    complex_match = extract_complex(parsed["title"])
+    # Only reviewed aliases are persisted automatically. Unknown trigger-only
+    # candidates remain available to the audit layer, but do not create noisy
+    # production complex rows without validation. Landmark mentions are never
+    # assigned to the listing itself.
+    complex_name = (
+        complex_match.canonical_name
+        if complex_match
+        and complex_match.matched_alias is not None
+        and complex_match.relation == "unit"
+        else None
+    )
     row: dict[str, Any] = {
         "source": "unegui",
         "source_url": parsed["url"],
@@ -129,6 +155,10 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "price_negotiable": parse_price_negotiable(parsed.get("price_raw")),
         "area_sqm": parse_area_sqm(specs.get("Талбай")),
         "rooms": parse_rooms(parsed.get("property_subcategory")),
+        "floor": parse_floor(specs.get("Хэдэн давхарт")),
+        "total_floors": parse_floor(specs.get("Барилгын давхар")),
+        "complex_id": None,
+        "complex_name": complex_name,
         "district": parsed.get("district"),
         "address": parsed.get("location_raw"),
         "lat": parsed.get("latitude"),
@@ -144,6 +174,33 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
     }
     row["dedup_hash"] = compute_dedup_hash(row)
     return row
+
+
+def _resolve_complex_ids(
+    cur: psycopg2.extensions.cursor, rows: list[dict[str, Any]]
+) -> None:
+    """Upsert reviewed complex names and attach their IDs to listing rows."""
+    names = sorted({row["complex_name"] for row in rows if row.get("complex_name")})
+    if not names:
+        return
+    ids: dict[str, int] = {}
+    for name in names:
+        cur.execute(
+            """
+            INSERT INTO complexes (canonical_name, normalized_name, aliases)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (canonical_name) DO UPDATE SET
+                normalized_name = EXCLUDED.normalized_name,
+                aliases = EXCLUDED.aliases,
+                updated_at = now()
+            RETURNING id
+            """,
+            (name, normalize_complex_name(name), list(COMPLEX_ALIASES.get(name, ()))),
+        )
+        returned = cur.fetchone()
+        ids[name] = returned["id"] if isinstance(returned, dict) else returned[0]
+    for row in rows:
+        row["complex_id"] = ids.get(row.get("complex_name"))
 
 
 def recently_scraped(
@@ -218,6 +275,7 @@ def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
         try:
             with conn:
                 with conn.cursor() as cur:
+                    _resolve_complex_ids(cur, rows)
                     psycopg2.extras.execute_batch(cur, _UPSERT_SQL, rows)
             return len(rows)
         except psycopg2.DataError:
@@ -227,6 +285,7 @@ def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
                 try:
                     with conn:
                         with conn.cursor() as cur:
+                            _resolve_complex_ids(cur, [row])
                             cur.execute(_UPSERT_SQL, row)
                     saved += 1
                 except psycopg2.DataError as exc:

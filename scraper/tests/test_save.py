@@ -1,11 +1,13 @@
 """Unit tests for the parser-dict -> listings-row mapping and dedup hash."""
 
 from scraper.save import (
+    _resolve_complex_ids,
     compute_dedup_hash,
     known_urls,
     listing_row_from_parsed,
     normalize_dsn,
     parse_area_sqm,
+    parse_floor,
     parse_price_negotiable,
     parse_rooms,
     recently_scraped,
@@ -33,7 +35,12 @@ SAMPLE_PARSED = {
     "longitude": 106.93199,
     "phones": ["+97683033091", "+97699112233"],
     "photo_urls": ["https://cdn1.unegui.mn/a.webp", "https://cdn1.unegui.mn/b.webp"],
-    "specs": {"Талбай": "49 м²", "Шал": "Паркет"},
+    "specs": {
+        "Талбай": "49 м²",
+        "Шал": "Паркет",
+        "Хэдэн давхарт": "4",
+        "Барилгын давхар": "25+",
+    },
 }
 
 
@@ -59,6 +66,13 @@ def test_parse_rooms_variants() -> None:
     assert parse_rooms("5+ өрөө") == 5
     assert parse_rooms("Хажуу өрөө түрээслүүлнэ") is None
     assert parse_rooms(None) is None
+
+
+def test_parse_floor_variants() -> None:
+    assert parse_floor("4") == 4
+    assert parse_floor("25+") == 25
+    assert parse_floor("давхар") is None
+    assert parse_floor(None) is None
 
 
 def test_dedup_hash_is_deterministic_and_ignores_price() -> None:
@@ -90,12 +104,36 @@ def test_listing_row_mapping() -> None:
     assert row["specs"].adapted == SAMPLE_PARSED["specs"]  # full dict kept as JSONB
     assert row["area_sqm"] == 49.0
     assert row["rooms"] == 2
+    assert row["floor"] == 4
+    assert row["total_floors"] == 25
+    assert row["complex_id"] is None
+    assert row["complex_name"] is None
     assert row["listing_type"] == "rent"
     assert row["property_type"] == "Орон сууц түрээслүүлнэ"
     assert row["property_subtype"] == "2 өрөө"
     assert row["photo_urls"] == SAMPLE_PARSED["photo_urls"]
     assert row["address"] == "Баянзүрх, Баянзүрх, Хороо 6"
     assert row["lat"] == 47.91811 and row["lng"] == 106.93199
+
+
+def test_listing_row_maps_reviewed_complex_without_rooms() -> None:
+    parsed = dict(
+        SAMPLE_PARSED,
+        title="Бүти таун хотхонд худалдааны талбай",
+        property_subcategory=None,
+    )
+    row = listing_row_from_parsed(parsed)
+    assert row is not None
+    assert row["rooms"] is None
+    assert row["complex_name"] == "Buti Town"
+
+
+def test_resolve_complex_ids_upserts_canonical_complex(cur) -> None:
+    rows = [{"complex_name": "Buti Town", "complex_id": None}]
+    _resolve_complex_ids(cur, rows)
+    assert isinstance(rows[0]["complex_id"], int)
+    cur.execute("SELECT canonical_name FROM complexes WHERE id = %s", (rows[0]["complex_id"],))
+    assert cur.fetchone()["canonical_name"] == "Buti Town"
 
 
 def test_unusable_records_are_skipped() -> None:

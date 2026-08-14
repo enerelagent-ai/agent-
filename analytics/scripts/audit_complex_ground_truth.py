@@ -28,6 +28,7 @@ NON_COMPLEX_LABELS = {
     "Хүрмэн TESCOMA-тай байр": "building",
     "Шинэ Зуун Билэг сургуулийн зүүн талд": "landmark",
     "зайсан удирдлагын академийн урд": "location",
+    "Академи": "location",
 }
 
 # Only observed spelling/transliteration variants are listed. This is kept
@@ -48,7 +49,7 @@ ALIASES: dict[str, tuple[str, ...]] = {
     "Park Garden": ("park garden", "парк гарден", "рark garden"),
     "Regis Place": ("regis place", "regis palace", "рэжис плэйс"),
     "River Garden": ("river garden", "ривер гарден"),
-    "River Plaza": ("river plaza", "river tower", "ривер плаза", "ривер тауэр"),
+    "River Plaza": ("river plaza", "ривер плаза"),
     "River Villa": ("river villa", "ривер вилла"),
     "Sky Garden Residence": ("sky garden residence", "sky garden", "skygarden", "скай гарден"),
     "Sn tower": ("sn tower", "sn тауэр"),
@@ -109,7 +110,8 @@ def classify_row(row: dict[str, str], title: str | None, labels: set[str]) -> di
         result.update(entity_type="unknown", status="source_unavailable", evidence=None)
         return result
 
-    if expected in NON_COMPLEX_LABELS:
+    matches = matching_labels(title, labels)
+    if expected in NON_COMPLEX_LABELS and not matches:
         result.update(
             entity_type=NON_COMPLEX_LABELS[expected],
             status="confirmed_negative",
@@ -117,7 +119,6 @@ def classify_row(row: dict[str, str], title: str | None, labels: set[str]) -> di
         )
         return result
 
-    matches = matching_labels(title, labels)
     if expected in matches:
         direct = normalize(expected) in normalize(title)
         result.update(

@@ -190,14 +190,18 @@ transliteration/typo alias болон reused-URL conflict дүрмийг хэр�
 
 | Эцсийн төлөв | Мөр | Gold fixture-д орсон эсэх |
 |---|---:|---|
-| `confirmed_positive` | 327 | Тийм |
-| `confirmed_negative` (landmark/building/location) | 10 | Тийм |
-| `reused_url_mismatch` | 25 | Тийм, hard negative |
-| `excluded_insufficient_evidence` | 8 | Үгүй |
+| `confirmed_positive` | 320 | Тийм |
+| `confirmed_negative` (landmark/building/location) | 12 | Тийм |
+| `reused_url_mismatch` | 26 | Тийм, hard negative |
+| `excluded_insufficient_evidence` | 12 | Үгүй |
 | `source_unavailable` | 597 | Үгүй |
 
-Ингэснээр одоогийн title evidence-тэй 362 мөр regression fixture болсон.
-Нотолгоогүй 8 мөрийг хүчээр positive/negative болгоогүй.
+Ингэснээр одоогийн title evidence-тэй 358 мөр regression fixture болсон.
+Нотолгоогүй 12 мөрийг хүчээр positive/negative болгоогүй. Phase 2-ийн
+анхны regression-аар CSV-ийн `Академи` label нь complex биш, ихэнхдээ
+`Удирдлагын академийн урд` гэсэн location болохыг илрүүлж, `Академи 1/2`-оос
+салгасан. Мөн `River Tower` ба `River Plaza`-г тусдаа canonical complex
+болгож fixture-ийг чангаруулсан.
 
 URL match өөрөө label-ийн нотолгоо биш гэдэг бодит жишээ гарсан. CSV-д
 `Akoya Residence` гэж тэмдэглэсэн URL-ийн одоогийн title `Aqua Garden`,
@@ -253,8 +257,8 @@ building/location label. Иймд баганын нэрийг semantics гэж �
   `analytics/tests/test_complex_ground_truth_audit.py`
 - Raw CSV нь хэрэглэгчийн Downloads дотор хэвээр. Утас, үнэ fixture-д
   ороогүй бөгөөд raw файлыг repo-д хуулж/commit хийгээгүй.
-- Phase 2 extractor нь 327 positive дээр canonical accuracy/recall, 35
-  negative дээр false-positive rate хэмжинэ. `source_unavailable` болон
+- Phase 2 extractor нь 320 positive дээр canonical accuracy/recall, 38
+  negative дээр false-positive/stale-label rate хэмжинэ. `source_unavailable` болон
   `excluded_insufficient_evidence` мөр metric-д орохгүй.
 
 Эдгээр deliverable бүрдсэнээр Phase 1 дууссан; Phase 2 extraction +
