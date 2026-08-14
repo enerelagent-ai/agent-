@@ -3,7 +3,7 @@
 for why stop_after_known is a separate mechanism from stop_after_stale."""
 
 import scraper.list_pages as list_pages_module
-from scraper.list_pages import collect_ad_urls
+from scraper.list_pages import collect_ad_inventory, collect_ad_urls
 
 
 def _fake_fetch(pages: dict[int, list[str]], fetched: list[int]):
@@ -82,3 +82,21 @@ def test_collect_ad_urls_without_checker_is_unaffected(monkeypatch) -> None:
 
     assert fetched == [1, 2, 3]  # stops after 3 consecutive empty (stale) pages
     assert result == []
+
+
+def test_inventory_is_complete_only_after_natural_end(monkeypatch) -> None:
+    pages = {1: ["https://x/adv/1_a/"], 2: [], 3: [], 4: []}
+    fetched: list[int] = []
+    monkeypatch.setattr(list_pages_module, "fetch_ad_urls_from_page", _fake_fetch(pages, fetched))
+
+    complete = collect_ad_inventory(
+        None, "https://x/", 10, delay_range=(0, 0), stop_after_stale=3
+    )
+    capped = collect_ad_inventory(
+        None, "https://x/", 1, delay_range=(0, 0), stop_after_stale=3
+    )
+
+    assert complete.complete is True
+    assert complete.stop_reason == "natural_end"
+    assert capped.complete is False
+    assert capped.stop_reason == "max_pages"

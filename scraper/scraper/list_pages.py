@@ -1,6 +1,7 @@
 import random
 import re
 import time
+from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urljoin
 
@@ -12,6 +13,17 @@ from scraper.browser import new_context, wait_past_challenge
 AD_HREF_RE = re.compile(r"^/adv/\d+_[\w-]+/?$")
 
 
+class ListPageFetchError(RuntimeError):
+    """Raised when a strict inventory crawl cannot verify a list page."""
+
+
+@dataclass(frozen=True)
+class InventoryResult:
+    urls: list[str]
+    complete: bool
+    stop_reason: str
+
+
 def build_page_url(category_url: str, page_num: int) -> str:
     """Return the list-page URL for a given page number of a category (page 1 has no query param)."""
     if page_num <= 1:
@@ -19,7 +31,9 @@ def build_page_url(category_url: str, page_num: int) -> str:
     return f"{category_url}?page={page_num}"
 
 
-def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> list[str]:
+def fetch_ad_urls_from_page(
+    browser: Browser, url: str, *, retries: int = 2, strict: bool = False
+) -> list[str]:
     """Load one list page in a fresh browser context and return the unique,
     absolute detail-page URLs found on it.
 
@@ -45,6 +59,8 @@ def fetch_ad_urls_from_page(browser: Browser, url: str, *, retries: int = 2) -> 
             context.close()
         if attempt < retries:
             time.sleep(2 * (attempt + 1))
+    if strict:
+        raise ListPageFetchError(f"could not verify list page after {retries + 1} attempts: {url}")
     return []
 
 
@@ -77,12 +93,45 @@ def collect_ad_urls(
     This is distinct from stop_after_stale, which detects the unrelated case
     of running off the end of the category's real page count.
     """
+    return collect_ad_inventory(
+        browser,
+        category_url,
+        max_pages,
+        delay_range=delay_range,
+        stop_after_stale=stop_after_stale,
+        known_urls_checker=known_urls_checker,
+        stop_after_known=stop_after_known,
+    ).urls
+
+
+def collect_ad_inventory(
+    browser: Browser,
+    category_url: str,
+    max_pages: int,
+    *,
+    delay_range: tuple[float, float] = (2.0, 3.0),
+    stop_after_stale: int = 3,
+    known_urls_checker: Callable[[list[str]], set[str]] | None = None,
+    stop_after_known: int = 3,
+    strict_fetch: bool = False,
+) -> InventoryResult:
+    """Collect URLs and report whether the category's natural end was seen.
+
+    ``complete`` is deliberately false when the known-URL optimization or
+    max_pages stops the walk. Only a strict, naturally-completed inventory is
+    safe input to lifecycle reconciliation: absence from a partial newest-first
+    crawl is not evidence that an older listing was removed.
+    """
     seen: dict[str, None] = {}
     stale_pages = 0
     known_streak = 0
+    stop_reason = "max_pages"
     for page_num in range(1, max_pages + 1):
         page_url = build_page_url(category_url, page_num)
-        ad_urls = fetch_ad_urls_from_page(browser, page_url)
+        if strict_fetch:
+            ad_urls = fetch_ad_urls_from_page(browser, page_url, strict=True)
+        else:
+            ad_urls = fetch_ad_urls_from_page(browser, page_url)
         new_urls = sum(1 for ad_url in ad_urls if ad_url not in seen)
         print(f"    page {page_num}: {len(ad_urls)} ads, {new_urls} new ({page_url})", flush=True)
         for ad_url in ad_urls:
@@ -90,6 +139,7 @@ def collect_ad_urls(
         stale_pages = 0 if new_urls else stale_pages + 1
         if stale_pages >= stop_after_stale:
             print(f"    stopping: {stop_after_stale} consecutive pages with no new ads")
+            stop_reason = "natural_end"
             break
         if known_urls_checker is not None and ad_urls:
             already_known = known_urls_checker(ad_urls)
@@ -97,6 +147,11 @@ def collect_ad_urls(
             known_streak = known_streak + 1 if all_known else 0
             if known_streak >= stop_after_known:
                 print(f"    stopping: {stop_after_known} consecutive pages already fully in the database")
+                stop_reason = "known_pages"
                 break
         time.sleep(random.uniform(*delay_range))
-    return list(seen)
+    return InventoryResult(
+        urls=list(seen),
+        complete=stop_reason == "natural_end",
+        stop_reason=stop_reason,
+    )

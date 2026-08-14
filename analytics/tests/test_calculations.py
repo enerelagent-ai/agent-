@@ -21,12 +21,28 @@ from analytics.calculations import (
     estimate_negotiable_price,
     investment_summary_by_district,
     listing_counts_by_property_type,
+    monthly_delisting_trend,
     price_trend,
     rental_yield_by_district_rooms,
     snapshot_market_prices,
     todays_opportunity,
     yield_category_coverage,
 )
+
+
+def test_monthly_delisting_trend_groups_by_month_type_and_district(cur) -> None:
+    for url, when in (("test://closed-jan-a", "2026-01-02"), ("test://closed-jan-b", "2026-01-29")):
+        listing_id = _insert(cur, url, 100_000_000, 50, district="Lifecycle дүүрэг", is_active=False)
+        cur.execute("UPDATE listings SET delisted_at = %s WHERE id = %s", (when, listing_id))
+
+    rows = monthly_delisting_trend(cur, "sale", "Lifecycle дүүрэг")
+
+    assert rows == [{
+        "month": date(2026, 1, 1),
+        "listing_type": "sale",
+        "district": "Lifecycle дүүрэг",
+        "n_delisted": 2,
+    }]
 from analytics.matches import record_matches, superseded_listing_ids
 
 _INSERT_SQL = """

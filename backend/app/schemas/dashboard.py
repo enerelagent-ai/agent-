@@ -27,6 +27,13 @@ class ListingTypeCount(BaseModel):
     n: int
 
 
+class MonthlyDelistingPoint(BaseModel):
+    month: date
+    listing_type: str
+    district: str | None
+    n_delisted: int
+
+
 class ComplexPriceSummary(BaseModel):
     complex_id: int
     complex_name: str

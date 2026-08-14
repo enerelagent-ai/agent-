@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, ForeignKey, Numeric, SmallInteger, String, Text, text
+from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -64,6 +64,7 @@ class Listing(Base):
 
     contact_phone: Mapped[str | None] = mapped_column(Text)
     photo_urls: Mapped[list[str]] = mapped_column(ARRAY(Text))
+    view_count: Mapped[int | None] = mapped_column(Integer)
 
     dedup_hash: Mapped[str] = mapped_column(Text)
 

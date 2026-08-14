@@ -17,10 +17,11 @@ from analytics.matches import match_new_listings
 
 from scraper.browser import launch_browser
 from scraper.detail_page import fetch_detail_html, parse_detail_page
-from scraper.list_pages import collect_ad_urls
+from scraper.list_pages import collect_ad_inventory, collect_ad_urls
 from scraper.save import (
     known_urls_conn,
     listing_row_from_parsed,
+    reconcile_category_inventory_conn,
     recently_scraped_urls,
     upsert_listings,
 )
@@ -32,6 +33,46 @@ CATEGORIES = {
     "for_rent": "https://www.unegui.mn/l-hdlh/l-hdlh-treesllne/",
 }
 DELAY_RANGE = (2.0, 3.0)
+
+
+def run_inventory_reconciliation(dsn: str, max_pages: int) -> int:
+    """Fully crawl both list categories and reconcile active lifecycle state.
+
+    Unlike the daily incremental detail scrape this never stops on known URLs.
+    Every category must reach its natural end; hitting max_pages or failing a
+    strict page fetch aborts before that category can mark anything delisted.
+    """
+    inventories: dict[str, list[str]] = {}
+    with sync_playwright() as p:
+        browser = launch_browser(p)
+        try:
+            for name, category_url in CATEGORIES.items():
+                print(f"{name}: collecting complete lifecycle inventory")
+                result = collect_ad_inventory(
+                    browser,
+                    category_url,
+                    max_pages=max_pages,
+                    strict_fetch=True,
+                )
+                if not result.complete:
+                    raise RuntimeError(
+                        f"{name} inventory incomplete ({result.stop_reason}); "
+                        "increase --pages before reconciling"
+                    )
+                inventories[name] = result.urls
+        finally:
+            browser.close()
+
+    for name, urls in inventories.items():
+        listing_type = "sale" if name == "for_sale" else "rent"
+        counts = reconcile_category_inventory_conn(dsn, listing_type, urls)
+        print(
+            f"{name}: {len(urls)} live urls, {counts['reactivated']} reactivated, "
+            f"{counts['delisted']} delisted"
+        )
+    snapshot_count = snapshot_market_prices_conn(dsn)
+    print(f"market snapshot: {snapshot_count} price groups recorded", flush=True)
+    return 0
 
 
 def scrape_and_save(
@@ -150,6 +191,14 @@ def main() -> None:
         help="cap detail pages per category; omit to scrape every collected URL",
     )
     parser.add_argument(
+        "--reconcile-inventory",
+        action="store_true",
+        help=(
+            "crawl each category to its verified natural end and reconcile "
+            "is_active/delisted_at; aborts safely if --pages is too low"
+        ),
+    )
+    parser.add_argument(
         "--skip-recent-days",
         type=float,
         default=0.0,
@@ -169,13 +218,16 @@ def main() -> None:
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         sys.exit("DATABASE_URL environment variable is required (see backend/.env)")
-    error_count = run_pipeline(
-        dsn,
-        max_pages=args.pages,
-        ads_per_category=args.ads_per_category,
-        skip_recent_days=args.skip_recent_days,
-        stop_after_known_pages=args.stop_after_known_pages,
-    )
+    if args.reconcile_inventory:
+        error_count = run_inventory_reconciliation(dsn, max_pages=args.pages)
+    else:
+        error_count = run_pipeline(
+            dsn,
+            max_pages=args.pages,
+            ads_per_category=args.ads_per_category,
+            skip_recent_days=args.skip_recent_days,
+            stop_after_known_pages=args.stop_after_known_pages,
+        )
     sys.exit(1 if error_count else 0)
 
 

@@ -22,6 +22,7 @@ _UPSERT_SQL = """
         source, source_url, title, description, price, price_raw, price_negotiable,
         area_sqm, rooms, floor, total_floors, complex_id,
         district, address, lat, lng, contact_phone, photo_urls,
+        view_count,
         dedup_hash, listing_type, property_type, property_subtype,
         posted_at, posted_raw, specs
     )
@@ -30,6 +31,7 @@ _UPSERT_SQL = """
         %(price_negotiable)s, %(area_sqm)s, %(rooms)s, %(floor)s, %(total_floors)s,
         %(complex_id)s,
         %(district)s, %(address)s, %(lat)s, %(lng)s, %(contact_phone)s, %(photo_urls)s,
+        %(view_count)s,
         %(dedup_hash)s, %(listing_type)s, %(property_type)s, %(property_subtype)s,
         %(posted_at)s, %(posted_raw)s, %(specs)s
     )
@@ -50,6 +52,7 @@ _UPSERT_SQL = """
         lng = EXCLUDED.lng,
         contact_phone = EXCLUDED.contact_phone,
         photo_urls = EXCLUDED.photo_urls,
+        view_count = EXCLUDED.view_count,
         dedup_hash = EXCLUDED.dedup_hash,
         listing_type = EXCLUDED.listing_type,
         property_type = EXCLUDED.property_type,
@@ -57,6 +60,8 @@ _UPSERT_SQL = """
         posted_at = EXCLUDED.posted_at,
         posted_raw = EXCLUDED.posted_raw,
         specs = EXCLUDED.specs,
+        is_active = true,
+        delisted_at = NULL,
         scraped_at = now()
 """
 
@@ -165,6 +170,7 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "lng": parsed.get("longitude"),
         "contact_phone": phones[0] if phones else None,
         "photo_urls": parsed.get("photo_urls") or [],
+        "view_count": parsed.get("view_count"),
         "listing_type": parsed.get("listing_type"),
         "property_type": parsed.get("property_category"),
         "property_subtype": parsed.get("property_subcategory"),
@@ -257,6 +263,58 @@ def known_urls_conn(dsn: str, urls: list[str]) -> set[str]:
             result = known_urls(cur, urls)
     conn.close()
     return result
+
+
+def reconcile_category_inventory(
+    cur: psycopg2.extensions.cursor,
+    listing_type: str,
+    seen_urls: list[str],
+) -> dict[str, int]:
+    """Apply one verified-complete Unegui category inventory atomically.
+
+    Seen URLs are (re)activated; currently-active URLs of the same transaction
+    type that are absent are soft-deleted. An empty inventory is rejected as a
+    final guard against a bot challenge or selector regression being mistaken
+    for a category with no ads.
+    """
+    if listing_type not in {"sale", "rent"}:
+        raise ValueError(f"unsupported listing_type: {listing_type}")
+    if not seen_urls:
+        raise ValueError("refusing to reconcile an empty category inventory")
+
+    cur.execute(
+        """
+        UPDATE listings
+        SET is_active = true, delisted_at = NULL
+        WHERE source = 'unegui'
+          AND listing_type = %s
+          AND source_url = ANY(%s)
+          AND NOT is_active
+        """,
+        (listing_type, seen_urls),
+    )
+    reactivated = cur.rowcount
+    cur.execute(
+        """
+        UPDATE listings
+        SET is_active = false, delisted_at = now()
+        WHERE source = 'unegui'
+          AND listing_type = %s
+          AND is_active
+          AND NOT (source_url = ANY(%s))
+        """,
+        (listing_type, seen_urls),
+    )
+    return {"reactivated": reactivated, "delisted": cur.rowcount}
+
+
+def reconcile_category_inventory_conn(
+    dsn: str, listing_type: str, seen_urls: list[str]
+) -> dict[str, int]:
+    """Connection-owning wrapper for reconcile_category_inventory()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor() as cur:
+            return reconcile_category_inventory(cur, listing_type, seen_urls)
 
 
 def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:

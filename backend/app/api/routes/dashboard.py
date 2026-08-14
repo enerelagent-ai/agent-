@@ -7,6 +7,7 @@ from analytics.calculations import (
     estimate_negotiable_price_conn,
     investment_summary_by_district_conn,
     listing_counts_by_property_type_conn,
+    monthly_delisting_trend_conn,
     price_trend_conn,
     rental_yield_by_district_rooms_conn,
     todays_opportunity_conn,
@@ -22,6 +23,7 @@ from app.schemas.dashboard import (
     ComplexPriceSummary,
     ComplexOption,
     ListingTypeCount,
+    MonthlyDelistingPoint,
     PriceTrendPoint,
     TodaysOpportunity,
 )
@@ -62,6 +64,15 @@ def price_trend(
 @router.get("/listing-counts-by-type", response_model=list[ListingTypeCount])
 def listing_counts_by_type() -> list[dict]:
     return listing_counts_by_property_type_conn(settings.database_url)
+
+
+@router.get("/delisting-trend", response_model=list[MonthlyDelistingPoint])
+def delisting_trend(
+    listing_type: Literal["sale", "rent"] | None = Query(None),
+    district: str | None = Query(None),
+) -> list[dict]:
+    """Monthly removed-ad counts; removal does not necessarily mean a sale."""
+    return monthly_delisting_trend_conn(settings.database_url, listing_type, district)
 
 
 @router.get("/complex-prices", response_model=list[ComplexPriceSummary])

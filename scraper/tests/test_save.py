@@ -11,6 +11,7 @@ from scraper.save import (
     parse_price_negotiable,
     parse_rooms,
     recently_scraped,
+    reconcile_category_inventory,
 )
 
 SAMPLE_PARSED = {
@@ -165,6 +166,42 @@ def test_known_urls_ignores_scraped_at_age(cur) -> None:
     urls = ["test://known-fresh", "test://known-old", "test://known-unseen"]
     assert known_urls(cur, urls) == {"test://known-fresh", "test://known-old"}
     assert known_urls(cur, []) == set()
+
+
+def test_reconcile_inventory_delists_missing_and_reactivates_seen(cur) -> None:
+    cur.execute(
+        "SELECT source_url FROM listings WHERE source = 'unegui' AND listing_type = 'sale' AND is_active"
+    )
+    existing_active_urls = [row["source_url"] for row in cur.fetchall()]
+    for url, active in (("test://life-seen", False), ("test://life-missing", True)):
+        cur.execute(
+            """INSERT INTO listings
+               (source, source_url, title, dedup_hash, listing_type, is_active, delisted_at)
+               VALUES ('unegui', %s, 't', 'life', 'sale', %s,
+                       CASE WHEN %s THEN NULL ELSE now() END)""",
+            (url, active, active),
+        )
+
+    counts = reconcile_category_inventory(
+        cur, "sale", [*existing_active_urls, "test://life-seen"]
+    )
+
+    cur.execute(
+        "SELECT source_url, is_active, delisted_at FROM listings WHERE dedup_hash = 'life'"
+    )
+    rows = {row["source_url"]: row for row in cur.fetchall()}
+    assert counts == {"reactivated": 1, "delisted": 1}
+    assert rows["test://life-seen"]["is_active"] is True
+    assert rows["test://life-seen"]["delisted_at"] is None
+    assert rows["test://life-missing"]["is_active"] is False
+    assert rows["test://life-missing"]["delisted_at"] is not None
+
+
+def test_reconcile_inventory_rejects_empty_input(cur) -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="empty"):
+        reconcile_category_inventory(cur, "sale", [])
 
 
 def test_normalize_dsn() -> None:

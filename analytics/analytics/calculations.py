@@ -473,6 +473,49 @@ def investment_summary_by_district_conn(dsn: str) -> list[dict[str, Any]]:
             return investment_summary_by_district(cur)
 
 
+def monthly_delisting_trend(
+    cur: psycopg2.extensions.cursor,
+    listing_type: str | None = None,
+    district: str | None = None,
+) -> list[dict[str, Any]]:
+    """Monthly soft-deletion counts over canonical Unegui listings.
+
+    This is a lifecycle/liquidity observation, not proof that every removed ad
+    was sold or rented: sellers can withdraw or replace an ad for other reasons.
+    """
+    if listing_type not in {None, "sale", "rent"}:
+        raise ValueError(f"unsupported listing_type: {listing_type}")
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(
+        """
+        SELECT date_trunc('month', delisted_at)::date AS month,
+               listing_type,
+               district,
+               count(*) AS n_delisted
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND source = 'unegui'
+          AND NOT is_active
+          AND delisted_at IS NOT NULL
+          AND (%(listing_type)s IS NULL OR listing_type = %(listing_type)s)
+          AND (%(district)s IS NULL OR district = %(district)s)
+        GROUP BY 1, listing_type, district
+        ORDER BY 1, listing_type, district
+        """,
+        {"excluded_ids": excluded, "listing_type": listing_type, "district": district},
+    )
+    return [dict(row) for row in cur.fetchall()]
+
+
+def monthly_delisting_trend_conn(
+    dsn: str, listing_type: str | None = None, district: str | None = None
+) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for monthly_delisting_trend()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return monthly_delisting_trend(cur, listing_type, district)
+
+
 _PRICE_HISTORY_UPSERT_SQL = """
     INSERT INTO price_history (snapshot_date, listing_type, property_type,
                                 district, n_listings, avg_price, avg_price_per_sqm)

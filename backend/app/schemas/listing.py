@@ -28,6 +28,7 @@ class ListingOut(BaseModel):
     lng: float | None
     contact_phone: str | None
     photo_urls: list[str]
+    view_count: int | None
     scraped_at: datetime
     created_at: datetime
     updated_at: datetime

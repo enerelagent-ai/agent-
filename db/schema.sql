@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS listings (
 
     contact_phone   TEXT,
     photo_urls      TEXT[] NOT NULL DEFAULT '{}',
+    -- Latest cumulative detail-page counter reported by the source.
+    view_count      INTEGER CHECK (view_count IS NULL OR view_count >= 0),
 
     -- Hash of normalized listing attributes, used to find cross-source duplicate
     -- candidates (e.g. the same unit posted on both Unegui and Facebook).
