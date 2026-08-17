@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   Building2,
@@ -17,22 +20,20 @@ interface NavItem {
   href: string | null;
 }
 
-// Only "Хяналтын самбар" (Dashboard) is wired up right now — the rest need
-// backing data (search, market-overview stats, yield calculators, reports)
-// that hasn't been built yet. They're shown for visual completeness and to
-// signal what's coming, not left off the list entirely.
 const NAV_ITEMS: NavItem[] = [
   { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/" },
-  { label: "Зар мэдээлэл", icon: ListChecks, href: null },
+  { label: "Зар мэдээлэл", icon: ListChecks, href: "/listings" },
   { label: "Зах зээлийн тойм", icon: TrendingUp, href: null },
-  { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: null },
+  { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: "/calculator" },
   { label: "Түрээсийн өгөөж", icon: KeyRound, href: null },
   { label: "Дүрслэл & Тайлан", icon: FileBarChart, href: null },
-  { label: "Мэдэгдэл", icon: Bell, href: null },
+  { label: "Мэдэгдэл", icon: Bell, href: "/notifications" },
   { label: "Тохиргоо", icon: Settings, href: null },
 ];
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="flex w-64 shrink-0 flex-col bg-[#111a3d] text-white">
       <div className="flex items-center gap-2.5 px-5 py-6">
@@ -45,12 +46,16 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 pt-2">
-        {NAV_ITEMS.map(({ label, icon: Icon, href }) =>
-          href ? (
+        {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
+          const active = href === "/" ? pathname === "/" : href !== null && pathname.startsWith(href);
+          return href ? (
             <Link
               key={label}
               href={href}
-              className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2.5 text-sm font-medium text-white transition-colors"
+              aria-current={active ? "page" : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10 ${
+                active ? "bg-white/10" : ""
+              }`}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden />
               {label}
@@ -65,11 +70,11 @@ export function Sidebar() {
               <Icon className="h-4 w-4 shrink-0" aria-hidden />
               {label}
             </span>
-          )
-        )}
+          );
+        })}
       </nav>
 
-      <div className="px-3 pb-5 text-xs text-white/30">V1.0 — Хувилбар 1.0.0</div>
+      <div className="px-3 pb-5 text-xs text-white/30">V1.5 — Хувилбар 1.5.0</div>
     </aside>
   );
 }

@@ -33,3 +33,17 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
     headers: { "Content-Type": backendRes.headers.get("Content-Type") ?? "application/json" },
   });
 }
+
+export async function POST(request: NextRequest, { params }: { params: { path: string[] } }) {
+  const url = `${BACKEND_URL}/${params.path.join("/")}${request.nextUrl.search}`;
+  const headers: HeadersInit = {};
+  if (ADMIN_USERNAME && ADMIN_PASSWORD) {
+    headers["Authorization"] = `Basic ${Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64")}`;
+  }
+  const backendRes = await fetch(url, { method: "POST", headers, cache: "no-store" });
+  const body = await backendRes.text();
+  return new NextResponse(body, {
+    status: backendRes.status,
+    headers: { "Content-Type": backendRes.headers.get("Content-Type") ?? "application/json" },
+  });
+}

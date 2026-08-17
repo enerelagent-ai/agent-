@@ -1,7 +1,12 @@
 """Core market calculation queries over canonical (non-duplicate) listings.
 
 Every query excludes matches.superseded_listing_ids() first, so an
-auto-resolved duplicate group is counted once, not once per repost.
+auto-resolved duplicate group is counted once, not once per repost. Every
+query also filters WHERE is_active (migration 009): a sold/rented/removed
+listing must never count as live inventory in a *current* market figure —
+it stays in the table (soft-deleted, not dropped) purely for closure-trend
+analysis over time, which is a different, deliberately separate concern
+from anything in this module.
 """
 
 from datetime import date
@@ -27,6 +32,23 @@ MIN_COMPARABLE_GROUP_SIZE = 20
 # and district were asked for: sale and rent prices differ by ~100x for the
 # same property_type (see db/schema.sql's listing_type comment, and the
 # Week 4 investigation) — blending them would make the average meaningless.
+#
+# price_negotiable IS NOT TRUE: a "Vнэ тохирно" placeholder is never a real
+# price (same policy as deal_percentages/estimate_negotiable_price below —
+# this function had fallen out of sync with that policy; 2026-08 audit).
+# Real-DB impact was severe, not theoretical: a single negotiable "Газар
+# зарна" land ad with a literal but absurd asking price (3.5 trillion MNT
+# for one Баянзvрх plot, 2 trillion for one Сонгинохайрхан plot) inflated
+# those districts' average land price 7.9x and 4.5x respectively before
+# this fix.
+#
+# price <= _MAX_PLAUSIBLE_PRICE is defense-in-depth for the same failure on
+# a future *non*-negotiable row (a typo'd extra zero or two): verified
+# against the full DB that nothing legitimate is anywhere close to this
+# ceiling — the highest genuine listing is ~51B MNT (a large commercial
+# object), the next tier up is those same two negotiable errors at 2-3.5
+# TRILLION, a >40x gap either direction, so the ceiling has wide margin and
+# won't clip real high-value commercial/land listings.
 _GROUP_STATS_SQL = """
     SELECT
         listing_type,
@@ -38,14 +60,21 @@ _GROUP_STATS_SQL = """
         count(price_per_sqm) AS n_with_price_per_sqm
     FROM listings
     WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
       AND district IS NOT NULL
+      AND price_negotiable IS NOT TRUE
+      AND price <= %(max_plausible_price)s
       AND (%(district)s IS NULL OR district = %(district)s)
     GROUP BY listing_type, property_type, district
     HAVING count(*) >= %(min_group_size)s
     ORDER BY listing_type, property_type, n_listings DESC
 """
+
+# See _GROUP_STATS_SQL comment above for how this value and its safety
+# margin were derived from the real DB.
+_MAX_PLAUSIBLE_PRICE = Decimal("100000000000")  # 100 billion MNT
 
 
 def average_price_by_group(
@@ -66,12 +95,18 @@ def average_price_by_group(
     only reflects listings that have both price and area_sqm; n_listings vs
     n_with_price_per_sqm shows how many of the group lack area data (common
     for land/object listings).
+
+    Excludes price_negotiable listings (a placeholder price, never a real
+    one) and anything above _MAX_PLAUSIBLE_PRICE (a data-entry-error
+    ceiling) before averaging — see _GROUP_STATS_SQL's comment for why both
+    guards are needed and how the ceiling was derived.
     """
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_GROUP_STATS_SQL, {
         "excluded_ids": excluded,
         "district": district,
         "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
     })
     return [dict(row) for row in cur.fetchall()]
 
@@ -101,8 +136,11 @@ _RENTAL_YIELD_SQL = """
                round(avg(price_per_sqm)::numeric, 2) AS avg_sale_price_per_sqm
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND listing_type = 'sale' AND property_type = %(sale_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
           AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     ),
@@ -112,8 +150,11 @@ _RENTAL_YIELD_SQL = """
                round(avg(price)::numeric, 2) AS avg_rent_price
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND listing_type = 'rent' AND property_type = %(rent_label)s
           AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
           AND (%(district)s IS NULL OR district = %(district)s)
         GROUP BY district, property_subtype, rooms
     )
@@ -164,6 +205,7 @@ def rental_yield_by_district_rooms(
         "sale_label": _APARTMENT_SALE_LABEL,
         "rent_label": _APARTMENT_RENT_LABEL,
         "district": district,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
     })
     return [dict(row) for row in cur.fetchall()]
 
@@ -215,7 +257,7 @@ _SPECIAL_REASONS: dict[str, str] = {
 _COVERAGE_COUNT_SQL = """
     SELECT count(*) AS n, count(rooms) AS n_rooms
     FROM listings
-    WHERE listing_type = %(listing_type)s AND property_type = %(label)s
+    WHERE is_active AND listing_type = %(listing_type)s AND property_type = %(label)s
 """
 
 
@@ -292,6 +334,7 @@ _LISTING_COUNTS_SQL = """
         count(*) AS n
     FROM listings
     WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
       AND listing_type IS NOT NULL
       AND property_type IS NOT NULL
     GROUP BY listing_type, bucket
@@ -340,6 +383,49 @@ def listing_counts_by_property_type_conn(dsn: str) -> list[dict[str, Any]]:
 _MIN_SAMPLE_SIZE = 20
 
 
+_DISTRICT_SALE_DISTRIBUTION_SQL = """
+    WITH eligible_rent_groups AS (
+        SELECT DISTINCT district, property_subtype, rooms
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
+          AND listing_type = 'rent' AND property_type = %(rent_label)s
+          AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
+    )
+    SELECT s.district,
+           min(s.price) AS min_sale_price,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY s.price) AS median_sale_price,
+           max(s.price) AS max_sale_price
+    FROM listings s
+    JOIN eligible_rent_groups r
+      ON s.district = r.district
+     AND s.property_subtype IS NOT DISTINCT FROM r.property_subtype
+     AND s.rooms = r.rooms
+    WHERE s.id != ALL(%(excluded_ids)s)
+      AND s.is_active
+      AND s.listing_type = 'sale' AND s.property_type = %(sale_label)s
+      AND s.price_negotiable IS NOT TRUE
+      AND s.price > 0 AND s.price <= %(max_plausible_price)s
+    GROUP BY s.district
+"""
+
+
+def district_sale_price_distribution(
+    cur: psycopg2.extensions.cursor,
+) -> dict[str, dict[str, Any]]:
+    """Min/median/max sale price for the same eligible apartment groups as yield."""
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_DISTRICT_SALE_DISTRIBUTION_SQL, {
+        "excluded_ids": excluded,
+        "sale_label": _APARTMENT_SALE_LABEL,
+        "rent_label": _APARTMENT_RENT_LABEL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+    })
+    return {row["district"]: dict(row) for row in cur.fetchall()}
+
+
 def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
     """Week 6 dashboard input: one row per district, built on top of
     rental_yield_by_district_rooms() rather than a fresh query, so it always
@@ -372,6 +458,7 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     dashboard users actually weigh price vs. yield.
     """
     buckets = rental_yield_by_district_rooms(cur)
+    distributions = district_sale_price_distribution(cur)
 
     totals: dict[str, dict[str, Any]] = {}
     for b in buckets:
@@ -408,6 +495,9 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
             "avg_price_per_sqm": round(avg_price_per_sqm, 2) if avg_price_per_sqm is not None else None,
             "gross_rental_yield_pct": round(gross_yield_pct, 2),
             "roi_pct": round(gross_yield_pct, 2),
+            "min_sale_price": distributions[district]["min_sale_price"],
+            "median_sale_price": distributions[district]["median_sale_price"],
+            "max_sale_price": distributions[district]["max_sale_price"],
         })
 
     n = len(rows)
@@ -433,6 +523,49 @@ def investment_summary_by_district_conn(dsn: str) -> list[dict[str, Any]]:
     with psycopg2.connect(normalize_dsn(dsn)) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             return investment_summary_by_district(cur)
+
+
+def monthly_delisting_trend(
+    cur: psycopg2.extensions.cursor,
+    listing_type: str | None = None,
+    district: str | None = None,
+) -> list[dict[str, Any]]:
+    """Monthly soft-deletion counts over canonical Unegui listings.
+
+    This is a lifecycle/liquidity observation, not proof that every removed ad
+    was sold or rented: sellers can withdraw or replace an ad for other reasons.
+    """
+    if listing_type not in {None, "sale", "rent"}:
+        raise ValueError(f"unsupported listing_type: {listing_type}")
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(
+        """
+        SELECT date_trunc('month', delisted_at)::date AS month,
+               listing_type,
+               district,
+               count(*) AS n_delisted
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND source = 'unegui'
+          AND NOT is_active
+          AND delisted_at IS NOT NULL
+          AND (%(listing_type)s IS NULL OR listing_type = %(listing_type)s)
+          AND (%(district)s IS NULL OR district = %(district)s)
+        GROUP BY 1, listing_type, district
+        ORDER BY 1, listing_type, district
+        """,
+        {"excluded_ids": excluded, "listing_type": listing_type, "district": district},
+    )
+    return [dict(row) for row in cur.fetchall()]
+
+
+def monthly_delisting_trend_conn(
+    dsn: str, listing_type: str | None = None, district: str | None = None
+) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for monthly_delisting_trend()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return monthly_delisting_trend(cur, listing_type, district)
 
 
 _PRICE_HISTORY_UPSERT_SQL = """
@@ -589,6 +722,7 @@ _DEAL_PERCENTAGES_SQL = """
                count(*) AS n_comparable
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
           AND area_sqm >= %(min_area_sqm)s
           AND rooms != %(open_ended_rooms)s
@@ -599,7 +733,7 @@ _DEAL_PERCENTAGES_SQL = """
     ),
     priced AS (
         SELECT
-            l.id, l.district, l.rooms, l.listing_type, l.property_type,
+            l.id, l.complex_id, l.district, l.rooms, l.listing_type, l.property_type,
             l.price, l.price_per_sqm, l.area_sqm,
             round(gm.group_median_price_per_sqm::numeric, 2) AS group_median_price_per_sqm,
             gm.n_comparable,
@@ -609,6 +743,7 @@ _DEAL_PERCENTAGES_SQL = """
         JOIN group_medians gm
           ON l.district = gm.district AND l.rooms = gm.rooms AND l.listing_type = gm.listing_type
         WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
           AND l.district IS NOT NULL AND l.rooms IS NOT NULL AND l.price_per_sqm IS NOT NULL
           AND l.area_sqm >= %(min_area_sqm)s
           AND l.rooms != %(open_ended_rooms)s
@@ -724,6 +859,154 @@ def deal_percentages_conn(dsn: str, district: str | None = None) -> list[dict[st
             return deal_percentages(cur, district)
 
 
+# A complex is a much tighter comparison than a whole district. We require
+# a larger discount before presenting a separate "complex-level opportunity"
+# signal, while retaining the same 50% data-quality review ceiling.
+MIN_COMPLEX_DEAL_PCT = 20.0
+
+_COMPLEX_AVERAGE_PRICE_SQL = """
+    SELECT
+        l.complex_id,
+        c.canonical_name AS complex_name,
+        l.listing_type,
+        l.property_type,
+        count(*) AS n_listings,
+        round(avg(l.price)::numeric, 2) AS avg_price,
+        round(percentile_cont(0.5) WITHIN GROUP (ORDER BY l.price)::numeric, 2) AS median_price,
+        round(avg(l.price_per_sqm)::numeric, 2) AS avg_price_per_sqm,
+        round(percentile_cont(0.5) WITHIN GROUP (ORDER BY l.price_per_sqm)::numeric, 2)
+            AS median_price_per_sqm,
+        count(l.price_per_sqm) AS n_with_price_per_sqm
+    FROM listings l
+    JOIN complexes c ON c.id = l.complex_id
+    WHERE l.id != ALL(%(excluded_ids)s)
+      AND l.is_active
+      AND l.complex_id IS NOT NULL
+      AND l.listing_type IS NOT NULL
+      AND l.property_type IS NOT NULL
+      AND l.price IS NOT NULL
+      AND l.price_negotiable IS NOT TRUE
+      AND l.price <= %(max_plausible_price)s
+      AND (%(complex_id)s IS NULL OR l.complex_id = %(complex_id)s)
+    GROUP BY l.complex_id, c.canonical_name, l.listing_type, l.property_type
+    HAVING count(*) >= %(min_group_size)s
+    ORDER BY n_listings DESC, c.canonical_name, l.listing_type, l.property_type
+"""
+
+
+def complex_average_price(
+    cur: psycopg2.extensions.cursor, complex_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Price statistics within canonical complex + transaction + property type.
+
+    Reuses every Phase 0 current-market guard: superseded duplicates,
+    inactive rows, negotiable placeholders, prices above the verified 100B
+    ceiling, and groups below MIN_COMPARABLE_GROUP_SIZE are excluded. Sale
+    and rent, or apartments and garages in the same complex, are never mixed.
+    Both mean and median are returned; callers should use the median for a
+    per-listing deal badge because it resists one otherwise-valid extreme.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_COMPLEX_AVERAGE_PRICE_SQL, {
+        "excluded_ids": excluded,
+        "complex_id": complex_id,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+    })
+    return [dict(row) for row in cur.fetchall()]
+
+
+def complex_average_price_conn(dsn: str, complex_id: int | None = None) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for complex_average_price()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return complex_average_price(cur, complex_id)
+
+
+_COMPLEX_DEAL_PERCENTAGES_SQL = """
+    WITH group_medians AS (
+        SELECT complex_id, listing_type, property_type,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm)
+                   AS complex_median_price_per_sqm,
+               count(*) AS n_comparable
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
+          AND complex_id IS NOT NULL
+          AND listing_type IS NOT NULL AND property_type IS NOT NULL
+          AND price_per_sqm IS NOT NULL AND area_sqm >= %(min_area_sqm)s
+          AND price_negotiable IS NOT TRUE
+          AND price <= %(max_plausible_price)s
+        GROUP BY complex_id, listing_type, property_type
+        HAVING count(*) >= %(min_group_size)s
+    ),
+    priced AS (
+        SELECT l.id, l.complex_id, c.canonical_name AS complex_name,
+               l.district, l.rooms, l.listing_type, l.property_type,
+               l.price, l.price_per_sqm, l.area_sqm,
+               round(gm.complex_median_price_per_sqm::numeric, 2)
+                   AS complex_median_price_per_sqm,
+               gm.n_comparable AS complex_n_comparable,
+               round((((gm.complex_median_price_per_sqm - l.price_per_sqm)
+                       / gm.complex_median_price_per_sqm) * 100)::numeric, 2)
+                   AS complex_deal_pct
+        FROM listings l
+        JOIN group_medians gm
+          ON l.complex_id = gm.complex_id
+         AND l.listing_type = gm.listing_type
+         AND l.property_type = gm.property_type
+        JOIN complexes c ON c.id = l.complex_id
+        WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
+          AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+          AND l.price_negotiable IS NOT TRUE
+          AND l.price <= %(max_plausible_price)s
+    )
+    SELECT *,
+        CASE
+            WHEN complex_deal_pct > %(max_confident_pct)s THEN 'needs_review'
+            WHEN complex_deal_pct >= %(min_complex_deal_pct)s THEN 'top_deal'
+            ELSE 'not_notable'
+        END AS complex_deal_status
+    FROM priced
+    ORDER BY complex_deal_pct DESC
+"""
+
+
+def complex_deal_percentages(cur: psycopg2.extensions.cursor) -> list[dict[str, Any]]:
+    """Compare listings with the median price/m² inside their own complex.
+
+    Groups are (complex_id, listing_type, property_type), with the same
+    current-market/data-quality guards as complex_average_price(). A 20%
+    discount is required for the complex-level top-deal signal; values above
+    the existing 50% confidence ceiling remain needs_review, never a badge.
+    """
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_COMPLEX_DEAL_PERCENTAGES_SQL, {
+        "excluded_ids": excluded,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+        "min_group_size": MIN_COMPARABLE_GROUP_SIZE,
+        "min_complex_deal_pct": MIN_COMPLEX_DEAL_PCT,
+        "max_confident_pct": MAX_CONFIDENT_DEAL_PCT,
+    })
+    rows = [dict(row) for row in cur.fetchall()]
+    for row in rows:
+        row["complex_deal_reason"] = (
+            _MISCLASSIFICATION_REVIEW_REASON
+            if row["complex_deal_status"] == "needs_review"
+            else None
+        )
+    return rows
+
+
+def complex_deal_percentages_conn(dsn: str) -> list[dict[str, Any]]:
+    """Connection-owning wrapper for complex_deal_percentages()."""
+    with psycopg2.connect(normalize_dsn(dsn)) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            return complex_deal_percentages(cur)
+
+
 _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
     WITH group_medians AS (
         SELECT district, rooms, listing_type, property_type,
@@ -732,6 +1015,7 @@ _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
                count(*) AS n_comparable
         FROM listings
         WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
           AND district IS NOT NULL AND rooms IS NOT NULL AND price_per_sqm IS NOT NULL
           AND area_sqm >= %(min_area_sqm)s
           AND rooms != %(open_ended_rooms)s
@@ -764,6 +1048,7 @@ _ESTIMATE_NEGOTIABLE_PRICE_SQL = """
       ON l.district = gm.district AND l.rooms = gm.rooms
      AND l.listing_type = gm.listing_type AND l.property_type = gm.property_type
     WHERE l.id != ALL(%(excluded_ids)s)
+      AND l.is_active
       AND l.price_negotiable IS TRUE
       AND l.district IS NOT NULL AND l.rooms IS NOT NULL
       AND l.rooms != %(open_ended_rooms)s
@@ -829,6 +1114,7 @@ _LAST_SCRAPED_AT_SQL = """
     FROM listings
     WHERE district = %(district)s
       AND id != ALL(%(excluded_ids)s)
+      AND is_active
 """
 
 

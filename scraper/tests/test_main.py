@@ -7,6 +7,7 @@ class of regression fail loudly again.
 """
 
 import scraper.main as main_module
+from scraper.list_pages import InventoryResult
 
 
 def test_main_module_imports_cleanly() -> None:
@@ -46,3 +47,70 @@ def test_cli_parses_expected_flags(monkeypatch, capsys) -> None:
         "skip_recent_days": 1.0,
         "stop_after_known_pages": 3,
     }
+
+
+def test_pipeline_records_market_snapshot_after_scrape(monkeypatch) -> None:
+    events: list[object] = []
+
+    class FakePlaywrightContext:
+        def __enter__(self):
+            return object()
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    class FakeBrowser:
+        def close(self) -> None:
+            events.append("browser_closed")
+
+    monkeypatch.setattr(main_module, "CATEGORIES", {})
+    monkeypatch.setattr(main_module, "sync_playwright", FakePlaywrightContext)
+    monkeypatch.setattr(main_module, "launch_browser", lambda _playwright: FakeBrowser())
+    monkeypatch.setattr(
+        main_module,
+        "snapshot_market_prices_conn",
+        lambda dsn: events.append(("snapshot", dsn)) or 12,
+    )
+
+    errors = main_module.run_pipeline("postgresql://example/test", 1, None)
+
+    assert errors == 0
+    assert events == ["browser_closed", ("snapshot", "postgresql://example/test")]
+
+
+def test_inventory_reconciliation_refuses_partial_crawl(monkeypatch) -> None:
+    events: list[str] = []
+
+    class FakePlaywrightContext:
+        def __enter__(self):
+            return object()
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    class FakeBrowser:
+        def close(self) -> None:
+            events.append("browser_closed")
+
+    monkeypatch.setattr(main_module, "CATEGORIES", {"for_sale": "https://x/sale"})
+    monkeypatch.setattr(main_module, "sync_playwright", FakePlaywrightContext)
+    monkeypatch.setattr(main_module, "launch_browser", lambda _playwright: FakeBrowser())
+    monkeypatch.setattr(
+        main_module,
+        "collect_ad_inventory",
+        lambda *_args, **_kwargs: InventoryResult(
+            urls=["https://x/adv/1_a/"], complete=False, stop_reason="max_pages"
+        ),
+    )
+    monkeypatch.setattr(
+        main_module,
+        "reconcile_category_inventory_conn",
+        lambda *_args: events.append("reconciled"),
+    )
+
+    import pytest
+
+    with pytest.raises(RuntimeError, match="incomplete"):
+        main_module.run_inventory_reconciliation("postgresql://example/test", 10)
+
+    assert events == ["browser_closed"]

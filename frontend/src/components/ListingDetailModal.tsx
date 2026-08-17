@@ -14,6 +14,8 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
 
   const priceDisplay = formatListingPrice(listing);
   const hasGroupComparison = listing.group_median_price_per_sqm !== null && listing.price_per_sqm !== null;
+  const hasComplexComparison =
+    listing.complex_median_price_per_sqm !== null && listing.price_per_sqm !== null;
   const hasYield = listing.rental_yield_pct !== null;
 
   return (
@@ -48,6 +50,7 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
 
         <p className="mb-1 text-xs text-ink-secondary">
           {listing.district ?? "Байршил тодорхойгүй"}
+          {listing.complex_name ? ` · ${listing.complex_name}` : ""}
           {listing.rooms ? ` · ${listing.rooms} өрөө` : ""}
           {listing.area_sqm ? ` · ${listing.area_sqm} мкв` : ""}
           {listing.listing_type === "sale" ? " · Худалдах" : listing.listing_type === "rent" ? " · Түрээслэх" : ""}
@@ -58,7 +61,7 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
         </p>
 
         <div className="mb-4 rounded-lg border border-line-grid p-3">
-          <h3 className="mb-2 text-sm font-semibold text-ink-primary">Үнэ / мкв харьцуулалт</h3>
+          <h3 className="mb-2 text-sm font-semibold text-ink-primary">Дүүргийн үнэ / мкв харьцуулалт</h3>
           {hasGroupComparison ? (
             <>
               <div className="flex justify-between text-sm">
@@ -96,6 +99,60 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
           ) : (
             <p className="text-sm text-ink-muted">
               Энэ зарыг харьцуулах хангалттай тооны (дор хаяж 20) ижил төрлийн зар олдсонгүй.
+            </p>
+          )}
+        </div>
+
+        <div className="mb-4 rounded-lg border border-line-grid p-3">
+          <h3 className="mb-2 text-sm font-semibold text-ink-primary">Хотхоны үнэ / мкв харьцуулалт</h3>
+          {hasComplexComparison ? (
+            <>
+              <div className="flex justify-between gap-3 text-sm">
+                <span className="text-ink-secondary">Хотхон</span>
+                <span className="text-right text-ink-primary">{listing.complex_name}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-secondary">Энэ зарын үнэ / мкв</span>
+                <span className="tabular-nums text-ink-primary">
+                  {formatMnt(listing.price_per_sqm as number)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-secondary">Хотхоны медиан</span>
+                <span className="tabular-nums text-ink-primary">
+                  {formatMnt(listing.complex_median_price_per_sqm as number)}
+                </span>
+              </div>
+              {listing.complex_deal_pct !== null && (
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-ink-secondary">Зөрүү</span>
+                  <span
+                    className={`font-medium ${
+                      listing.complex_deal_pct >= 0 ? "text-series-1" : "text-ink-primary"
+                    }`}
+                  >
+                    {listing.complex_deal_pct >= 0 ? "↓" : "↑"}{" "}
+                    {formatPercent(Math.abs(listing.complex_deal_pct))}
+                    {listing.complex_deal_pct >= 0 ? " хямд" : " өндөр"}
+                  </span>
+                </div>
+              )}
+              {listing.complex_n_comparable !== null && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  Энэ хотхоны {listing.complex_n_comparable} ижил төрлийн зар дээр үндэслэв.
+                </p>
+              )}
+              {listing.complex_deal_status === "needs_review" && listing.complex_deal_reason && (
+                <p className="mt-2 rounded-md bg-[#fab219]/10 p-2 text-xs text-[#8a5a00]">
+                  ⚠ {listing.complex_deal_reason}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              {listing.complex_name
+                ? "Энэ хотхонд харьцуулах хангалттай тооны (дор хаяж 20) ижил төрлийн зар алга."
+                : "Хотхоны нэр баталгаажаагүй тул complex-level харьцуулалт хийх боломжгүй."}
             </p>
           )}
         </div>

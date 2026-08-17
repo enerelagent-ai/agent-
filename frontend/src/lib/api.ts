@@ -21,6 +21,9 @@ export interface DistrictInvestmentSummary {
   n_sale: number;
   n_rent: number;
   avg_sale_price: number;
+  min_sale_price: number;
+  median_sale_price: number;
+  max_sale_price: number;
   avg_price_per_sqm: number | null;
   gross_rental_yield_pct: number;
   roi_pct: number;
@@ -55,6 +58,28 @@ export interface ListingTypeCount {
   n: number;
 }
 
+export interface ComplexOption {
+  id: number;
+  canonical_name: string;
+}
+
+export interface DealAlertItem {
+  id: number;
+  title: string;
+  source_url: string;
+  price: number | null;
+  district: string | null;
+  complex_name: string | null;
+  scraped_at: string;
+  deal_pct: number;
+}
+
+export interface DealAlertFeed {
+  items: DealAlertItem[];
+  unseen_count: number;
+  last_seen_at: string;
+}
+
 export interface Listing {
   id: number;
   source: string;
@@ -66,6 +91,10 @@ export interface Listing {
   area_sqm: number | null;
   price_per_sqm: number | null;
   rooms: number | null;
+  floor: number | null;
+  total_floors: number | null;
+  complex_id: number | null;
+  complex_name: string | null;
   listing_type: string | null;
   property_type: string | null;
   district: string | null;
@@ -74,6 +103,7 @@ export interface Listing {
   lng: number | null;
   contact_phone: string | null;
   photo_urls: string[];
+  view_count: number | null;
   scraped_at: string;
   created_at: string;
   updated_at: string;
@@ -87,6 +117,13 @@ export interface Listing {
   // Same source as deal_pct — the group's own median price/m² as an
   // absolute number, for showing "your price/m² vs the group's".
   group_median_price_per_sqm: number | null;
+
+  // Independent, stricter comparison within the same canonical complex.
+  complex_deal_pct: number | null;
+  complex_deal_status: "top_deal" | "needs_review" | "not_notable" | null;
+  complex_deal_reason: string | null;
+  complex_n_comparable: number | null;
+  complex_median_price_per_sqm: number | null;
 
   // From analytics.estimate_negotiable_price() — only ever set alongside
   // price_negotiable=true, never alongside a deal_pct.
@@ -117,6 +154,26 @@ async function getJSON<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function postJSON<T>(path: string): Promise<T> {
+  const isServer = typeof window === "undefined";
+  const headers: HeadersInit = {};
+  if (isServer && ADMIN_USERNAME && ADMIN_PASSWORD) {
+    headers["Authorization"] = `Basic ${btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)}`;
+  }
+  const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
+  const res = await fetch(url, { method: "POST", cache: "no-store", headers });
+  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
+  return res.json();
+}
+
+export function getDealAlerts(limit = 20): Promise<DealAlertFeed> {
+  return getJSON(`/dashboard/deal-alerts?limit=${limit}`);
+}
+
+export function markDealAlertsSeen(): Promise<{ last_seen_at: string }> {
+  return postJSON("/dashboard/deal-alerts/mark-seen");
+}
+
 export function getInvestmentSummary(): Promise<DistrictInvestmentSummary[]> {
   return getJSON("/dashboard/investment-summary");
 }
@@ -136,6 +193,10 @@ export function getListingCountsByType(): Promise<ListingTypeCount[]> {
   return getJSON("/dashboard/listing-counts-by-type");
 }
 
+export function getComplexes(): Promise<ComplexOption[]> {
+  return getJSON("/dashboard/complexes");
+}
+
 export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
 }
@@ -143,10 +204,13 @@ export function getRecentListings(limit = 5): Promise<Listing[]> {
 export interface ListingFilters {
   district?: string;
   propertyType?: string;
+  complexId?: number;
   minPrice?: number;
   maxPrice?: number;
   sortBy?: "recent" | "deal_pct";
+  dealStatus?: "top_deal" | "needs_review" | "not_notable";
   limit?: number;
+  offset?: number;
 }
 
 // Client-side counterpart to getRecentListings, for the interactive filter
@@ -155,10 +219,13 @@ export function getFilteredListings(filters: ListingFilters = {}): Promise<Listi
   const params = new URLSearchParams();
   if (filters.district) params.set("district", filters.district);
   if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
   if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
+  if (filters.dealStatus) params.set("deal_status", filters.dealStatus);
   params.set("limit", String(filters.limit ?? 6));
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset));
   return getJSON(`/dashboard/listings?${params.toString()}`);
 }
 

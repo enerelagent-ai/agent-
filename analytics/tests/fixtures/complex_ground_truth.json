@@ -1,0 +1,2941 @@
+{
+  "schema_version": 1,
+  "source": "ХУД 15 17 18 хороо - Зарууд.csv",
+  "privacy": "Phone and price columns intentionally omitted.",
+  "selection": "Only rows with current-title evidence; unavailable/insufficient rows excluded.",
+  "counts": {
+    "confirmed_negative": 12,
+    "confirmed_positive": 320,
+    "reused_url_mismatch": 26
+  },
+  "rows": [
+    {
+      "source_url": "https://www.unegui.mn/adv/10226194_115-r-surguuliin-oir/",
+      "csv_label": "115-р сургуулийн хажууд",
+      "current_title": "Худ 115-р сургуулийн баруун талд 97,32мкв 3 өрөө байр",
+      "entity_type": "landmark",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10071796_115-surguuliin-khazhuud-3-oroo-bair-zarna/",
+      "csv_label": "115-р сургуулийн хажууд",
+      "current_title": "115-р сургуулийн хажууд 118.61 мкв 3 өрөө",
+      "entity_type": "landmark",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9907757_khud-15-khoroo-115-surguuliin-baruun-tald-98-4-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "115-р сургуулийн хажууд",
+      "current_title": "Худ 15 хороо 115 сургуулийн баруун талд 98.4 мкв 3 өрөө орон сууц",
+      "entity_type": "landmark",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10430665_akoyatower-3-oroo-bair/",
+      "csv_label": "Akoya Residence",
+      "current_title": "Akoyatower 3 өрөө 140m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10209161_akoya-tower-3-oroo-dupleks-oron-suuts-khudaldana/",
+      "csv_label": "Akoya Residence",
+      "current_title": "Akoya tower 3 өрөө дуплекс орон сууц 139m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10281006_mash-khiamd-akoiaa-tauer-rizedensed-khudaldana/",
+      "csv_label": "Akoya Residence",
+      "current_title": "Маш хямд акояа тауэр ризеденс 139.81м2 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10363009_khud-akua-garden-khotkhond-66-18-mk-3-oroo-oron-suuts/",
+      "csv_label": "Akoya Residence",
+      "current_title": "Худ акуа гарден хотхонд 66.18мкв 3 өрөө орон сууц",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10243156_aqua-garden-2-oroo/",
+      "csv_label": "Aqua Garden",
+      "current_title": "Aqua garden 2 өрөө 52.88 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10243275_aqua-garden-3-oroo/",
+      "csv_label": "Aqua Garden",
+      "current_title": "Aqua garden 3 өрөө 85.8 м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10408076_aqua-garden-khotkhond-shine-85-8m2-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Aqua Garden",
+      "current_title": "Худ aqua garden хотхонд шинэ 85.8м2 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10492512_solongos-elchin-urd-buti-taun-khotkhond-3-oroo-bair-khudaldana/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ солонгос элчингийн урд бүти таун хотхонд 3 өрөө 108.59мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10495195_orchlon-surguul-buti-town-108m2-3-oroo/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ buti town мастертай гал тогоо тусдаа 3 өрөө 108.59мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10494981_khud-15-khoroo-buti-town-khotkhond-108-59-mkv-mastertai-3-oroo-oron-suuts/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ 15 хороо buti town хотхонд 108.59 мкв мастертай 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10493994_khud-15-r-khoroo-buti-taun-khotkhond-108-59mkv-mastertai-3-oroo/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ 15-р хороо бути таун хотхонд мастертай 3 өрөө 108.59мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10494014_khud-15r-khoroo-buti-taun-khotkhond-mastertai-3oroo-108-59m2-bair/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ 15р хороо бүти таун хотхонд мастертай 3өрөө 108.59м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10496018_khud-orchlon-surguuliin-khazhuud-buti-taun-khotkhond-108-59mkv-3oroo/",
+      "csv_label": "Buti Town",
+      "current_title": "Худ орчлон сургуулийн хажууд бүти таун хотхонд 3 өрөө 108.59мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10432417_khud-18-r-surguuliin-zuun-tald-bairlakh-cozy-apartment-khotkhond-51-52m-2-oroo/",
+      "csv_label": "Cozy Apartment",
+      "current_title": "Худ, 18-р сургуулийн зүүн талд байрлах cozy apartment хотхонд 51.52м 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9945978_gerlug-vista-140-5-mkv-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Gerlug vista",
+      "current_title": "Худ гэрлүг виста 140.5 мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10208839_global-town-residence-khotkhond-86-41mkv-3-oroo-mastertai/",
+      "csv_label": "Global Town",
+      "current_title": "Global town residence хотхонд мастертай 3 өрөө 86.41мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10447829_khud-120-miangat-globaltown-3oroo-79-2mk/",
+      "csv_label": "Global Town",
+      "current_title": "Худ 15-хороо төв цэнгэлдэхийн зүүн талд global town 3 өрөө 79.2мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10446020_khud-15-r-khoroo-global-town-khotkhond-79-2-mkv-3-oroo/",
+      "csv_label": "Global Town",
+      "current_title": "Худ 15-р хороо хүннү2222-3 ээлж хотхонд 70 мкв 3 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Хүннү 2222"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10470644_khud-solongos-elchin-global-town-nd-79-2mkv-3-oroo/",
+      "csv_label": "Global Town",
+      "current_title": "Худ солонгос элчин global town-д 3 өрөө 79.2мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10462180_global-taun-3-oroo/",
+      "csv_label": "Global Town",
+      "current_title": "Глобал таунд 3 өрөө 86.41мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10461211_khud-15-r-khoroo-global-town-d-79-2-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Global Town",
+      "current_title": "Худ 15-р хороо global town-д 79.2 мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10479634_tsengeldekh-khureelengiin-zuun-khoino-global-taun-khotkhond-3-oroo-khudaldana/",
+      "csv_label": "Global Town",
+      "current_title": "Цэнгэлдэх хүрээлэнгийн зүүн хойно глобал таун хотхонд 3 өрөө 79.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10471281_khud-15-r-khoroo-solongos-elchin-global-town-nd-79-2mkv-3-oroo-bair-khudaldana/",
+      "csv_label": "Global Town",
+      "current_title": "Худ 15-р хороо солонгос элчин global town-нд 79.2мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10480964_global-town-65-45mkv-2-oroo/",
+      "csv_label": "Global Town",
+      "current_title": "Global town 65.45мкв 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9851958_khan-uul-duureg-solongos-elchin-saidyn-iaam-khazhuud-bairlaltai-global-town-khotkhon/",
+      "csv_label": "Global Town",
+      "current_title": "Хан уул дүүрэг global town хотхонд 86.41мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10397855_khud-18-r-khoroo-hansvill-khotkhond-103-35mkv-3-oroo-khudaldana/",
+      "csv_label": "Hansvill",
+      "current_title": "Худ 18-р хороо hansvill хотхонд 103.35мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10427647_khud-15-r-khoroo-khansvill-khotkhon-3-oroo-bair/",
+      "csv_label": "Hansvill",
+      "current_title": "Худ 15-р хороо хансвилл хотхонд 3 өрөө 103.35мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10168988_khansvill-khotkhon-gal-togoo-tusdaa-5-oroo-oron-suuts-179-5-mk-khudaldana/",
+      "csv_label": "Hansvill",
+      "current_title": "Хансвилл хотхон гал тогоо тусдаа 5 өрөө орон сууц 179.5 мк",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10193591_khansvill-khotkhon-khotkhon-5-oroo-oron-suuts/",
+      "csv_label": "Hansvill",
+      "current_title": "Хансвилл хотхон хотхон 5 өрөө орон сууц 179,5м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10393791_khansvill-khotkhond-124-76-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Hansvill",
+      "current_title": "Хансвилл хотхонд 124.76мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10390671_khud-iin-15-r-khoroo-i-martyn-khoino-khansvill-khotkhond-124-76-mkv-4-oroo-khudaldana/",
+      "csv_label": "Hansvill",
+      "current_title": "Худ-ийн 15-р хороо, и мартын хойно, хансвилл хотхонд 124.76 мкв 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/8084190_ikh-mongol-khoroolold-29mkv-1-oroo-buren-tavilgatai/",
+      "csv_label": "Hansvill",
+      "current_title": "Худ хүннү 2222 хотхоны 3-р ээлжинд 2 өрөө 50 мкв байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Хүннү 2222"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10453063_khansvill-khotkhond-mastertai-3-oroo-zarna/",
+      "csv_label": "Hansvill",
+      "current_title": "Хансвилл хотхонд мастертай 3 өрөө 78мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9857873_home-plaza-2-oroo-khudaldana/",
+      "csv_label": "Home Plaza",
+      "current_title": "Худ 15-р хороо home plaza 2 өрөө 71.23м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10211429_home-plaza-narkhan-khotkhond-5-oroo-oron-suuts/",
+      "csv_label": "Home Plaza",
+      "current_title": "Home plaza нархан хотхонд 5 өрөө 150мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10282482_khud-home-plaza-baruun-urd-narkhan-khotkhond-150mkv-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Home Plaza",
+      "current_title": "Худ, home plaza баруун урд нархан хотхонд 150мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10214446_home-plaza-n-hajuud-3-uruu-bair-zarna/",
+      "csv_label": "Home Plaza",
+      "current_title": "Home plaza-n hajuud 3 uruu bair 100м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10456428_japan-town-khotkhond-131-m2-tselger-3-oroo-oron-suuts-khudaldaalna/",
+      "csv_label": "Japan Town",
+      "current_title": "Japan town хотхонд 131 м² 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10455827_japan-town-c5-blokt-133-5m2-tansag-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Japan Town",
+      "current_title": "Japan town c5 блокт 133.5м² 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10132805_khud-ocean-apartment-286mkv-5-oroo-oron-suuts-170mkv-terrastai-khudaldana/",
+      "csv_label": "Japan Town",
+      "current_title": "Худ, ocean apartment 286мкв 5 өрөө орон сууц 170мкв террастай",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10156471_oceans-10-apartment-286mkv-5-oroo-170mkv-terrastai-oron-suuts/",
+      "csv_label": "Japan Town",
+      "current_title": "Ocean's 10 apartment 286мкв 5 өрөө, 170мкв террастай орон сууц",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Ocean's 10 apartment"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10461271_jardin-luxury-residence-ondor-zeregleliin-khotkhond/",
+      "csv_label": "Jardin luxury residence",
+      "current_title": "Jardin luxury residence хотхонд 4 өрөө 189.44мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10420189_khud-15-kh-apartment-4-oroo/",
+      "csv_label": "KH apartment",
+      "current_title": "Худ 15 kh apartment 4 өрөө 120.78мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10480837_kh-apartment-58mkv-2-oroo-bair/",
+      "csv_label": "KH apartment",
+      "current_title": "Сбд дөлгөөн нуур home town 46мкв 2 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10481061_naadam-tsentr-kh-apartment-58mkv/",
+      "csv_label": "KH apartment",
+      "current_title": "Наадам центр kh apartment 58мкв 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10346630_kh-apartment-3-oroo-khudaldana/",
+      "csv_label": "KH apartment",
+      "current_title": "Kh apartment 3 өрөө 103.62мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10420199_kh-apartment-120mkv-4-oroo/",
+      "csv_label": "KH apartment",
+      "current_title": "Kh apartment 120мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10409235_khud-17-r-khoroo-khanhills-khotkhond-106-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Худ 17-р хороо khanhills хотхонд 106 мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10411406_khan-khills-1-khotkhond-106-mkv-3-oroo-oron-suuts/",
+      "csv_label": "Khan Hills",
+      "current_title": "Худ хан хиллс 1 хотхонд 106 мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10454980_khan-hills-khotkhond-170mkv-4-oroo-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Khan hills хотхонд 170мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10459400_khan-hills-2-khotkhond-170-78mkv-4-oroo-oron-suuts/",
+      "csv_label": "Khan Hills",
+      "current_title": "Khan hills 2 хотхонд 170,78мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10458302_khud-marshalyn-guurnii-baruun-tald-khanhills-2-khotkhond-170-78mkv-4-oroo/",
+      "csv_label": "Khan Hills",
+      "current_title": "Худ маршалын гүүрний баруун талд khanhills 2 хотхонд 170.78мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10492156_khan-khills-khotkhond-3-oroo-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Хан хиллс хотхонд 3 өрөө 106мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10488740_khanhills-1-khotkhond-106-mkv-mastertai-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Khanhills-1 хотхонд 106 мкв мастертай 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10273066_khanhills-2-residence-4-oroo-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Khanhills 2 residence 4 өрөө 171мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10462568_khan-hills-khotkhond-4-oroo/",
+      "csv_label": "Khan Hills",
+      "current_title": "Худ khan hills хотхонд 4 өрөө 140м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10480527_khankhills-khotkhon-106mkv-3-oroo/",
+      "csv_label": "Khan Hills",
+      "current_title": "Khankhills хотхон 106мкв 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10441647_khankhills-khotkhond-106mkv-3-oroo-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Ханхиллс хотхонд 106мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10490981_khankhills-khotkhond-106mkv-zasvar-khiisen-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Khan Hills",
+      "current_title": "Ханхиллс хотхонд 106мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10460801_khankhills-106mkv-mastertai-3-oroo/",
+      "csv_label": "Khan Hills",
+      "current_title": "Худ ханхиллс хотхонд мастертай 3 өрөө 106мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10475203_king-tower-5-r-eelzh-deer-tom-terrastai-117-5mkv-4-oroo-iaaraltai-khiamd-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 5-р ээлж дээр том террастай 117,5мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499435_king-tower-4-oroo-iaaraltai-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 5-т 4 өрөө 117.5м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10430269_king-tower-4-oroo-120m2/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 4 өрөө 120м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10251674_khud-17-r-khoroo-king-taur-khotkhond-mastertai-3oroo-115m2/",
+      "csv_label": "King Tower",
+      "current_title": "Худ 17-р хороо кинг тауэр хотхонд мастертай 3 өрөө 115м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10493952_king-tower-khotkhond-97-m2-3-oroo-bair-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Худ king tower хотхонд 97м² 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9741440_marshil-taun-terrasstai-192mkv-4-oroo-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Маршил таун террасстай 4 өрөө 192мк байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Marshal Town"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10479377_khud-17-r-khoroo-king-taur-6-r-eelzh-2-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Худ 17-р хороо кинг таур 6-р ээлж 2 өрөө орон сууц 79м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10479089_king-tower-khotkhond-114-5-mkv-3-oroo-bair-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower хотхонд 3 өрөө 114.75 мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10472648_king-tower-t-2-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower-т 2 өрөө 79мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10493168_king-tower-khotkhony-baruun-tald-4-oroo-zarna/",
+      "csv_label": "King Tower",
+      "current_title": "King tower хотхоны баруун талд 4 өрөө байр 180м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463115_king-tower-174m2-4-oroo-bair/",
+      "csv_label": "King Tower",
+      "current_title": "King tower-т 4 өрөө 174м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10401388_king-tauer-khotkhond-terastai-bair/",
+      "csv_label": "King Tower",
+      "current_title": "Кинг тауэр хотхонд терастай байр 3 өрөө 112мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10371190_khud-king-tower-3-r-eelzhid-137mkv-3-oroo-oron-suuts/",
+      "csv_label": "King Tower",
+      "current_title": "Худ king tower 3-р ээлжинд 3 өрөө 137мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10474903_king-tower-5r-eelzhind-117-5mk-4-oroo-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 5р ээлжинд 117.5мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10424454_king-tower-khotkhon-5-r-eelzh-shine-4-oroo/",
+      "csv_label": "King Tower",
+      "current_title": "King tower хотхон 5-р ээлж шинэ 4 өрөө 117.5м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10227628_king-tower-185-26mk-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Худ king tower 4 өрөө 185.26мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10389014_king-tower-khotkhond-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower хотхонд 5 өрөө орон сууц 203.76мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10451037_king-towert-137mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King towert 137мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10320910_king-tower-145r-bairand-109-93mkv-4-oroo-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 145р байранд 109.93мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10319337_khud-17-r-khoroo-king-tower-apartment-3-oroo-bair-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Худ 17-р хороо king tower apartment 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10319316_kingtowert-96-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "King tower-т 96 мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9961568_gaikhaltai/",
+      "csv_label": "King Tower",
+      "current_title": "Худ кинг тауэр хотхонд 4 өрөө 173мк байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10192869_king-tower-5-r-eelzh-120m-kv-3-oroo/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 5-р ээлж 120м.кв 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10174253_king-tower-183m2-4uru/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 185,26м2 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10423607_king-tower-khotkhony-5-r-eelzhind-shine-117-5mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "King Tower",
+      "current_title": "Худ king tower хотхоны 5-р ээлжинд шинэ 117.5мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10192956_king-tower-5r-eelzh-120mkv-3-oroo/",
+      "csv_label": "King Tower",
+      "current_title": "King tower 5-р ээлж 120мкв 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10105117_khud-17-r-khoroo-marshal-town-khotkhond-89-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Marshal Town",
+      "current_title": "Худ 17-р хороо marshall town хотхонд 3 өрөө 89мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10434364_king-tauert-shine-4-oroo-bair-khudaldana/",
+      "csv_label": "Marshal Town",
+      "current_title": "Худ кинг тауэрт шинэ 4 өрөө байр 132.5мкв",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "King Tower"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10240983_oddyn-khotkhond-115-mkv-4-oroo-zarna/",
+      "csv_label": "Marshal Town",
+      "current_title": "Худ оддын хотхонд 115 мкв 4 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Оддын хотхон"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463784_modun-town-khotkhond-2-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Modun Town",
+      "current_title": "Худ Modun town хотхонд 2 өрөө орон сууц 49м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10483721_khud-ikh-modun-taun-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Modun Town",
+      "current_title": "Худ модун таун хотхонд 4 өрөө 133.7м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10326173_nobles-khotkhon-sila-centre-zamyn-esreg-tald/",
+      "csv_label": "Nobles Residence",
+      "current_title": "Nobles хотхон sila centre замын эсрэг талд 5 өрөө 243м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10326279_nobles-khotkhon-sila-centre-esreg-tald/",
+      "csv_label": "Nobles Residence",
+      "current_title": "Худ Nobles хотхон /sila centre эсрэг талд 5 өрөө 243м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10468514_khud-18-ocean-10-apartment-286mkv-5-oroo-170mkv-terrastai-oron-suuts/",
+      "csv_label": "Ocean's 10 apartment",
+      "current_title": "Худ 18, ocean 10 apartment 286мкв 5 өрөө 170мкв террастай орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10207716_ocean-10-apartment-286m2-5-oroo/",
+      "csv_label": "Ocean's 10 apartment",
+      "current_title": "Худ оcean 10 апартмент 5 өрөө 286м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10128760_oceans-10-apartment-286mkv-5-oroo-170mkv-terrastai-oron-suuts-khudaldana/",
+      "csv_label": "Ocean's 10 apartment",
+      "current_title": "𝐎𝐜𝐞𝐚𝐧𝐬 𝟏𝟎 𝐀𝐩𝐚𝐫𝐭𝐦𝐞𝐧𝐭 𝟐𝟖𝟔мкв 𝟓 өрөө 𝟏𝟕𝟎мкв террастай орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10446010_tsetserlegt-khureelengiin-khoid-tald-pares-central-park-residence-d-mastertai-3-oroo/",
+      "csv_label": "Pares Central Park",
+      "current_title": "Цэцэрлэгт хүрээлэнгийн хойд талд pares central park residence-д мастертай 3 өрөө 92мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10445618_khud-18-khoroo-park-garden-khotkhond-3-oroo-khudaldana/",
+      "csv_label": "Park Garden",
+      "current_title": "Худ 18 хороо парк гарден хотхонд 3 өрөө байр 97м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10353893_park-garden-khotkhond-3-oroo/",
+      "csv_label": "Park Garden",
+      "current_title": "Park garden хотхонд 3 өрөө 76.89мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10443876_khud-18khoroo-park-garden-khotkhond-mastertai-3-oroo-khudaldana/",
+      "csv_label": "Park Garden",
+      "current_title": "Худ, 18хороо, парк гарден хотхонд мастертай 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10424347_park-garden-tsengeldehiin-urd/",
+      "csv_label": "Park Garden",
+      "current_title": "Park garden tsengeldehiin urd 3 uruu 76,89mkv",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10287486_park-gardend-97m2-3-uruu-hudaldana/",
+      "csv_label": "Park Garden",
+      "current_title": "Park gardend 97m2 3 uruu",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10444742_park-garden-complex-96mkv-mastertai-3-oroo/",
+      "csv_label": "Park Garden",
+      "current_title": "Худ рark garden complex мастертай 3 өрөө 97мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10466492_regis-place-74-33-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 74.33мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10373594_regis-place-135-mkv-dupleks-oron-suuts/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 135 мкв дуплекс орон сууц 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10105971_regis-place-135-mkv-dupleks-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 135 мкв дуплекс 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10431066_khud-15-khoroo-regis-place-109-29mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ 15 хороо regis place 109.29мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10009318_regis-place-4-oroo-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ regis place-д duplex 4 өрөө 218мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10393675_regis-place-4-oroo-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 4 өрөө duplex орон сууц 218мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9848428_regis-place-300m2-dupleks-talbai-oron-suuts-offis-al-alind-tokhiromzhtoi/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 300м2 дүплекс талбай 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10152966_khud-15-r-khoroo-regis-place-4-oroo-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ,15-р хороо regis place 4 өрөө duplex орон сууц 218м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463673_regis-place-74-33-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "𝐑𝐞𝐠𝐢𝐬_𝐏𝐥𝐚𝐜𝐞 74.33 мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10326915_regis-place-2-oroo-62m2/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 2 өрөө 62м²",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9621039_regis-place-135m2-dupleks/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ regis place-д дуплекс 3 өрөө 135.68мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10448885_khud-n-15-r-khoroo-regis-place-d-74-33mk-3-oroo-bair-zarna/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ 15-р хороо regis place-д 3 өрөө 74.33мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9687201_regis-place-d-3-oroo-75m2-oron-suuts-zarna/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place-d 3 өрөө 75мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10494120_khud-regis-palace-3-oroo-bair-khudaldana/",
+      "csv_label": "Regis Place",
+      "current_title": "Худ regis palace 3 өрөө байр 109.29 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10489797_regis-place-109mkv-3-oroo-oron-suuts/",
+      "csv_label": "Regis Place",
+      "current_title": "Regis place 109мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10373374_river-garden-deer-5-oroo-oron-suuts/",
+      "csv_label": "River Garden",
+      "current_title": "Худ river garden дээр 4 өрөө орон сууц 120.6мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10131820_ncd-buteen-baiguulalt-river-garden-2-khotkhond-158mkv-1-davkharyn-terrastai-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "River garden-2 хотхонд террастай 4 өрөө 158мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10298766_khud-river-garden-1-khotkhond-117-5-mkv-3-oroo-oron-suuts/",
+      "csv_label": "River Garden",
+      "current_title": "Ривер гарден 1 хотхонд 3 өрөө 117.5мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499166_river-garden-2-khotkhond-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "River garden 2 хотхонд 4 өрөө 120мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10493277_khud-marshalyn-guurnii-baruun-tald-river-garden-2-khotkhond-120mkv-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "Худ маршалын гүүрний баруун талд river garden 2 хотхонд 120мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10483738_river-garden-khotkhond-oron-suuts-khudaldana/",
+      "csv_label": "River Garden",
+      "current_title": "River garden хотхонд 3 өрөө 117м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10316515_river-garden-d-117mkv-3n-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Garden",
+      "current_title": "River garden 117мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10489638_river-garden-urd-zakhyn-blok-deer-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "River garden урд захын блок дээр 4 өрөө 120м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10482975_river-garden-1-d-117m2-tai-3-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "Ривер гарден-1д 117м2 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9838005_khan-hills-2-khotkhond-tansag-zeregleliin-khotkhond-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "Худ khan hills-2 хотхонд 4 өрөө 170м2",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Khan Hills"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10447882_river-garden-2-khotkhond-113-5mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Garden",
+      "current_title": "River garden 2 хотхонд 113.5мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10170545_river-garden-2-khotkhond-158-mkv-4-oroo/",
+      "csv_label": "River Garden",
+      "current_title": "River garden 2 хотхонд 158 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9706500_river-plaza-213m2-5-oroo-tansag-zeregleliin-oron-suuts-khudaldana/",
+      "csv_label": "River Plaza",
+      "current_title": "River plaza 5 өрөө 213мк орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9684327_river-plaza-213mk-5-oroo-tansag-zeregleliin-oron-suuts-khudaldana/",
+      "csv_label": "River Plaza",
+      "current_title": "Худ river plaza-д 213 мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10410452_khud-river-plaza-tsogtsolboryn-baruun-tald-khan-hills-khotkhond-106mkv-3-oroo/",
+      "csv_label": "River Plaza",
+      "current_title": "Худ river plaza цогцолборын баруун талд khan hills хотхонд 106мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10032062_river-plaza/",
+      "csv_label": "River Plaza",
+      "current_title": "River plaza-д 5 өрөө 213мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10391272_khud-canada-surguuliin-urd-tansag-zeregleliin-river-plaza-d-213mkv-5-oroo/",
+      "csv_label": "River Plaza",
+      "current_title": "Худ, canada сургуулийн урд тансаг зэрэглэлийн river plaza-д 213мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9585054_river-plaza-213mkv-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Plaza",
+      "current_title": "Худ river plaza-д 5 өрөө 213мк орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9571622_river-plaza213m2-5-oroo-tansag-zeregleliin-oron-suuts-khudaldana/",
+      "csv_label": "River Plaza",
+      "current_title": "Худ river plaza 213мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10262432_river-towert-6-oroo-bair-khudaldana/",
+      "csv_label": "River Plaza",
+      "current_title": "River tower-т 6 өрөө 366.7мкв байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "River Tower"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10342506_river-plaza-d-8-oroo/",
+      "csv_label": "River Plaza",
+      "current_title": "River tower-д 8 өрөө 366мкв байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "River Tower"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9861099_luxury-river-tower-366m2-8-oroo/",
+      "csv_label": "River Tower",
+      "current_title": "Luxury river tower 366м2 8 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10401742_river-villa-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Villa",
+      "current_title": "River villa 3 өрөө орон сууц 105.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10488683_river-villa-khotkhond-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Villa",
+      "current_title": "Худ river villa хотхонд 3 өрөө орон сууц 105m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10471658_belen-tureeslegchtei-river-villa-khotkhond-terrastai-3-oroo/",
+      "csv_label": "River Villa",
+      "current_title": "Бэлэн түрээслэгчтэй river villa хотхонд террастай 3 өрөө 114мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9503254_river-garden-2-khotkhond-120mk-4-oroo/",
+      "csv_label": "River Villa",
+      "current_title": "Баянмонгол хороололд 99,7мк 3 өрөө",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10273625_river-villa-3-oroo-bair-zarna/",
+      "csv_label": "River Villa",
+      "current_title": "River villa хотхонд 105м² luxury 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10434090_khud-15-r-khoroo-river-villa-khotkhond-108-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "River Villa",
+      "current_title": "Худ 15-р хороо ривер вилла хотхонд 108 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10408997_river-villa-khotkhond-105mkv-3oroo/",
+      "csv_label": "River Villa",
+      "current_title": "Ривер вилла хотхонд 105мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463186_royal-garden-6-oroo/",
+      "csv_label": "Royal garden",
+      "current_title": "Royal garden 6 өрөө 207.18м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10163021_buti-town-90-mkv-4-oroo/",
+      "csv_label": "Seven Star",
+      "current_title": "Зайсан, seven star 4 өрөө 110мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10484099_silk-road-residences-d-120-16mkv-4-oroo-oron-suutsny-zakhialgyn-erkh-shilzhuulne/",
+      "csv_label": "Silk road residence",
+      "current_title": "Silk road residences-д 120.16мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9792281_silkroad-residence-mash-goio-kharuutstai-bair/",
+      "csv_label": "Silk road residence",
+      "current_title": "Silkroad residence 4 өрөө байр 120м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10464224_skygarden-khotkhond-4-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ Skygarden хотхонд 4 өрөө 159м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10247018_sky-garden-residence-ondor-zeregleliin-khotkhond-174-64-mkv-5-oroo-oron-suuts/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "𝐒𝐤𝐲 𝐆𝐚𝐫𝐝𝐞𝐧 𝐑𝐞𝐬𝐢𝐝𝐞𝐧𝐜𝐞 өндөр зэрэглэлийн хотхонд 174.64 мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10420997_sky-garden-residence-d-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ sky garden residence-д 4 өрөө 159м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10460892_khud-tsetserlegt-khureelen-khazhuud-sky-garden-379-mkv-mastertai-7-oroo-pentkhaus-bair/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ цэцэрлэгт хүрээлэнгийн хажууд sky garden 379.12мкв мастертай 7 өрөө пентхаус",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10344577_khud-skygarden-khotkhond-230-62-mkv-4-oroo-bair/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ sky garden хотхонд 230,62мкв 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10420161_sky-gardend-4-uruu-bair-hudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky gardend 4 uruu bair 230.0m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10347593_sky-garden-residence-4-oroo-bair-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 4 өрөө 230.62мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499155_sky-garden-residence-penthouse/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence penthouse 379,12мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10350428_sky-garden-khotkhon-230mkv-4-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden хотхонд 230мкв байр 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10419058_sky-garden-residence-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence 4 өрөө орон сууц 159.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10097272_teso-grupp-buteen-baiguulalt-sky-garden-residenced-230-62mkv-5-oroo-oron-s/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ sky garden residence-д 5 өрөө 230.62мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10069316_khud-17-r-khoroo-sky-garden-namkhand-174-64-m-kv-5-oroo-bair/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ 17-р хороо sky garden намханд 5 өрөө 174.64 м.кв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10432476_sky-garden-residence-khotkhond-159-mkv-4-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 159 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10435713_sky-garden-reaidence-d-159mkv-4-oroo-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden reaidence-д 159мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10432328_sky-garden-residence-khotkhond-165-23mkv-4-oroo-oron-suuts/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 165.23мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9947606_khud-17-r-khoroo-sky-garden-khotkhond-174-64-m-kv-5-oroo-bair-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ 17-р хороо sky garden хотхонд 5 өрөө 174.64 мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10444335_sky-garden-residence-khotkhond-230-62-mkv-5-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "𝐒𝐊𝐘 𝐆𝐀𝐑𝐃𝐄𝐍 𝐑𝐄𝐒𝐈𝐃𝐄𝐍𝐂𝐄 хотхонд 230.62 мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10424387_sky-garden-khotkhond-4-oroo-shine-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ sky garden хотхонд 4 өрөө шинэ орон сууц 166мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10487054_sky-garden-residence-t-230-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence-т 230 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10421380_sky-garden-residence-4-oroo-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence 4 өрөө 230.62мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10121700_marshalyn-guurnii-khoino-sky-garden-residence-165-23mkv-4-oroo-oron-suuts/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ маршалын гүүрний хойно sky garden residence 4 өрөө 166 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10429452_sky-garden-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden 4 өрөө орон сууц 159m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10315235_sky-garden-residence-d-tansag-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence 5 өрөө орон сууц 174.64мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10297580_khud-17-r-khoroo-sky-garden-khotkhond-174-64-m-kv-5-oroo-bair-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ 17-р хороо sky garden хотхонд 174,64 м.кв 5 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10390975_khud-marshalyn-guurnii-baruun-khoino-sky-garden-residence-d-304-11mkv-5-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ маршалын гүүрний баруун хойно sky garden residence-д 304.11мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9862399_khud-17-r-khoroo-sky-garden-khotkhond-230-62mkv-5oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ 17-р хороо sky garden хотхонд 5 өрөө 230.62 мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10180328_sky-garden-khotkhond-mastertai-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Худ sky garden хотхонд мастертай 5 өрөө 174.64мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10163493_sky-garden-residence-khotkhon-230-62-mkv-4-oroo-mash-goio-kharuuts-zokhion-baiguulaltta/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Teso group өндөр зэрэглэлийн sky garden residence хотхон 230.62 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10419093_sky-garden-khotkhond-4-oroo-oronsuuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden хотхонд 4 өрөө 159мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10434355_sky-garden-residence-khotkhond-4-oroo-tansag-oron/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 4 өрөө 165.23m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10176180_sky-garden-230m-kv-5-oroo-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden 230м.кв 5 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10361134_sky-garden-residence-t-tansag-zeregleliin-232-25-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence-т тансаг зэрэглэлийн 232.25 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10247405_sky-garden-residence-174-64-m-kv-5-oroo-bair/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence 174.64 м.кв 5 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10119028_sky-garden-d-165-23-mkv-4-oroo-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden-д 165.23 мкв 4 өрөө шинэ орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10349759_sky-garden-residence-khotkhond-4oroo-oron-suuts-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 4 өрөө 165.23мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10440762_sky-garden-residence-d-4-oroo/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence-д 4 өрөө 159мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10157903_sky-garden-residence-khotkhond-tansag-pentkhaus-khudaldana/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden residence хотхонд 379.12мкв пентхаус",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10428267_sky-garden-khotkhond-230-62-4-oroo-oron-suuts/",
+      "csv_label": "Sky Garden Residence",
+      "current_title": "Sky garden хотхонд 4 өрөө 230.62мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10501371_khud-19r-khoroo-sky-tower-5-oroo-suutsyg-khudaldana/",
+      "csv_label": "Sky Tower",
+      "current_title": "Худ 19-р хороо sky tower 5 өрөө сууц 110.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10032451_khud-sn-tauert-4-oroo-bair-khudaldana/",
+      "csv_label": "Sn tower",
+      "current_title": "Худ, sn тауэрт 4 өрөө 125 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10391507_solaris-plus-residence-5-oroo-oron-suuts/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Solaris_plus residence 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10365172_solaris-plus-residence-khotkhond-179-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Solaris Residence",
+      "current_title": "𝐒𝐨𝐥𝐚𝐫𝐢𝐬 𝐏𝐥𝐮𝐬 𝐑𝐞𝐬𝐢𝐝𝐞𝐧𝐜𝐞 хотхонд 179 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10353130_solaris-residence-5-oroo/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Худ solaris plus 5 өрөө 179мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10466776_solaris-plus-179mkv-4-oroo-oron-suuts-khtsdaldana/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Solaris plus 179мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10421052_khud-15-r-khoroo-solaris-plus-179-mkv-gal-togoo-tusdaa-4-oroo-bair-khudaldana/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Худ 15-р хороо solaris plus 179мкв гал тогоо тусдаа 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10407420_solaris-plus-residence-2026-ond-ashiglaltand-orson-91m2-3-oroo/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Solaris plus residence 91м2 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10416256_solaris-residence-5-oroo-oron-suuts/",
+      "csv_label": "Solaris Residence",
+      "current_title": "Худ solaris residence 5 өрөө 179м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10392651_khud-tsengeldekhiin-urd-bairshiltai/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ цэнгэлдэхийн урд байршилтай 209.72мкв 5 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Цэнгэлдэх"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10410874_ss-garden-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ ss garden хотхонд 4 өрөө орон сууц 156м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10462622_khud-18-r-khoroo-ss-garden-tansag-zeregleliin-khotkhond-155-04mkv-4-oroo/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ 18-р хороо ss garden тансаг зэрэглэлийн хотхонд 155.04мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463042_ss-garden-209-mkv-5-oroo-oron-suuts/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden 209 мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10284979_ss-garden-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд 4 өрөө 155.04м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10315748_ss-garden-khotkhond-4-zugt-kharuutstai-209-72-mkv-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд 5 өрөө 209.72 мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9881396_ssgarden-khotkhond-tansag-zeregleliin-house-penthouse-zarna/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд penthouse 482м2 7өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10302613_khud-18-r-khoroo-ss-garden-khotkhond-4-zugt-kharuutstai-209-72mkv-5-oroo-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ 18-р хороо ss garden хотхонд 4 зүгт 209.72мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9905679_ss-garden-tansag-zeregleliin-khotkhond-7-oroo-pentkhaus-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд 7 өрөө пентхаус 482м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10459251_ss-garden-4-oroo-tseverkhen-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden 4 өрөө орон сууц 155.5мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10164954_ss-garden-khotkhond-155mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ ss garden хотхонд 4 өрөө 155мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10208954_ss-garden-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд 4 өрөө орон сууц 155м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10235039_ss-garden-khotkhond-155mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "SS Garden",
+      "current_title": "Ss garden хотхонд 155мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10348883_ssgarden-khotkhond-5-oroo-bair-zarna/",
+      "csv_label": "SS Garden",
+      "current_title": "Худ ssgarden хотхонд 5 өрөө байр 209м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10383768_time-square-149mkv-4oroo/",
+      "csv_label": "Time Square",
+      "current_title": "Time square 149мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10500213_time-square-khotkhond-139mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Time Square",
+      "current_title": "Худ time square хотхонд 4 өрөө 139мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10233984_khunnu-2222-kanad-surguuliin-zuun-talyn-bairand-117mkv-4-oroo-oron-suuts-khudaldan/",
+      "csv_label": "Time Square",
+      "current_title": "Time square хотхонд мастертай 4 өрөө 138.9мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499657_khud-17-r-khoroo-time-square-khotkhond-138-9m2-mastertai-4-oroo-khudaldana/",
+      "csv_label": "Time Square",
+      "current_title": "Худ 17-р хороо time square хотхонд мастертай 4 өрөө 138.9м² байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10497499_time-square-4-uruu-bair-hudaldana/",
+      "csv_label": "Time Square",
+      "current_title": "Hud time square 4 uruu bair 138.9m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10358523_river-garden-1-khotkhond-1-davkharyn-terrastai-4-oroo-oron-suuts/",
+      "csv_label": "Time Square",
+      "current_title": "Time square 4 өрөө 139мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10495562_time-square-khotkhond-138-9mkv-mastertai-4-oroo-khudaldana/",
+      "csv_label": "Time Square",
+      "current_title": "Time square хотхонд 138.9мкв мастертай 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10379782_khud-17-khoroo-tokya-townd-1t-4-oroo-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ 17 хороо tokya townd-1 4 өрөө 110.56м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10419443_khud-tokyo-town-2-khotkhond-127-72mkv-duples-4-shine-oroo-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ tokyo town-2 хотхонд дуплекс 4 өрөө 127.72мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10496712_khud-tokyo-town-1t-103m2-mastertai-3-oroo/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ tokyo town 1т мастертай 3 өрөө 103м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10495978_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ tokyo town-2 хотхонд дуплекс 4 өрөө 128мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10419512_tokyo-town2-khotkhond-dupleks-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town2 хотхонд дуплекс 4 өрөө орон сууц 128мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10496025_tokyo-town-2-khotkhond-penthouse-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ tokyo town 2 хотхонд пентхаус 4 өрөө 128мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10418303_khud-15-khoroo-tokyo-town-2-dupleks-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ 15 хороо tokyo town 2 дуплекс 3 өрөө 128мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10418974_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town 2 хотхонд 128мкв duplex орон сууц 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10434297_khan-uul-duureg-18khoroo-tokyo-town-1-3-oroo/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Хан-уул дүүрэг 18 хороо tokyo town 1-т 3 өрөө 103.5m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10427002_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town-2 хотхонд 128мкв duplex орон сууц 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10423508_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town-2 хотхонд duplex 4 өрөө 128мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10466657_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts-zarna/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town 2 хотхонд 128мкв duplex 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10407596_khud-khobbi-surguul-baruun-tald-tokyo-town-1-khotkhon-110-56mkv-4-oroo-oron-suuts/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ хобби сургууль баруун талд tokyo town-1 хотхон 4 өрөө 110.56мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10418281_solongos-elchin-khazhuud-tokyo-town-2-128mkv-dupleks/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Солонгос элчин хажууд tokyo town 2 128мкв дуплекс 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10430620_tokyo-town-2-khotkhond-128mkv-duplex-oron-suuts/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town-2 хотхонд 128мкв duplex 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463869_tokyo-town-2-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town 2 хотхонд 4 өрөө орон сууц 128мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10429264_tokyo-town-2-khotkhond-128mkv-4-oroo-penthouse-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town 2 хотхонд 128мкв 4 өрөө penthouse",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10423931_solongos-elchingiin-khazhuud-tokio-taund-dupleks-oron-suuts-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Худ солонгос элчингийн хажууд токио таунд дуплекс 4 өрөө орон сууц 128мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10500106_tokyo-town-1-khotkhond-4-oroo-bair-khudaldana/",
+      "csv_label": "Tokyo Town",
+      "current_title": "Tokyo town 1 хотхонд 4 өрөө байр 111.97мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10397453_vega-city-khotkhond-mastertai-3oroo/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхонд мастертай 3 өрөө 82м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10391033_khud-hobby-surguuliin-khoino-vega-city-khotkhond-104-5mkv-3-oroo/",
+      "csv_label": "Vega City",
+      "current_title": "Худ hobby сургуулийн хойно vega city хотхонд 104.5мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10475246_vega-city-khotkhond-105-4mkv-4-oroo/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхонд 105.4мкв 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10386860_vega-city-d-104-5mkv-4-oroo-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city-д 104,5мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10444145_vega-city-3-r-eelzh/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city 3-р ээлж 4 өрөө 104.5м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10240219_vega-city-khotkhony-baruun-tald-sn-residence-d-90mkv-3-oroo-oron-suuts/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхоны баруун талд sn residence-д 90мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10156665_khankhills-2-khotkhond-4-oroo-bair/",
+      "csv_label": "Vega City",
+      "current_title": "Худ ханхиллс-2 хотхонд 4 өрөө 172.22м2 байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Khan Hills"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10208690_vega-city-khotkhony-baruun-tald-sn-residence-d-90mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ vega city хотхоны баруун талд sn residence-д 3 өрөө 90мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10264808_vega-city-60m2/",
+      "csv_label": "Vega City",
+      "current_title": "Худ 18-р хороо vega city 60m2 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10401324_imartyn-baruun-talyn-vega-siti-khotkhond/",
+      "csv_label": "Vega City",
+      "current_title": "Рапид хурд хороололд 4 өрөө 129m2",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Рапид"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10341853_vega-city-khotkhony-baruun-tald-sn-residence-d-90-mkv-3-oroo-oron-suuts/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхоны баруун талд sn residence-д 90мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10329087_vega-city-mastertai-3-oroo-bair-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city мастертай 3 өрөө байр 82.м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10396392_vega-city-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхонд 4 өрөө 104,5мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10216086_vega-city-khotkhony-baruun-tald-sn-residence-d-90mkv-3-oroo-oron/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхоны баруун талд sn residence-д 90мкв 3 өрөө орон",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10343739_khud-15-khoroo-vega-city-khotkhond-104-5mkv-4-oroo-oron-suuts/",
+      "csv_label": "Vega City",
+      "current_title": "Худ 15 хороо vega city хотхонд 4 өрөө 104.5мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10373625_vega-city-104-5mkv-4oroo-oron-suuts-zarna/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city 104.5мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10457938_khud-tokyo-town-2-khotkhond-127-72mkv-duples-4-shine-oroo-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ, tokyo town-2 хотхонд 127.72мкв дуплес 4 өрөө",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Tokyo Town"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10466315_tokyo-town2-khotkhond-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Tokyo town2 хотхонд 4 өрөө 127.7м2 орон сууц",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Tokyo Town"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10405776_vega-city-khotkhond-82-mkv-3-oroo-bair-dulaan-zogsoolyn-khamt-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхонд 82 мкв 3 өрөө байр зогсоолын хамт",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10407342_vega-city-khotkhond-104-5-mkv-4-oroo-shine-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city хотхонд 104.5 мкв 4 өрөө шинэ орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10474957_khud-i-martyn-khazhuul-vega-city-khotkhond-3-oroo-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ и-мартын хажуул vega city хотхонд 3 өрөө 82.97мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10443935_khud-tokyo-town-2-khotkhond-127-72mkv-dupleks-4-shine-oroo-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ, tokyo town-2 хотхонд 127.72мкв дуплекс 4 шинэ өрөө",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Tokyo Town"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10368779_vega-city-82mkv-mastertai-3oroo-zogsooltoi-n-zarna/",
+      "csv_label": "Vega City",
+      "current_title": "Vega city мастертай 3 өрөө 82мкв зогсоолтой",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10388385_khud-15-r-khoroo-vega-city-khotkhond-104-5-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ 15-р хороо vega city хотхонд 104.5 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10200356_2-oroo-bair-zarna/",
+      "csv_label": "Vega City",
+      "current_title": "Худ вега сити хотхонд 2 өрөө 59.4мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10349796_orchlon-surguuliin-baruun-tal-vega-city-khotkhon-125-5mkv-3oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Орчлон сургуулийн баруун тал vega city хотхон 3 өрөө 125.5мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10077798_vega-city-khotkhond-3-oroo-tsoo-shine-bair-zarna/",
+      "csv_label": "Vega City",
+      "current_title": "Худ vega city хотхонд 3 өрөө 82.9m2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10374014_khud-15-khoroo-vega-city-khotkhond-104-5mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Vega City",
+      "current_title": "Худ 15 хороо vega city хотхонд 4 өрөө 104.5мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9636246_iaarmag-nukhtiin-amand-winter-garden-ondor-zereglelliin-khotkhond-209-87/",
+      "csv_label": "Winter Garden",
+      "current_title": "Яармаг нүхтийн аманд winter garden хотхонд 209,87 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10121624_khunnu-2222-khazhuud-agnistai-khotkhond-7-oroo-pentkhaus-khudaldana/",
+      "csv_label": "Агниста",
+      "current_title": "Хүннү 2222 хажууд агнистай хотхонд 7 өрөө 315.41мкв пентхаус",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10357018_agnista-khotkhond-dupleks-bair-khudaldana/",
+      "csv_label": "Агниста",
+      "current_title": "Худ агниста хотхонд дуплэкс 7 өрөө 226.31мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10501571_khud-udirdlagyn-akademi-urd-tokhilog-4-oroo-159-mkv-bair-2-grazh-khamt/",
+      "csv_label": "Академи",
+      "current_title": "Худ удирдлагын академи урд 4 өрөө 159 мкв байр 2 гараж хамт",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10471611_udirdlagyn-akademi-baruun-tald-tsetseg-khotkhon-4-oroo/",
+      "csv_label": "Академи",
+      "current_title": "Удирдлагын академи баруун талд цэцэг хотхон 4 өрөө 112мкв",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Цэцэг"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10400099_akademi-2-khotkhond/",
+      "csv_label": "Академи",
+      "current_title": "Академи 2 хотхонд 2 өрөө 50.0mkv",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Академи 2"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10472645_udirdlagyn-akademid-4n-oroo-bair-zarna/",
+      "csv_label": "Академи",
+      "current_title": "Удирдлагын академид 4 өрөө 119,8мкв",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10411857_akademi-2-khotkhond-80mkv-mastertai-3-oroo-bair-khudaldana/",
+      "csv_label": "Академи",
+      "current_title": "Академи 2 хотхонд 80мкв мастертай 3 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Академи 2"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10386672_akademi-1-khotkhond-70mkv-3-oroo-khudaldana/",
+      "csv_label": "Академи 1",
+      "current_title": "Худ академи 1 хотхонд 3 өрөө 70мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10487977_akademi-1-khotkhond-3-oroo-bair-zarna/",
+      "csv_label": "Академи 1",
+      "current_title": "Академи 1 хотхонд 3 өрөө байр 69.93мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10423844_khud-18-r-khoroo-udirdlagyn-akademiin-khoid-tald-akademi-1-khotkhond-3-oroo-oron-suu/",
+      "csv_label": "Академи 1",
+      "current_title": "Худ 18-р хороо, удирдлагын академийн хойд талд академи-1 хотхонд 3 өрөө 79.98мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10488677_gegeenten-3-oroo/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "Гэгээнтэн хотхонд 3 өрөө 100.09мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9429620_120miangat-gegeenten-tsogtsolbort-100-09mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "𝟏𝟐𝟎 мянгат, гэгээнтэн цогцолборт 100.09 мкв 𝟑 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9431541_khud-15-khoroo-gegeenten-tsogtsolbort-100-09mkv-3-oroo-oron-suuts/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "Худ 15 хороо, гэгээнтэн цогцолборт 3 өрөө 100.09мк орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10298752_gegeentend-4-oroo-bair-khudaldana/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "Гэгээнтэнд 4 өрөө 136м2 байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10157146_gegeentend-4-oroo-bair-khudaldana/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "Гэгээнтэнд 4 өрөө байр 136.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9434965_khud-15-khoroo-gegeenten-tsogtsolbort-100-09-mkv-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Гэгээнтэн",
+      "current_title": "Худ 15 хороо, гэгээнтэн цогцолборт 100,09 мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10069958_zhargalan-khotkhond-2-oroo-zasvartai-bair/",
+      "csv_label": "Жаргалан",
+      "current_title": "Жаргалан хотхонд 2 өрөө засвартай байр 68,46м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10425451_khud-15-r-khoroo-khoum-plazagiin-khoid-tald-zhargalan-khotkhond-2oroo-bair-zarna/",
+      "csv_label": "Жаргалан",
+      "current_title": "Худ 15-р хороо хоум плазагийн хойд талд жаргалан хотхонд 2 өрөө 60.46мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10045417_jargalan-hothond-4-uruu-hudaldana/",
+      "csv_label": "Жаргалан",
+      "current_title": "Jargalan hothond 4 uruu 135.1мкв bair",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10090215_zhargalan-khotkhon-135-1mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Жаргалан",
+      "current_title": "Худ жаргалан хотхонд 4 өрөө 135.1мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10348076_khud-zhargalan-khotkhond-107-mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Жаргалан",
+      "current_title": "Худ жаргалан хотхонд 107 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10218119_home-plaza-baruun-tald-oddyn-khotkhond-135-1mkv-4-oroo-bair-dulaan-grazhtai/",
+      "csv_label": "Жаргалан",
+      "current_title": "Жаргалан хотхонд 135.1мкв 4 өрөө байр гаражтай",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10348442_khud-15-zhargalan-khotkhond-6-oroo-dupleks/",
+      "csv_label": "Жаргалан",
+      "current_title": "Худ 15 жаргалан хотхонд 6 өрөө дүплекс 241.47m2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10450454_zhargalan-khotkhony-goodprice-tai-bairand-4-oroo/",
+      "csv_label": "Жаргалан",
+      "current_title": "Жаргалан хотхоны goodprice-тай байранд 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10200674_khud-15-r-khoroo-zhargalan-khotkhond-6-oroo-dupleks-khudaldana/",
+      "csv_label": "Жаргалан",
+      "current_title": "Худ 15-р хороо жаргалан хотхонд 6 өрөө дуплекс 241м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9310792_udirdlagyn-akademi-urd-4oroo-96-6mkv/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Худ удирдлагын академийн урд 4 өрөө 96,6 мкв",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10174465_udirdlagyn-akademiin-urd-96-6mkv-4-oroo-oron-suuts/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Удирдлагын академийн урд 96.6мкв 4 өрөө орон сууц",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10456585_udirdlagyn-akademiin-urd-3-oroo-khudaldana/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Худ удирдлагын академийн урд 3 өрөө 71.32 мкв",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10431627_udirdlagyn-akademiin-urd-2-oroo/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Удирдлагын академийн урд 2 өрөө.",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10448415_khud-17-r-khoroo-2-oroo/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Худ 17-р хороонд 2 өрөө 60мкв байр",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10430908_udirdlagyn-akademiin-urd-96-6mkv-4-oroo-oron-suuts/",
+      "csv_label": "зайсан удирдлагын академийн урд",
+      "current_title": "Удирдлагын академийн урд 96.6мкв 4 өрөө орон сууц",
+      "entity_type": "location",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10449413_zaisand-shine-moroodol-khotkhond-2-oroo/",
+      "csv_label": "Зайсан шинэ мөрөөдөл",
+      "current_title": "Зайсан шинэ мөрөөдөл хотхонд 2 өрөө 67.88мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10232840_zaisand-green-house-khotkhony-baruun-tald-2-oroo/",
+      "csv_label": "Зайсан Green House",
+      "current_title": "Зайсанд green house хотхоны баруун талд 2 өрөө 95 м.кв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/7021614_khoroolold-2-oroo-bair/",
+      "csv_label": "Зайсан Энхжин",
+      "current_title": "Зайсанд энхжин хотхонд 4 өрөө 157мкв бүрэн тавилгатай, граштай",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10428076_khomeplaza-narkhankhotkhon-138-8m2-5oroo/",
+      "csv_label": "Нархан",
+      "current_title": "Худ хомеплаза нархан хотхон 138,8м2 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10426263_khomeplaza-narkhankhotkhon-5-oroo/",
+      "csv_label": "Нархан",
+      "current_title": "Хомеплаза нарханхотхон 5 өрөө 138,8мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10418577_khud-17-r-khoroo-3-orgil-khotkhon-100-m-kv-3-oroo-bair/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Худ 17-р хороо 3 оргил хотхонд 99.8 м.кв 3 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10462963_khud-orgil-star-khotkhond-79-74-mkv-3-oroo-oron-suuts/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Худ оргил стар хотхонд 3 өрөө 79.74 мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9547079_orgil-star-khotkhond-120mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Оргил стар хотхонд 120мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10492520_orgil-start-2-oroo-92-8m2/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Оргил старт 2 өрөө 92.8м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10471900_khan-uul-duureg-17-r-khoroo-orgil-star-khotkhon-d-2oroo-bair-khudaldana/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Худ 17-р хороо оргил стар хотхон-д 2 өрөө 92,8мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10327109_zaisand-orgil-star-khotkhond-103-76mkv-3-oroo-bair/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Худ зайсанд оргил стар хотхонд 103.76мкв 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10338499_orchid-park-d-oron-suuts-zarna-khiamd-uneer/",
+      "csv_label": "Оргил Стар",
+      "current_title": "Орчид парк хотхон орон сууц 4 өрөө 117.27мкв",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10363097_khud-rapid-kharsh-khoroolold-147-05-mkv-5-oroo-oron-suuts/",
+      "csv_label": "Рапид",
+      "current_title": "Худ рапид харш хороололд 147.05 мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499593_khud-15-r-khoroo-rapid-kharsh-khotkhond-129-07mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Рапид",
+      "current_title": "Худ 15-р хороо рапид харш хотхонд 4 өрөө 129.07мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10184449_khud-15-r-khoroo-rapid-khoroolold-4-oroo-bair/",
+      "csv_label": "Рапид",
+      "current_title": "Худ 15-р хороо рапид хороололд 4 өрөө байр 129мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10427880_khurd-khoroolold-3-oroo/",
+      "csv_label": "Рапид",
+      "current_title": "Хурд хороололд 3 өрөө 115.11м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/8876288_khurd-rapid-khoroolold-4-oroo-bair-zarna/",
+      "csv_label": "Рапид",
+      "current_title": "Хурд рапид хороололд 4 өрөө байр 125м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9768155_tokyo-town-2-baruun-tald-37-1-bair-khudaldana/",
+      "csv_label": "Рапид",
+      "current_title": "Tokyo town 2 баруун талд 37/1 байр 167мкв 5 өрөө байр",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": [
+        "Tokyo Town"
+      ]
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10308527_khud-15-khoroo-khurd-rapid-khoroolold-4-oroo-bair-khudaldana/",
+      "csv_label": "Рапид",
+      "current_title": "Худ 15 хороо хурд рапид хороололд 4 өрөө байр 115м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10336535_khurd-rapid-kharsh-70-68mk-2oroo/",
+      "csv_label": "Рапид",
+      "current_title": "Хурд рапид харш 70.68мк 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10280028_rapid-khoroolol-1-davkhart-2-oroo-khudaldana/",
+      "csv_label": "Рапид",
+      "current_title": "Рапид хороолол 1 давхарт 2 өрөө 72м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10482128_rapid-khotkhond-1-oroo-bair-zarna/",
+      "csv_label": "Рапид",
+      "current_title": "Рапид хотхонд 1 өрөө 34мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10486282_khud-rapid-kharsh-khoroolold-2-aroo-oron-suuts/",
+      "csv_label": "Рапид",
+      "current_title": "Худ рапид харш хороололд 2 өрөө 54,26мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10422617_bogd-khaany-muzein-baruun-tald-taizh-12-apartment-d-4-oroo-bair/",
+      "csv_label": "ТАЙЖ-12 апартмент",
+      "current_title": "Худ богд хааны музейн баруун талд тайж 12 апартмент-д 4 өрөө байр 131м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10450963_khunnu-2222-khotkhony-2-r-eelzhind-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхоны 2-р ээлжинд 4 өрөө орон сууц 117.67 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10137850_khunnu-2222-khotkhon-1-r-eelzh-55-04mkv-2-oroo-oron-suuts/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхон 1-р ээлжид 55.04 мкв 2 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10499699_khunnu-2222-khotkhon-3-r-eelzh-3-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхон 3-р ээлж 3 өрөө орон сууц 80.0мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10498322_khunnu-2222-4oroo-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ хүннү 2222-т 4 өрөө 117.67мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10501372_khunnu-2222-3-r-eelzh-96-mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ хүннү 2222, 3-р ээлж 96 мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10451328_khud-khunnu-2222-khotkhon-i-eelzhind-96mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ, хүннү 2222 хотхон 1 ээлжинд 96мкв, 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10468649_khunnu-2222-2-eelzh-117-67-mkv-4-oroo-oron-suuts/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 2-ээлж 117,67 мкв 4 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10480408_khunnu-2222-khotkhon-2-eelzh-117mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхон 2 ээлж 117.67мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10045677_khud-18-khoroo-khunnu-2222-khotkhon-1-r-eelzhind-117-67m2/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ 18-р хороо хүннү 2222 хотхон 1-р ээлжид 117,67 мкв 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10422339_khud-18-khoroo-khunnu-2222-khotkhond-80m2/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ 18 хороо хүннү 2222 хотхонд 80м2 3 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10447959_khud-kanad-surguuliin-khoino-hunnu-2222-khotkhony-2-eelzhind-117-67mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ, канад сургуулийн хойно hunnu 2222 хотхоны 2 ээлжинд 117,67мкв, 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10450773_khunnu-2222-khotkhon-2-r-eelzh-80mkv-3-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхон 2-р ээлж 80мкв 3 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10442116_khunnu-2222-kanad-surguuliin-zuun-talyn-bairand-117mkv-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ хүннү 2222 канад сургуулийн зүүн талын байранд 117мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10476895_khunnu-2222-2-r-eelzh-117-67mkv-4-oroo-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 2-р ээлж 117,67мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10450904_khunnu-2222-1-kh-eelzhind-117-67-mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 1-р ээлжинд 117.67 мкв 4 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10165817_khunnu-2222-khotkhon-1-r-eelzh-55-04mkv-2-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү 2222 хотхон 1-р ээлж 2 өрөө 55.04мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10192692_khunnu-2222-khotkhony-2-r-eelzh-deer-117-67mkv-4-oroo/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Худ Хүннү 2222 хотхоны 2-р ээлж дээр 117.67мкв 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10284122_khunnu2222-1-r-eelzhind-tokhilog-4-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү2222 1-р ээлжинд тохилог 4 өрөө 117мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9835422_khunnu-222-3-oroo-bair-zarna/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү-222 3 өрөө байр 79.98 мкв",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10412252_khunnu2222-plas-167m-kv-5-oroo-oron-suuts-khudaldana/",
+      "csv_label": "Хүннү 2222",
+      "current_title": "Хүннү2222 плас 167мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10469103_khunnu-plas-d-166-88-mkv-5-oroo-oron-suuts/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Хүннү пласт 5 өрөө 166.88 мкв орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10400037_hunnu-plus-khotkhond-mash-goio-zasaltai-166-88m2-5-oroo-oron-suuts-garazh-khudaldana/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Hunnu plus хотхонд 5 өрөө 166.88м2 орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10497971_une-buusan-khunnu-plus-5-oroo-bair-khudaldanall/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Хүннү plus 5 өрөө байр 168м2",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10401989_khunnu-plus-5-oroo-bair-khudaldana/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Худ хүннү plus 5 өрөө 166.88мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10462543_hunnu-plus-khotkhond-166-86-mkv-5-oroo-oron-suuts/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Худ hunnu plus хотхонд 166.86 мкв 5 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10445692_khunnu-plus-d-166-88mkv-5-oroo-bair-khudaldana/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Хүннү plus-д 166.88мкв 5 өрөө байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10352632_khud-khobbi-surguuliin-urd-hunnu-plus-khotkhond-166-86mkv-5-oroo/",
+      "csv_label": "Хүннү Плюс",
+      "current_title": "Худ хобби сургуулийн урд hunnu plus хотхонд 166.86мкв 5 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "reviewed_alias_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10291927_ofiss-uilchilgee-bolgokh-bolomzhtoi/",
+      "csv_label": "Цэнгэлдэх",
+      "current_title": "Цэнгэлдэх хотхон мастертай 3 өрөө 80мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9416001_narny-khoroololyn-ondor-deer-50mkv-2-oroo/",
+      "csv_label": "Цэнгэлдэх",
+      "current_title": "1-р хороолол гал тогоо тусдаа 4 өрөө 86мкв",
+      "entity_type": "invalid",
+      "status": "reused_url_mismatch",
+      "evidence": "current_title_matches_other_complex",
+      "current_complex_candidates": []
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10463208_tsengeldekh-khotkhon-2-r-eelzhind-70mkv-3-oroo-oron-suuts/",
+      "csv_label": "Цэнгэлдэх",
+      "current_title": "Цэнгэлдэх хотхон 2-р ээлжинд 70мкв 3 өрөө орон сууц",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10451603_khud-15-r-khoroo-36-bairand-gal-togoo-tusdaa-3-oroo-khudaldana/",
+      "csv_label": "Шинэ Зуун Билэг сургуулийн зүүн талд",
+      "current_title": "Худ 15-р хороо 36 байранд гал тогоо тусдаа 3 өрөө 98.05мкв байр",
+      "entity_type": "landmark",
+      "status": "confirmed_negative",
+      "evidence": "curated_non_complex_label"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/9884453_erdeniin-togol-khotkhond-180mkv-4-oroo/",
+      "csv_label": "Эрдэнийн Төгөл",
+      "current_title": "Худ, эрдэнийн төгөл хотхонд 4 өрөө 180 мкв байр",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    },
+    {
+      "source_url": "https://www.unegui.mn/adv/10265265_khud-erdeniin-togol-khotkhond-180mk-4-oroo/",
+      "csv_label": "Эрдэнийн Төгөл",
+      "current_title": "Худ, эрдэнийн төгөл хотхонд 180мк 4 өрөө",
+      "entity_type": "complex",
+      "status": "confirmed_positive",
+      "evidence": "canonical_in_title"
+    }
+  ]
+}

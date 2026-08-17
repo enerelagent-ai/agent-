@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS listings (
     property_subtype TEXT,
 
     rooms           SMALLINT,
+    -- Normalized from generic specs ("Хэдэн давхарт" / "Барилгын давхар").
+    floor           SMALLINT,
+    total_floors    SMALLINT,
     district        TEXT,
     address         TEXT,
     lat             DOUBLE PRECISION,
@@ -43,6 +46,8 @@ CREATE TABLE IF NOT EXISTS listings (
 
     contact_phone   TEXT,
     photo_urls      TEXT[] NOT NULL DEFAULT '{}',
+    -- Latest cumulative detail-page counter reported by the source.
+    view_count      INTEGER CHECK (view_count IS NULL OR view_count >= 0),
 
     -- Hash of normalized listing attributes, used to find cross-source duplicate
     -- candidates (e.g. the same unit posted on both Unegui and Facebook).
@@ -69,8 +74,22 @@ CREATE TABLE IF NOT EXISTS listings (
     CONSTRAINT uq_listings_source_url UNIQUE (source, source_url)
 );
 
+CREATE TABLE IF NOT EXISTS complexes (
+    id              BIGSERIAL PRIMARY KEY,
+    canonical_name  TEXT NOT NULL UNIQUE,
+    normalized_name TEXT NOT NULL UNIQUE,
+    aliases         TEXT[] NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS complex_id BIGINT
+    REFERENCES complexes(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_listings_dedup_hash ON listings (dedup_hash);
 CREATE INDEX IF NOT EXISTS idx_listings_property_type ON listings (property_type);
+CREATE INDEX IF NOT EXISTS idx_listings_complex_id ON listings (complex_id);
+CREATE INDEX IF NOT EXISTS idx_listings_floor ON listings (floor);
 
 -- Scored duplicate-candidate pairs (see migration 004): kept separate from
 -- listings so match decisions stay auditable and re-scorable. One row per
@@ -86,6 +105,12 @@ CREATE TABLE IF NOT EXISTS duplicate_matches (
 );
 
 CREATE INDEX IF NOT EXISTS idx_duplicate_matches_b ON duplicate_matches (listing_id_b);
+
+CREATE TABLE IF NOT EXISTS notification_state (
+    id              SMALLINT PRIMARY KEY CHECK (id = 1),
+    last_seen_at    TIMESTAMPTZ NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$

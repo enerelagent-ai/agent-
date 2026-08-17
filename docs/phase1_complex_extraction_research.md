@@ -1,0 +1,265 @@
+# Phase 1 — Хотхон/хорооллын нэр илрүүлэх судалгаа
+
+Судалгааны огноо: 2026-08-14. Эх үүсвэр: Phase 0(c)-ийн дараах local
+PostgreSQL (`44,507` идэвхтэй зар; хамгийн сүүлийн scrape 2026-08-13).
+
+## Дүгнэлт
+
+- Extractor нь `rooms`-оос болон орон сууцны ангиллаас хамаарах ёсгүй.
+  Trigger үг 15 canonical ангиллын 14-т илэрсэн.
+- `хотхон`, `residence`, `village`, `garden`, `town`, `apartment`,
+  `апартмент` нь нэрийн хүчтэй дохио боловч нийлмэл үг болон латин/кирилл
+  залгаврыг салгаж normalize хийх шаардлагатай.
+- `хороолол` нь дангаараа найдвартай trigger биш. `Нарны хороолол` нь
+  complex байж болох ч `1-р хороолол`, `3,4-р хороолол`, `10-р хороолол`
+  нь хотын ерөнхий байршил. Дугаартай хорооллыг default-аар complex гэж
+  ангилахгүй.
+- Trigger-гүй нэр олон байна (`Regis Place`, `Mandala 365 Residential
+  Tower`, `Golden Buddha` гэх мэт). 967 мөрийн curated CSV нь эдгээр alias,
+  spelling болон trigger-гүй нэрсийг нөхөх үндсэн dictionary/ground truth
+  болох ёстой; regex ганцаараа бүрэн coverage өгөхгүй.
+- Phase 2-т эхлээд өндөр precision-тэй dictionary + trigger extraction
+  хэрэгжүүлж, CSV дээр хэмжсэний дараа л heuristic-ийг өргөжүүлнэ.
+
+## DB baseline ба trigger coverage
+
+Phase 0(c) дууссаныг DB-ээр баталгаажуулсан: нийт болон `is_active=true`
+мөр хоёул `44,507`; 2026-08-12/13-нд `11,828` мөр дахин scrape хийгдсэн.
+
+Доорх тоо нь title-д `(хотхон|хороолол|residence|village|garden|town|
+apartment|апартмент)` илэрсэн мөрийн raw coverage. Энэ нь extraction
+accuracy биш.
+
+| # | Canonical ангилал | Нийт | Trigger-тэй | Coverage |
+|---:|---|---:|---:|---:|
+| 1 | Орон сууц | 23,223 | 12,532 | 54.0% |
+| 2 | 00-н өрөө, В1, подвал | 214 | 66 | 30.8% |
+| 3 | АОС, хаус, зуслан | 3,420 | 904 | 26.4% |
+| 4 | Газар | 3,804 | 122 | 3.2% |
+| 5 | Гараж, контейнер, з-сууц | 593 | 107 | 18.0% |
+| 6 | Нийтийн байр, дотуур байр | 406 | 35 | 8.6% |
+| 7 | Оффис | 3,037 | 277 | 9.1% |
+| 8 | Үйлдвэр, агуулах, объект | 2,534 | 223 | 8.8% |
+| 9 | Худалдаа, үйлчилгээний талбай | 5,304 | 1,253 | 23.6% |
+| 10 | Хашаа байшин | 1,395 | 35 | 2.5% |
+| 11 | Монгол гэр | 130 | 1 | 0.8% |
+| 12 | Бусад | 2 | 0 | 0.0% |
+| 13 | Hostel/Хостел | 56 | 15 | 26.8% |
+| 14 | Хоногоор байр, байшин | 371 | 65 | 17.5% |
+| 15 | Хурлын өрөө, заал | 18 | 1 | 5.6% |
+
+## 15 ангиллын title жишээ
+
+Жишээг шинэ baseline-ийн идэвхтэй мөрөөс deterministic түүвэрлэв. Эдгээр
+нь зөв label гэсэн үг биш; title хэлбэрийн бодит олон янз байдлыг харуулна.
+
+1. **Орон сууц:** `parkside residence хотхонд 3 өрөө байр`;
+   `Mandala 365 residential tower-т ...`; `19 хороолол, нэхмэл хотхонд...`
+2. **00-н өрөө, В1, подвал:** `Буянт од хотхон b1 тоот`;
+   `Сансар ктмс 160м2 b1 давхарын үйлчилгээний талбай заал зогсоол`
+3. **АОС, хаус, зуслан:** `Gachuurtad 120мкв townhouse`;
+   `Худ 2 давхар пентхаус 482м2`
+4. **Газар:** `Элеганс хотхоны баруун талд 2 айлын газар`;
+   `Тахилтад зам дагуу 4000м2 газар`
+5. **Гараж, контейнер, з-сууц:** `Орчид парк хотхонд дулаан зогсоол`;
+   `Бзд 18m2 авто зогсоол`
+6. **Нийтийн байр, дотуур байр:** `Хангай хотхоны ард нийтийн байранд өрөө`;
+   `Нисэхэд нийтийн байр, билльярд бие даасан обьект`
+7. **Оффис:** `River plaza office-т 473,79мкв талбай`;
+   `Нарны хороолол урд tara tower 74.6 мкв оффис талбай`
+8. **Үйлдвэр, агуулах, объект:** `Сонсголонгийн уулзвараас ... үйлдвэр,
+   агуулахын зориулалтаар обьект`; `Яармаг, хүннү молл-ын хойно ... объект`
+9. **Худалдаа, үйлчилгээний талбай:** `Хангай хотхоны хажууд Go to market-д
+   ... талбай`; `А бүс peace tower-m 312 мкв талбай`
+10. **Хашаа байшин:** `Сэлхийн зусланд бүрэн тавилгатай гэр`;
+    `Баянхошуунд өмчилсөн хашаа байшин`
+11. **Монгол гэр:** `Увсын 8-н ханатай монгол гэр`; `Ih5 hantai ger`
+12. **Бусад:** `Гачууртын ... 2 айлын гэрчилгээтэй өвөлжөө`;
+    `Налайх төв зам дагуу 1 га газартай авто засвар`
+13. **Hostel/Хостел:** `11-р хороололд охидын хостел`;
+    `Хотын төвд сөүлийн гудамж ... охидын хостел`
+14. **Хоногоор байр, байшин:** `Жигжидийн зусланд байшин 25мкв`;
+    `Бгд модны 2-т 2 өрөө 55мкв`
+15. **Хурлын өрөө, заал:** `Сбд хурлын заал, сургалтын танхим заал`;
+    `Баянмонголын урд 85мкв хурлын танхим`
+
+Эндээс харахад complex нэр нь тухайн зарын үндсэн объект байх албагүй:
+`хотхоны ард`, `хотхоны баруун талд`, `хотхоны хажууд` нь зөвхөн landmark.
+Тиймээс Phase 2-т `complex_name`-ээс гадна evidence/relation хадгалах эсвэл
+наад зах нь landmark хэлбэрийг confidence-д тусгах шаардлагатай.
+
+## Trigger taxonomy
+
+### Монгол trigger ба бодит хувилбар
+
+- `хотхон`: `хотхон`, `хотхонд`, `хотхоны`, `хотхоноос`, ховор
+  `хотхондоо`, `хотхонууд` болон typo (`хотхонп`, `хотхонт`). Үндэс дээр
+  тааруулж, дараах залгаврыг trigger-ээс салгана.
+- `хороолол`: `хороолол`, `хороололд`, `хорооллын`, өгөгдөлд түгээмэл typo
+  болох `хороололын`, мөн `хороололоос`, `хороололтой`. `хороололийн`,
+  `хороололлын` зэрэг ховор алдааг normalize хийж болно.
+- Trigger өмнөх token-тэй наалдсан (`4хороолол`, `нарханхотхон`) тохиолдол
+  байгаа ч эхний хувилбарт автоматаар салгах нь false positive эрсдэлтэй;
+  CSV alias байвал л салгаж танина.
+
+### Англи/холимог trigger
+
+- Өндөр ач холбогдолтой: `residence`/`residences`, `village`, `apartment`/
+  `apartments`, `апартмент` болон Монгол залгавартай хэлбэрүүд.
+- Нэрийн token байдлаар: `garden`, `town`, `tower`, `park`, `plaza`.
+  `garden` ба `town` нь нийлмэл нэрэнд наалдаж болно (`RiverGarden`,
+  `SkyTown`, `JapanTown`).
+- `townhouse` нь complex trigger биш, үл хөдлөхийн төрлийг заах нь элбэг.
+- `downtown`, `hometown` доторх `town`-ыг substring-аар тасалж болохгүй.
+- `tower`, `park`, `plaza` нь дангаараа өндөр ambiguity-тэй (`авто парк`,
+  `талбай/plaza`, оффис tower); зөвхөн CSV dictionary эсвэл өөр нэрийн
+  нотолгоотой үед ашиглана.
+
+### `хороолол`-ын зайлшгүй ялгалт
+
+Default-аар complex биш байршлын pattern:
+
+- `1-р`, `3-р`, `3,4-р`, `4-р`, `10-р`, `11-р`, `13-р`, `16-р`, `19-р`,
+  `21-р хороолол` болон зай/`-р`-ийн бичлэгийн хувилбарууд;
+- district prefix (`БГД 10-р хороолол`, `СБД 11-р хороолол`) нь энэ
+  шийдвэрийг өөрчлөхгүй.
+
+Нэртэй complex candidate:
+
+- `Нарны`, `Баянмонгол`, `Саруул`, `Содон`, `Москва`, `Хурд Рапид`
+  хороолол гэх мэт. Эдгээрийг зөвхөн нэрийн dictionary/CSV-р canonical
+  болгоно; дурын үгийг `хороолол`-ын өмнөөс тасалж авахгүй.
+
+### Relation/confidence дохио
+
+- Unit доторх өндөр confidence: `<name> хотхонд`, `<name> хотхоны <давхар/...>`,
+  `<name> residence-д`.
+- Landmark буюу бага confidence: `<name> хотхоны ард|урд|хажууд|баруун
+  талд|зүүн талд|ойролцоо|харалдаа`.
+- Нэр дурдсан ч unit нь complex-д байна гэж үзэж болохгүй жишээ: газар,
+  агуулах, нийтийн байр, гаднах худалдааны талбай.
+
+## Phase 2 extraction contract
+
+Phase 1-ийн судалгаагаар дараах contract тохиромжтой:
+
+1. Бүх `is_active` listing дээр, ангилал/`rooms`-оос үл хамааран ажиллана.
+2. Title-ийг Unicode/case/space/punctuation болон Монгол залгаврын түвшинд
+   normalize хийнэ; эх title-г evidence болгон хэвээр үлдээнэ.
+3. Эхлээд CSV alias dictionary exact/longest-match; дараа нь өндөр precision
+   trigger heuristic хэрэглэнэ.
+4. `хотхон` ба `хороолол`-ыг нэг canonical `complex` ойлголтод оруулна,
+   харин raw trigger болон relation-ийг алдахгүй.
+5. Нэг title-д олон нэр таарвал longest alias, дараа нь unit-relation,
+   дараа нь CSV-ийн баталгаажсан төлөвөөр эрэмбэлнэ; шийдэж чадахгүй бол
+   автоматаар нэгийг зохиохгүй.
+6. Numbered-neighborhood болон landmark match-ийг `complex_id`-д шууд
+   оноохгүй; тусдаа review/error ангилалд үлдээнэ.
+
+Санал болгох цэвэр функцийн гаралт:
+
+```text
+raw_name, normalized_name, matched_alias, trigger,
+relation(unit|landmark|unknown), confidence, evidence_span
+```
+
+## 967 мөрийн CSV audit ба ground-truth төлөвлөгөө
+
+Файл: `ХУД 15 17 18 хороо - Зарууд.csv`. Header-ээс гадна яг 967 data
+мөртэй, 967 URL нь бүгд unique, `Хотхон` хоосон мөр байхгүй. Нийт 73 unique
+`Хотхон` label байна; `Өрөө` 41 мөрөнд хоосон байгаа нь extractor-ийг
+`rooms`-оос хамааралгүй хийх шийдвэрийг дахин батална.
+
+Багана: `Хотхон, Өрөө, М², М²-үнэ, Нийт үнэ, Давхар, Утас, Холбоос`.
+2026-08-14-ний шинэ local DB-тэй URL exact-match хийхэд 370 мөр таарч, 597
+мөр таараагүй. Төлөвлөгөөн дэх 355 нь Phase 0(c)-ийн өмнөх DB snapshot дээрх
+тоо байсан байх магадлалтай; rescrape-ийн дараа 15 URL нэмэгдсэн гэсэн
+inference бөгөөд CSV дотор тусдаа `verified` багана байхгүй.
+
+370 matched мөрийн normalized CSV label-ийг одоогийн DB title-тай тулгахад:
+
+| Ангилал | Мөр |
+|---|---:|
+| CSV label title-д шууд (case/punctuation үл харгалзан) орсон | 246 |
+| Alias, spelling эсвэл гараар шалгах шаардлагатай | 124 |
+| Одоогийн DB-д URL байхгүй | 597 |
+
+Энэ нь alias review хийхээс өмнөх raw exact-match audit. Curated
+transliteration/typo alias болон reused-URL conflict дүрмийг хэрэглэсний
+дараах эцсийн Phase 1 ангилал:
+
+| Эцсийн төлөв | Мөр | Gold fixture-д орсон эсэх |
+|---|---:|---|
+| `confirmed_positive` | 320 | Тийм |
+| `confirmed_negative` (landmark/building/location) | 12 | Тийм |
+| `reused_url_mismatch` | 26 | Тийм, hard negative |
+| `excluded_insufficient_evidence` | 12 | Үгүй |
+| `source_unavailable` | 597 | Үгүй |
+
+Ингэснээр одоогийн title evidence-тэй 358 мөр regression fixture болсон.
+Нотолгоогүй 12 мөрийг хүчээр positive/negative болгоогүй. Phase 2-ийн
+анхны regression-аар CSV-ийн `Академи` label нь complex биш, ихэнхдээ
+`Удирдлагын академийн урд` гэсэн location болохыг илрүүлж, `Академи 1/2`-оос
+салгасан. Мөн `River Tower` ба `River Plaza`-г тусдаа canonical complex
+болгож fixture-ийг чангаруулсан.
+
+URL match өөрөө label-ийн нотолгоо биш гэдэг бодит жишээ гарсан. CSV-д
+`Akoya Residence` гэж тэмдэглэсэн URL-ийн одоогийн title `Aqua Garden`,
+`Global Town` URL-ийн title `Хүннү 2222`, `Hansvill` URL-ийн title мөн
+`Хүннү 2222` болсон мөр байна. Мөн CSV-д `Japan Town` гэсэн мөр одоогийн
+title дээр `Ocean's 10 Apartment` болсон. Unegui зар/URL дахин ашиглагддаг
+тухай төслийн өмнөх ажиглалтыг энэ audit дахин баталж байна. Ийм мөрийг
+alias гэж автоматаар суралцуулбал өөр complex-уудыг буруу нэгтгэнэ.
+
+Хамгийн олон мөртэй label-ууд: `Vega City` (108), `Sky Garden Residence`
+(77), `King Tower` (65), `Tokyo Town` (58), `Хүннү 2222` (54), `Рапид`
+(44), `Global Town` (42), `Akoya Residence` (31), `River Garden` (29).
+
+`Хотхон` баганын 73 утга бүгд complex биш. Жишээ нь `115-р сургуулийн
+хажууд`, `АПУ компаний хажууд`, `Мишээл экспо`, `зайсан удирдлагын
+академийн урд`, `Шинэ Зуун Билэг сургуулийн зүүн талд` нь landmark/location;
+`Туул голын хойно байрлах 36-р байранд`, `Удирдлагын академийн байр` нь
+building/location label. Иймд баганын нэрийг semantics гэж үзэхгүй, мөр
+бүрт `complex | building | landmark | location | invalid/reused_url`
+төрлийн label нэмсний дараа л complex ground truth болгоно.
+
+Файл ирсний дараах заавал хийх алхам:
+
+1. Encoding, delimiter, column, null, duplicate-ийг audit хийнэ; эх файлыг
+   өөрчлөхгүй.
+2. CSV-д `verified` багана байхгүй тул DB URL exact-match-ийг зөвхөн
+   `source_present` evidence гэж тэмдэглэнэ; энэ нь label зөв гэсэн баталгаа
+   биш. Шууд таарсан 246 мөр ч landmark байж болох тул `entity_type` audit
+   давна. 124 зөрүүтэй мөрийг `valid_alias | spelling_variant |
+   reused_url_mismatch | wrong_label | insufficient_evidence` гэж гараар
+   ангилна. Үлдсэн 597 мөр candidate/review set байна.
+3. Нэг бодит хотхоны spelling/alias-уудыг train/test хоёр талд задлахгүй.
+   Canonical complex-аар group хийж deterministic split хийнэ. Ингэхгүй бол
+   alias цээжилсэн extractor хуурамчаар өндөр accuracy үзүүлнэ.
+4. Gold set-д заавал negative мөр нэмнэ: numbered neighborhood, landmark,
+   `townhouse`, `downtown`, trigger-тэй боловч complex биш зар. CSV зөвхөн
+   positive нэрс агуулдаг бол precision хэмжих боломжгүй.
+5. Үндсэн metric: exact canonical precision/recall/F1; нэмэлтээр extraction
+   coverage, false-positive rate, alias-normalization accuracy, relation
+   accuracy. Ангилал тус бүрээр болон trigger тус бүрээр тайлагнана.
+6. Acceptance gate: confirmed gold set дээр precision-ийг нэн тэргүүнд
+   тавина. Threshold-ыг CSV audit-ийн дараа тогтооно; 355 positive мөрөөр
+   дангаар нь “accuracy” зарлахгүй.
+7. Regression fixture-д raw title, expected canonical name/null, relation,
+   verification source хадгална. Production DB id-г цорын ганц key болгохгүй.
+
+## Phase 1 гарах үр дүн
+
+- Reproducible audit: `analytics/scripts/audit_complex_ground_truth.py`
+- Privacy-safe gold/negative fixture:
+  `analytics/tests/fixtures/complex_ground_truth.json`
+- Audit дүрмийн unit test:
+  `analytics/tests/test_complex_ground_truth_audit.py`
+- Raw CSV нь хэрэглэгчийн Downloads дотор хэвээр. Утас, үнэ fixture-д
+  ороогүй бөгөөд raw файлыг repo-д хуулж/commit хийгээгүй.
+- Phase 2 extractor нь 320 positive дээр canonical accuracy/recall, 38
+  negative дээр false-positive/stale-label rate хэмжинэ. `source_unavailable` болон
+  `excluded_insufficient_evidence` мөр metric-д орохгүй.
+
+Эдгээр deliverable бүрдсэнээр Phase 1 дууссан; Phase 2 extraction +
+normalization эхлэхэд дата талын blocker үлдээгүй.

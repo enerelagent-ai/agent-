@@ -1,10 +1,14 @@
+from datetime import datetime, timezone
 from typing import Literal
 
 from analytics.calculations import (
+    complex_average_price_conn,
+    complex_deal_percentages_conn,
     deal_percentages_conn,
     estimate_negotiable_price_conn,
     investment_summary_by_district_conn,
     listing_counts_by_property_type_conn,
+    monthly_delisting_trend_conn,
     price_trend_conn,
     rental_yield_by_district_rooms_conn,
     todays_opportunity_conn,
@@ -14,16 +18,43 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Listing
+from app.models.listing import Complex, Listing, NotificationState
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
+    DealAlertFeed,
+    ComplexPriceSummary,
+    ComplexOption,
     ListingTypeCount,
+    MonthlyDelistingPoint,
+    NotificationReadState,
     PriceTrendPoint,
     TodaysOpportunity,
 )
 from app.schemas.listing import ListingOut
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+def _deal_candidate_ids(
+    deals_by_id: dict[int, dict],
+    status: str,
+    district: str | None,
+    property_type: str | None,
+    complex_id: int | None,
+    min_price: float | None,
+    max_price: float | None,
+) -> list[int]:
+    """Preserve analytics deal ranking while applying browse filters."""
+    return [
+        deal_id
+        for deal_id, deal in deals_by_id.items()
+        if deal["deal_status"] == status
+        and (district is None or deal["district"] == district)
+        and (property_type is None or deal["property_type"] == property_type)
+        and (complex_id is None or deal["complex_id"] == complex_id)
+        and (min_price is None or float(deal["price"]) >= min_price)
+        and (max_price is None or float(deal["price"]) <= max_price)
+    ]
 
 
 @router.get("/investment-summary", response_model=list[DistrictInvestmentSummary])
@@ -49,8 +80,8 @@ def price_trend(
 ) -> list[dict]:
     """Overall price trend for one (listing_type, property_type) slice, one
     point per price_history snapshot. Defaults to sale-side apartments — see
-    analytics.calculations.price_trend for why. Only ever has as many points
-    as snapshot_market_prices() has been run; today that's a single point.
+    analytics.calculations.price_trend for why. It has one point per day that
+    the scheduled scraper pipeline has completed a market-price snapshot.
     """
     return price_trend_conn(settings.database_url, listing_type, property_type)
 
@@ -60,14 +91,123 @@ def listing_counts_by_type() -> list[dict]:
     return listing_counts_by_property_type_conn(settings.database_url)
 
 
+@router.get("/delisting-trend", response_model=list[MonthlyDelistingPoint])
+def delisting_trend(
+    listing_type: Literal["sale", "rent"] | None = Query(None),
+    district: str | None = Query(None),
+) -> list[dict]:
+    """Monthly removed-ad counts; removal does not necessarily mean a sale."""
+    return monthly_delisting_trend_conn(settings.database_url, listing_type, district)
+
+
+def _notification_state(db: DbSession) -> NotificationState:
+    state = db.get(NotificationState, 1)
+    if state is None:
+        now = datetime.now(timezone.utc)
+        state = NotificationState(id=1, last_seen_at=now, updated_at=now)
+        db.add(state)
+        db.commit()
+        db.refresh(state)
+    return state
+
+
+@router.get("/deal-alerts", response_model=DealAlertFeed)
+def deal_alerts(db: DbSession, limit: int = Query(20, ge=1, le=100)) -> dict:
+    """Current confident deals plus a single-admin unread count."""
+    state = _notification_state(db)
+    deals = {
+        row["id"]: row
+        for row in deal_percentages_conn(settings.database_url)
+        if row["deal_status"] == "top_deal"
+    }
+    if not deals:
+        return {"items": [], "unseen_count": 0, "last_seen_at": state.last_seen_at}
+
+    rows = (
+        db.query(Listing)
+        .filter(Listing.id.in_(deals), Listing.is_active.is_(True))
+        .order_by(Listing.scraped_at.desc(), Listing.id.desc())
+        .all()
+    )
+    unseen_count = sum(1 for row in rows if row.scraped_at > state.last_seen_at)
+    page = rows[:limit]
+    complex_ids = {row.complex_id for row in page if row.complex_id is not None}
+    complex_names = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+    return {
+        "items": [
+            {
+                "id": row.id,
+                "title": row.title,
+                "source_url": row.source_url,
+                "price": float(row.price) if row.price is not None else None,
+                "district": row.district,
+                "complex_name": complex_names.get(row.complex_id),
+                "scraped_at": row.scraped_at,
+                "deal_pct": float(deals[row.id]["deal_pct"]),
+            }
+            for row in page
+        ],
+        "unseen_count": unseen_count,
+        "last_seen_at": state.last_seen_at,
+    }
+
+
+@router.post("/deal-alerts/mark-seen", response_model=NotificationReadState)
+def mark_deal_alerts_seen(db: DbSession) -> dict:
+    state = _notification_state(db)
+    now = datetime.now(timezone.utc)
+    state.last_seen_at = now
+    state.updated_at = now
+    db.commit()
+    return {"last_seen_at": now}
+
+
+@router.get("/complex-prices", response_model=list[ComplexPriceSummary])
+def complex_prices(complex_id: int | None = Query(None, ge=1)) -> list[dict]:
+    """Current canonical price statistics, optionally for one complex."""
+    return complex_average_price_conn(settings.database_url, complex_id)
+
+
+@router.get("/complexes", response_model=list[ComplexOption])
+def complexes(db: DbSession) -> list[dict]:
+    """Canonical complexes that currently have at least one active listing."""
+    rows = (
+        db.query(Complex.id, Complex.canonical_name)
+        .join(Listing, Listing.complex_id == Complex.id)
+        .filter(Listing.is_active.is_(True))
+        .distinct()
+        .order_by(Complex.canonical_name)
+        .all()
+    )
+    return [{"id": row.id, "canonical_name": row.canonical_name} for row in rows]
+
+
 def _attach_computed_fields(
-    listing: Listing, deal: dict | None, estimate: dict | None, yield_info: dict | None
+    listing: Listing,
+    deal: dict | None,
+    complex_deal: dict | None,
+    complex_name: str | None,
+    estimate: dict | None,
+    yield_info: dict | None,
 ) -> Listing:
     listing.deal_pct = float(deal["deal_pct"]) if deal else None
     listing.deal_status = deal["deal_status"] if deal else None
     listing.deal_reason = deal["deal_reason"] if deal else None
     listing.n_comparable = deal["n_comparable"] if deal else None
     listing.group_median_price_per_sqm = float(deal["group_median_price_per_sqm"]) if deal else None
+    listing.complex_name = complex_name
+    listing.complex_deal_pct = float(complex_deal["complex_deal_pct"]) if complex_deal else None
+    listing.complex_deal_status = complex_deal["complex_deal_status"] if complex_deal else None
+    listing.complex_deal_reason = complex_deal["complex_deal_reason"] if complex_deal else None
+    listing.complex_n_comparable = complex_deal["complex_n_comparable"] if complex_deal else None
+    listing.complex_median_price_per_sqm = (
+        float(complex_deal["complex_median_price_per_sqm"])
+        if complex_deal
+        else None
+    )
     listing.estimated_price = float(estimate["estimated_price"]) if estimate else None
     listing.estimated_price_per_sqm = (
         float(estimate["estimated_price_per_sqm"])
@@ -87,8 +227,10 @@ def list_dashboard_listings(
     db: DbSession,
     district: str | None = Query(None),
     property_type: str | None = Query(None),
+    complex_id: int | None = Query(None, ge=1),
     min_price: float | None = Query(None, ge=0),
     max_price: float | None = Query(None, ge=0),
+    deal_status: Literal["top_deal", "needs_review", "not_notable"] | None = Query(None),
     sort_by: Literal["recent", "deal_pct"] = Query("recent"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
@@ -100,8 +242,14 @@ def list_dashboard_listings(
     repost doesn't show up twice; there's no query param to turn this off,
     since nothing has asked for the raw including-duplicates view yet.
 
-    Every listing carries deal_pct/deal_status/deal_reason/n_comparable
-    from analytics.deal_percentages() regardless of sort_by — None for
+    Every listing carries the independent district-level
+    deal_pct/deal_status/deal_reason/n_comparable fields from
+    analytics.deal_percentages(), plus complex_deal_pct/status/reason/
+    n_comparable and complex_name from complex_deal_percentages(). The
+    district signal uses a 10% notable threshold; the tighter complex signal
+    uses 20%. Either comparison can be None while the other is available.
+
+    District fields are None for
     listings deal_percentages() doesn't cover (non-apartments, apartments
     below its area floor, or the open-ended "5+ өрөө" bucket; see that
     function's docstring for the full list of exclusions and why each
@@ -109,6 +257,11 @@ def list_dashboard_listings(
     deviation that a wrong comparison group is a more likely explanation
     than a genuine bargain — deal_reason then explains why), 'not_notable',
     or None when not applicable.
+
+    deal_status optionally restricts the browse result to one of those
+    explicit confidence classes. In particular, needs_review remains a
+    manual data-quality queue and is never folded into the default
+    sort_by="deal_pct" top-deal list.
 
     sort_by="deal_pct" ranks best-deal-first using that same precomputed,
     already-sorted dataset, filtered down to listings matching the other
@@ -149,10 +302,25 @@ def list_dashboard_listings(
     """
     excluded_ids = superseded_listing_ids_conn(settings.database_url)
     deals_by_id = {d["id"]: d for d in deal_percentages_conn(settings.database_url)}
+    complex_deals_by_id = {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
     estimates_by_id = {e["id"]: e for e in estimate_negotiable_price_conn(settings.database_url)}
     yield_by_district_rooms = {
         (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
     }
+
+    status_candidate_ids = (
+        _deal_candidate_ids(
+            deals_by_id,
+            deal_status,
+            district,
+            property_type,
+            complex_id,
+            min_price,
+            max_price,
+        )
+        if deal_status is not None
+        else None
+    )
 
     if sort_by == "deal_pct":
         # deal_percentages() already excludes superseded listings itself, so
@@ -165,26 +333,39 @@ def list_dashboard_listings(
         # (test ads, "170 ₮ Үнэ тохирно" placeholders, area-parsing bugs --
         # exactly the noise the confidence tiers exist to keep out of a
         # confident deals list) at the very top, ahead of every genuine deal.
-        candidate_ids = [
-            deal_id
-            for deal_id, deal in deals_by_id.items()
-            if deal["deal_status"] == "top_deal"
-            and (district is None or deal["district"] == district)
-            and (property_type is None or deal["property_type"] == property_type)
-            and (min_price is None or float(deal["price"]) >= min_price)
-            and (max_price is None or float(deal["price"]) <= max_price)
-        ]
+        candidate_ids = (
+            status_candidate_ids
+            if status_candidate_ids is not None
+            else _deal_candidate_ids(
+                deals_by_id,
+                "top_deal",
+                district,
+                property_type,
+                complex_id,
+                min_price,
+                max_price,
+            )
+        )
         page_ids = candidate_ids[offset:offset + limit]
         if not page_ids:
             return []
         rows_by_id = {row.id: row for row in db.query(Listing).filter(Listing.id.in_(page_ids)).all()}
         ordered = [rows_by_id[i] for i in page_ids if i in rows_by_id]
     else:
-        query = db.query(Listing).filter(Listing.id.notin_(excluded_ids))
+        query = db.query(Listing).filter(
+            Listing.id.notin_(excluded_ids),
+            Listing.is_active.is_(True),
+        )
+        if status_candidate_ids is not None:
+            if not status_candidate_ids:
+                return []
+            query = query.filter(Listing.id.in_(status_candidate_ids))
         if district is not None:
             query = query.filter(Listing.district == district)
         if property_type is not None:
             query = query.filter(Listing.property_type == property_type)
+        if complex_id is not None:
+            query = query.filter(Listing.complex_id == complex_id)
         if min_price is not None:
             query = query.filter(Listing.price >= min_price)
         if max_price is not None:
@@ -196,10 +377,18 @@ def list_dashboard_listings(
             .all()
         )
 
+    complex_ids = {listing.complex_id for listing in ordered if listing.complex_id is not None}
+    complex_names_by_id = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+
     return [
         _attach_computed_fields(
             listing,
             deals_by_id.get(listing.id),
+            complex_deals_by_id.get(listing.id),
+            complex_names_by_id.get(listing.complex_id),
             estimates_by_id.get(listing.id),
             yield_by_district_rooms.get((listing.district, listing.rooms)),
         )

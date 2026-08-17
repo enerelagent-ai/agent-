@@ -23,6 +23,7 @@ TODAY_WORD = "өнөөдөр"
 YESTERDAY_WORD = "өчигдөр"
 TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
 ABS_DATE_RE = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})")
+VIEW_COUNT_RE = re.compile(r"Үзсэн\s*:\s*([\d\s,]+)", re.IGNORECASE)
 
 
 def fetch_detail_html(browser: Browser, url: str, *, retries: int = 2) -> str | None:
@@ -155,6 +156,7 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
     address_el = soup.select_one("span[itemprop=address]")
     sku_el = soup.select_one("span[itemprop=sku]")
     date_el = soup.select_one("span.date-meta")
+    views_el = soup.select_one("span.counter-views")
 
     ad_id: int | None = None
     if sku_el and sku_el.get_text(strip=True).isdigit():
@@ -177,6 +179,12 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
     posted_raw: str | None = None
     if date_el:
         posted_raw = date_el.get_text(strip=True).removeprefix(POSTED_PREFIX).strip()
+
+    view_count: int | None = None
+    if views_el:
+        views_match = VIEW_COUNT_RE.search(views_el.get_text(" ", strip=True))
+        if views_match:
+            view_count = int(re.sub(r"[\s,]", "", views_match.group(1)))
 
     specs: dict[str, str] = {}
     for li in soup.select("ul.chars-column li"):
@@ -220,6 +228,7 @@ def parse_detail_page(html: str, url: str) -> dict[str, Any]:
         "property_subcategory_slug": _slug_from_href(subcategory_href),
         "posted_raw": posted_raw,
         "posted_at": parse_posted_at(posted_raw) if posted_raw else None,
+        "view_count": view_count,
         "latitude": latitude,
         "longitude": longitude,
         "phones": _parse_phones(soup),

@@ -10,40 +10,64 @@ import pytest
 from analytics.calculations import (
     MAX_CONFIDENT_DEAL_PCT,
     MIN_COMPARABLE_GROUP_SIZE,
+    _MAX_PLAUSIBLE_PRICE,
     _MIN_AREA_SQM_FOR_DEAL,
     _OPEN_ENDED_ROOMS,
     average_price_by_group,
     classify_deal,
+    complex_average_price,
+    complex_deal_percentages,
     deal_percentages,
     estimate_negotiable_price,
     investment_summary_by_district,
     listing_counts_by_property_type,
+    monthly_delisting_trend,
     price_trend,
     rental_yield_by_district_rooms,
     snapshot_market_prices,
     todays_opportunity,
     yield_category_coverage,
 )
+
+
+def test_monthly_delisting_trend_groups_by_month_type_and_district(cur) -> None:
+    for url, when in (("test://closed-jan-a", "2026-01-02"), ("test://closed-jan-b", "2026-01-29")):
+        listing_id = _insert(cur, url, 100_000_000, 50, district="Lifecycle дүүрэг", is_active=False)
+        cur.execute("UPDATE listings SET delisted_at = %s WHERE id = %s", (when, listing_id))
+
+    rows = monthly_delisting_trend(cur, "sale", "Lifecycle дүүрэг")
+
+    assert rows == [{
+        "month": date(2026, 1, 1),
+        "listing_type": "sale",
+        "district": "Lifecycle дүүрэг",
+        "n_delisted": 2,
+    }]
 from analytics.matches import record_matches, superseded_listing_ids
 
 _INSERT_SQL = """
     INSERT INTO listings (source, source_url, title, price, area_sqm,
                           district, listing_type, property_type,
-                          property_subtype, rooms, photo_urls, dedup_hash)
+                          property_subtype, rooms, photo_urls, dedup_hash,
+                          price_negotiable, is_active, complex_id)
     VALUES ('unegui', %(source_url)s, 'test', %(price)s, %(area_sqm)s,
             %(district)s, %(listing_type)s, %(property_type)s,
-            %(property_subtype)s, %(rooms)s, '{}', 'test-hash')
+            %(property_subtype)s, %(rooms)s, '{}', 'test-hash',
+            %(price_negotiable)s, %(is_active)s, %(complex_id)s)
     RETURNING id
 """
 
 
 def _insert(cur, url, price, area, *, listing_type="sale",
             property_type="Орон сууц зарна", district="Тест дүүрэг",
-            property_subtype=None, rooms=None) -> int:
+            property_subtype=None, rooms=None, price_negotiable=None,
+            is_active=True, complex_id=None) -> int:
     cur.execute(_INSERT_SQL, {
         "source_url": url, "price": price, "area_sqm": area,
         "district": district, "listing_type": listing_type, "property_type": property_type,
         "property_subtype": property_subtype, "rooms": rooms,
+        "price_negotiable": price_negotiable, "is_active": is_active,
+        "complex_id": complex_id,
     })
     return cur.fetchone()["id"]
 
@@ -60,6 +84,90 @@ def _group(rows, *, listing_type, property_type, district):
 def _insert_many(cur, url_prefix, n, price, area, **kwargs):
     for i in range(n):
         _insert(cur, f"{url_prefix}-{i}", price, area, **kwargs)
+
+
+def _complex(cur, name: str) -> int:
+    cur.execute(
+        """
+        INSERT INTO complexes (canonical_name, normalized_name)
+        VALUES (%s, %s)
+        ON CONFLICT (canonical_name) DO UPDATE SET updated_at = now()
+        RETURNING id
+        """,
+        (name, name.lower()),
+    )
+    return cur.fetchone()["id"]
+
+
+def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
+    complex_id = _complex(cur, "Тест Phase 3 хотхон")
+    _insert_many(
+        cur, "test://complex-average", 20, 150_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+    )
+    _insert(
+        cur, "test://complex-negotiable", 99_000_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        price_negotiable=True,
+    )
+    _insert(
+        cur, "test://complex-inactive", 900_000_000, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        is_active=False,
+    )
+    _insert(
+        cur, "test://complex-ceiling", _MAX_PLAUSIBLE_PRICE + 1, 50.0,
+        district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
+        price_negotiable=False,
+    )
+
+    rows = complex_average_price(cur, complex_id)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["complex_name"] == "Тест Phase 3 хотхон"
+    assert row["n_listings"] == 20
+    assert float(row["avg_price"]) == 150_000_000.0
+    assert float(row["median_price_per_sqm"]) == 3_000_000.0
+
+
+def test_complex_average_price_keeps_transaction_and_property_type_separate(cur) -> None:
+    complex_id = _complex(cur, "Тест Холихгүй хотхон")
+    _insert_many(cur, "test://complex-sale-apartment", 20, 100_000_000, 50.0,
+                 complex_id=complex_id)
+    _insert_many(cur, "test://complex-rent-apartment", 20, 1_000_000, 50.0,
+                 listing_type="rent", property_type="Орон сууц түрээслүүлнэ",
+                 complex_id=complex_id)
+    _insert_many(cur, "test://complex-sale-garage", 20, 30_000_000, 15.0,
+                 property_type="Гараж, контейнер, з-сууц зарна", complex_id=complex_id)
+
+    rows = complex_average_price(cur, complex_id)
+    assert len(rows) == 3
+    assert {(r["listing_type"], r["property_type"]) for r in rows} == {
+        ("sale", "Орон сууц зарна"),
+        ("rent", "Орон сууц түрээслүүлнэ"),
+        ("sale", "Гараж, контейнер, з-сууц зарна"),
+    }
+
+
+def test_complex_deal_uses_20_pct_threshold_and_median(cur) -> None:
+    complex_id = _complex(cur, "Тест Онцгой хотхон")
+    _insert_many(cur, "test://complex-deal-baseline", 20, 150_000_000, 50.0,
+                 rooms=2, complex_id=complex_id)
+    deal_id = _insert(cur, "test://complex-deal-target", 120_000_000, 50.0,
+                      rooms=2, complex_id=complex_id)
+
+    row = next(r for r in complex_deal_percentages(cur) if r["id"] == deal_id)
+    assert float(row["complex_median_price_per_sqm"]) == 3_000_000.0
+    assert float(row["complex_deal_pct"]) == 20.0
+    assert row["complex_deal_status"] == "top_deal"
+    assert row["complex_n_comparable"] == 21
+
+
+def test_complex_deal_drops_thin_complex_groups(cur) -> None:
+    complex_id = _complex(cur, "Тест Нимгэн хотхон")
+    _insert_many(cur, "test://complex-thin", 19, 150_000_000, 50.0,
+                 rooms=2, complex_id=complex_id)
+    assert all(r["complex_id"] != complex_id for r in complex_deal_percentages(cur))
 
 
 def test_average_price_by_group_computes_correct_stats(cur) -> None:
@@ -139,6 +247,55 @@ def test_possible_duplicate_tier_does_not_reduce_the_count(cur) -> None:
     group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Хянах дүүрэг")
     assert group["n_listings"] == 20
     assert float(group["avg_price"]) == 150_000_000.0
+
+
+def test_average_price_by_group_excludes_negotiable_listings(cur) -> None:
+    """A price_negotiable=true row is a placeholder ('Vнэ тохирно'), never a
+    real price -- it must not enter the average (2026-08 audit: this
+    function had fallen out of sync with deal_percentages/
+    estimate_negotiable_price, which already excluded it)."""
+    _insert_many(cur, "test://negotiable-filler", 20, 100_000_000, 50.0,
+                 district="Тохиролцоо дүүрэг")
+    # An absurd negotiable "asking price" that would badly skew the average
+    # if counted -- mirrors the real 3.5-trillion-MNT Газар зарна case.
+    _insert(cur, "test://negotiable-outlier", 999_000_000_000, 50.0,
+            district="Тохиролцоо дүүрэг", price_negotiable=True)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Тохиролцоо дүүрэг")
+    assert group["n_listings"] == 20  # the negotiable row excluded, not counted
+    assert float(group["avg_price"]) == 100_000_000.0
+
+
+def test_average_price_by_group_excludes_prices_above_plausible_ceiling(cur) -> None:
+    """Defense-in-depth for the same failure on a *non*-negotiable row (a
+    typo'd extra zero or two) -- see _GROUP_STATS_SQL's comment for how the
+    ceiling was derived from the real DB."""
+    _insert_many(cur, "test://ceiling-filler", 20, 100_000_000, 50.0,
+                 district="Дээвэр дүүрэг")
+    _insert(cur, "test://ceiling-outlier", _MAX_PLAUSIBLE_PRICE + 1, 50.0,
+            district="Дээвэр дүүрэг", price_negotiable=False)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Дээвэр дүүрэг")
+    assert group["n_listings"] == 20
+    assert float(group["avg_price"]) == 100_000_000.0
+
+
+def test_average_price_by_group_excludes_inactive_listings(cur) -> None:
+    """A sold/rented/removed listing (is_active=false, migration 009) is
+    soft-deleted, not dropped from the table -- it must still be excluded
+    from every *current* market figure, the same way a superseded duplicate
+    already is."""
+    _insert_many(cur, "test://inactive-filler", 20, 100_000_000, 50.0,
+                 district="Хаагдсан дүүрэг")
+    _insert(cur, "test://inactive-outlier", 999_000_000, 50.0,
+            district="Хаагдсан дүүрэг", is_active=False)
+
+    rows = average_price_by_group(cur)
+    group = _group(rows, listing_type="sale", property_type="Орон сууц зарна", district="Хаагдсан дүүрэг")
+    assert group["n_listings"] == 20  # the inactive row excluded, not counted
+    assert float(group["avg_price"]) == 100_000_000.0
 
 
 def test_average_price_by_group_drops_groups_below_min_comparable_size(cur) -> None:
@@ -307,6 +464,9 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
     assert row["roi_pct"] == row["gross_rental_yield_pct"]
     assert row["n_sale"] == 20
     assert row["n_rent"] == 20
+    assert float(row["min_sale_price"]) == 100_000_000
+    assert float(row["median_sale_price"]) == 100_000_000
+    assert float(row["max_sale_price"]) == 300_000_000
 
 
 def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:
@@ -353,6 +513,7 @@ def test_investment_summary_real_data_smoke_check(cur) -> None:
     assert len(rows) > 0
     for row in rows:
         assert row["avg_sale_price"] > 0
+        assert 0 < row["min_sale_price"] <= row["median_sale_price"] <= row["max_sale_price"]
         assert row["roi_pct"] == row["gross_rental_yield_pct"]
         assert 0.0 <= row["investment_score"] <= 100.0
         assert row["n_sale"] > 0 and row["n_rent"] > 0
@@ -638,6 +799,26 @@ def test_deal_percentages_excludes_negotiable_price_listings(cur) -> None:
     group_rows = [r for r in rows if r["district"] == "Тохиролцоот дил дүүрэг"]
     assert {r["id"] for r in group_rows} == set(ids_real)
     assert group_rows[0]["n_comparable"] == 20  # the negotiable listing isn't in the group either
+    assert float(group_rows[0]["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
+
+
+def test_deal_percentages_excludes_inactive_listings(cur) -> None:
+    """A closed listing (is_active=false, migration 009) must be excluded
+    from both sides, same as a negotiable one: neither scored itself (it's
+    not for sale/rent any more) nor counted toward anyone else's group
+    median baseline."""
+    ids_real = [
+        _insert(cur, f"test://deal-inactive-real-{i}", 150_000_000, 50.0,
+                district="Хаагдсан дил дүүрэг", rooms=2)
+        for i in range(20)
+    ]
+    _insert(cur, "test://deal-inactive-closed", 30_000_000, 50.0,
+            district="Хаагдсан дил дүүрэг", rooms=2, is_active=False)
+
+    rows = deal_percentages(cur)
+    group_rows = [r for r in rows if r["district"] == "Хаагдсан дил дүүрэг"]
+    assert {r["id"] for r in group_rows} == set(ids_real)
+    assert group_rows[0]["n_comparable"] == 20  # the closed listing isn't in the group either
     assert float(group_rows[0]["group_median_price_per_sqm"]) == pytest.approx(3_000_000.0, abs=0.01)
 
 

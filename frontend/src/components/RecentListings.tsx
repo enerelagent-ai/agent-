@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink } from "lucide-react";
-import { getFilteredListings, type Listing } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, Eye, GitCompareArrows } from "lucide-react";
+import { getFilteredListings, type ComplexOption, type Listing } from "@/lib/api";
 import { formatListingPrice, formatPercent, timeAgo } from "@/lib/format";
 import { ListingDetailModal } from "./ListingDetailModal";
+import { CompareTray, MAX_COMPARE_LISTINGS } from "./CompareTray";
+
+const COMPARE_STORAGE_KEY = "enerelagent.compare-listings.v1";
 
 // Sale and rent listings use different raw property_type strings for the
 // same real-world category (see analytics.calculations' _PROPERTY_TYPE_GROUPS
@@ -41,36 +44,88 @@ const RENT_PROPERTY_TYPES = [
   { value: "Хурлын өрөө, заал түрээслүүлнэ", label: "Хурлын өрөө, заал" },
 ];
 
-type Tab = "recent" | "deals";
+type Tab = "recent" | "deals" | "review";
 
 interface RecentListingsProps {
   initialListings: Listing[];
   districts: string[];
+  complexes: ComplexOption[];
   onDistrictApplied?: (district: string | null) => void;
+  pageSize?: number;
+  paginated?: boolean;
 }
 
-export function RecentListings({ initialListings, districts, onDistrictApplied }: RecentListingsProps) {
+export function RecentListings({
+  initialListings,
+  districts,
+  complexes,
+  onDistrictApplied,
+  pageSize = 6,
+  paginated = false,
+}: RecentListingsProps) {
   const [tab, setTab] = useState<Tab>("recent");
   const [listings, setListings] = useState(initialListings);
   const [district, setDistrict] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [complexId, setComplexId] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [compareListings, setCompareListings] = useState<Listing[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
-  async function runFetch(nextTab: Tab) {
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY) ?? "[]");
+      if (Array.isArray(saved)) {
+        setCompareListings(
+          saved
+            .filter((row): row is Listing => typeof row === "object" && row !== null && typeof row.id === "number")
+            .slice(0, MAX_COMPARE_LISTINGS),
+        );
+      }
+    } catch {
+      localStorage.removeItem(COMPARE_STORAGE_KEY);
+    }
+  }, []);
+
+  function updateCompare(next: Listing[]) {
+    setCompareListings(next);
+    try {
+      localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Private browsing/storage quotas must not break in-memory comparison.
+    }
+    if (next.length < 2) setCompareOpen(false);
+  }
+
+  function toggleCompare(listing: Listing) {
+    const selected = compareListings.some((row) => row.id === listing.id);
+    if (selected) {
+      updateCompare(compareListings.filter((row) => row.id !== listing.id));
+    } else if (compareListings.length < MAX_COMPARE_LISTINGS) {
+      updateCompare([...compareListings, listing]);
+    }
+  }
+
+  async function runFetch(nextTab: Tab, nextOffset = 0) {
     setLoading(true);
     try {
       const rows = await getFilteredListings({
         district: district || undefined,
         propertyType: propertyType || undefined,
+        complexId: complexId ? Number(complexId) : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         sortBy: nextTab === "deals" ? "deal_pct" : undefined,
-        limit: 6,
+        dealStatus: nextTab === "review" ? "needs_review" : undefined,
+        limit: pageSize,
+        offset: nextOffset,
       });
       setListings(rows);
+      setOffset(nextOffset);
       onDistrictApplied?.(district || null);
     } finally {
       setLoading(false);
@@ -79,7 +134,7 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
 
   function selectTab(nextTab: Tab) {
     setTab(nextTab);
-    runFetch(nextTab);
+    runFetch(nextTab, 0);
   }
 
   return (
@@ -107,6 +162,17 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
         >
           Хямд боломж
         </button>
+        <button
+          type="button"
+          onClick={() => selectTab("review")}
+          className={`border-b-2 px-3 py-2 text-sm font-medium ${
+            tab === "review"
+              ? "border-amber-500 text-ink-primary"
+              : "border-transparent text-ink-muted hover:text-ink-secondary"
+          }`}
+        >
+          Шалгах шаардлагатай
+        </button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -121,6 +187,22 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
             {districts.map((d) => (
               <option key={d} value={d}>
                 {d}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-secondary">
+          Хотхон
+          <select
+            value={complexId}
+            onChange={(e) => setComplexId(e.target.value)}
+            className="max-w-48 rounded-md border border-line-grid bg-surface-card px-2.5 py-1.5 text-sm text-ink-primary"
+          >
+            <option value="">Бүгд</option>
+            {complexes.map((complex) => (
+              <option key={complex.id} value={complex.id}>
+                {complex.canonical_name}
               </option>
             ))}
           </select>
@@ -177,7 +259,7 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
 
         <button
           type="button"
-          onClick={() => runFetch(tab)}
+          onClick={() => runFetch(tab, 0)}
           disabled={loading}
           className="rounded-md bg-series-1 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
         >
@@ -191,15 +273,25 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
           алдаа биш гэж тодорхой итгэлтэй үнэлэгдсэн зарууд эхэнд жагсаана.
         </p>
       )}
+      {tab === "review" && (
+        <p className="mb-3 rounded-md bg-amber-500/10 p-2.5 text-xs leading-relaxed text-amber-800">
+          Ижил бүлгийн медианаас 50%-иас их зөрсөн тул шууд “хямд боломж” гэж батлах боломжгүй зарууд. Ангилал, талбай, placeholder үнэ эсвэл эх өгөгдлийг гараар шалгана уу.
+        </p>
+      )}
 
       {listings.length === 0 ? (
         <p className="py-4 text-sm text-ink-muted">
-          {tab === "deals" ? "Энэ шүүлтээр хямд боломж олдсонгүй." : "Энэ шүүлтээр зар олдсонгүй."}
+          {tab === "deals"
+            ? "Энэ шүүлтээр хямд боломж олдсонгүй."
+            : tab === "review"
+              ? "Энэ шүүлтээр шалгах шаардлагатай зар олдсонгүй."
+              : "Энэ шүүлтээр зар олдсонгүй."}
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-line-grid">
           {listings.map((listing) => {
             const priceDisplay = formatListingPrice(listing);
+            const selectedForCompare = compareListings.some((row) => row.id === listing.id);
             return (
               <li
                 key={listing.id}
@@ -229,17 +321,55 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
                     </span>
                   </div>
                   <p className="truncate text-xs text-ink-secondary">
+                    {listing.complex_name ? `${listing.complex_name} · ` : ""}
                     {listing.district ?? "Байршил тодорхойгүй"}
                     {listing.rooms ? ` · ${listing.rooms} өрөө` : ""}
                     {listing.area_sqm ? ` · ${listing.area_sqm} мкв` : ""}
                   </p>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     <p className="text-xs text-ink-muted">{timeAgo(listing.scraped_at)}</p>
                     {listing.deal_status === "top_deal" && listing.deal_pct !== null && (
                       <span className="rounded-full bg-[#0ca30c]/10 px-2 py-0.5 text-xs font-medium text-[#0ca30c]">
-                        ↓ {formatPercent(listing.deal_pct)} дундажаас хямд
+                        Дүүргээс ↓ {formatPercent(listing.deal_pct)}
                       </span>
                     )}
+                    {listing.complex_deal_status === "top_deal" && listing.complex_deal_pct !== null && (
+                      <span
+                        title={`${listing.complex_name ?? "Хотхон"}-ы медиан үнээс хямд`}
+                        className="rounded-full bg-series-1/10 px-2 py-0.5 text-xs font-medium text-series-1"
+                      >
+                        Хотхоноос ↓ {formatPercent(listing.complex_deal_pct)}
+                      </span>
+                    )}
+                    {listing.rental_yield_pct !== null && (
+                      <span
+                        title={`Ижил дүүрэг, өрөөний бүлгийн gross rental yield · ${listing.rental_yield_n_sale ?? 0} худалдах / ${listing.rental_yield_n_rent ?? 0} түрээслэх зар`}
+                        className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700"
+                      >
+                        Өгөөж {formatPercent(listing.rental_yield_pct)}
+                      </span>
+                    )}
+                    {listing.view_count != null && (
+                      <span className="flex items-center gap-1 text-xs text-ink-muted" title="Эх сурвалж дээрх нийт үзэлт">
+                        <Eye className="h-3 w-3" aria-hidden />
+                        {listing.view_count.toLocaleString("mn-MN")}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleCompare(listing);
+                      }}
+                      disabled={!selectedForCompare && compareListings.length >= MAX_COMPARE_LISTINGS}
+                      title={!selectedForCompare && compareListings.length >= MAX_COMPARE_LISTINGS ? "Дээд тал нь 3 зар харьцуулна" : undefined}
+                      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${
+                        selectedForCompare ? "bg-series-1 text-white" : "bg-series-1/10 text-series-1"
+                      }`}
+                    >
+                      {selectedForCompare ? <Check className="h-3 w-3" aria-hidden /> : <GitCompareArrows className="h-3 w-3" aria-hidden />}
+                      {selectedForCompare ? "Сонгосон" : "Харьцуулах"}
+                    </button>
                     <a
                       href={listing.source_url}
                       target="_blank"
@@ -257,7 +387,41 @@ export function RecentListings({ initialListings, districts, onDistrictApplied }
         </ul>
       )}
 
+      {paginated && (offset > 0 || listings.length === pageSize) && (
+        <div className="mt-5 flex items-center justify-between border-t border-line-grid pt-4">
+          <p className="text-xs text-ink-muted">
+            {offset + 1}–{offset + listings.length} дахь зар
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => runFetch(tab, Math.max(0, offset - pageSize))}
+              disabled={loading || offset === 0}
+              className="flex items-center gap-1 rounded-md border border-line-grid px-3 py-1.5 text-sm text-ink-secondary disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden /> Өмнөх
+            </button>
+            <button
+              type="button"
+              onClick={() => runFetch(tab, offset + pageSize)}
+              disabled={loading || listings.length < pageSize}
+              className="flex items-center gap-1 rounded-md border border-line-grid px-3 py-1.5 text-sm text-ink-secondary disabled:opacity-40"
+            >
+              Дараах <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      )}
+
       <ListingDetailModal listing={selectedListing} onClose={() => setSelectedListing(null)} />
+      <CompareTray
+        listings={compareListings}
+        open={compareOpen}
+        onOpen={() => setCompareOpen(true)}
+        onClose={() => setCompareOpen(false)}
+        onRemove={(id) => updateCompare(compareListings.filter((row) => row.id !== id))}
+        onClear={() => updateCompare([])}
+      />
     </div>
   );
 }

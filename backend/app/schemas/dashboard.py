@@ -8,6 +8,9 @@ class DistrictInvestmentSummary(BaseModel):
     n_sale: int
     n_rent: int
     avg_sale_price: float
+    min_sale_price: float
+    median_sale_price: float
+    max_sale_price: float
     avg_price_per_sqm: float | None
     gross_rental_yield_pct: float
     roi_pct: float
@@ -25,6 +28,52 @@ class ListingTypeCount(BaseModel):
     bucket: str
     listing_type: str
     n: int
+
+
+class MonthlyDelistingPoint(BaseModel):
+    month: date
+    listing_type: str
+    district: str | None
+    n_delisted: int
+
+
+class DealAlertItem(BaseModel):
+    id: int
+    title: str
+    source_url: str
+    price: float | None
+    district: str | None
+    complex_name: str | None
+    scraped_at: datetime
+    deal_pct: float
+
+
+class DealAlertFeed(BaseModel):
+    items: list[DealAlertItem]
+    unseen_count: int
+    last_seen_at: datetime
+
+
+class NotificationReadState(BaseModel):
+    last_seen_at: datetime
+
+
+class ComplexPriceSummary(BaseModel):
+    complex_id: int
+    complex_name: str
+    listing_type: str
+    property_type: str
+    n_listings: int
+    avg_price: float
+    median_price: float
+    avg_price_per_sqm: float | None
+    median_price_per_sqm: float | None
+    n_with_price_per_sqm: int
+
+
+class ComplexOption(BaseModel):
+    id: int
+    canonical_name: str
 
 
 class TodaysOpportunity(BaseModel):
