@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test("sale and rent routes never mix transaction badges", async ({ page }) => {
-  await page.goto("/sale");
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/sale$/);
   const saleCards = page.locator("article");
   await expect(saleCards.first()).toBeVisible();
   await expect(saleCards.locator("text=ТҮРЭЭСЛҮҮЛНЭ")).toHaveCount(0);

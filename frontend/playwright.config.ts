@@ -30,7 +30,11 @@ export default defineConfig({
       url: "http://127.0.0.1:3100/sale",
       reuseExistingServer: true,
       timeout: 120_000,
-      env: { BACKEND_API_URL: "http://127.0.0.1:8100" },
+      env: {
+        BACKEND_API_URL: "http://127.0.0.1:8100",
+        MARKETPLACE_V2_ENABLED: "true",
+        COMPLEX_INSIGHTS_ENABLED: "false",
+      },
     },
   ],
 });

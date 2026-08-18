@@ -9,6 +9,7 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  Store,
   PiggyBank,
   Settings,
   TrendingUp,
@@ -21,7 +22,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/" },
+  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Зарын зах", icon: Store, href: "/market" },
   { label: "Зар мэдээлэл", icon: ListChecks, href: "/listings" },
   { label: "Зах зээлийн тойм", icon: TrendingUp, href: null },
   { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: "/calculator" },
@@ -47,7 +49,7 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 pt-2">
         {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
-          const active = href === "/" ? pathname === "/" : href !== null && pathname.startsWith(href);
+          const active = href !== null && pathname.startsWith(href);
           return href ? (
             <Link
               key={label}

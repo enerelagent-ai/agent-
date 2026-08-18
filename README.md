@@ -66,6 +66,19 @@ Smoke suite нь хэрэглэгчийн dev server-тэй мөргөлдөхг
 `8100`/`3100` портууд дээр түр асааж, `/sale`, `/rent`, filter, cursor pagination,
 detail page болон mobile filter drawer урсгалыг шалгана.
 
+### Marketplace release flag
+
+```bash
+MARKETPLACE_V2_ENABLED=true
+COMPLEX_INSIGHTS_ENABLED=false
+```
+
+`MARKETPLACE_V2_ENABLED=true` үед үндсэн `/` зам `/market`-аар дамжин
+marketplace-ийн `/sale` нүүрийг нээнэ. Хуучин аналитик самбар `/dashboard` дээр
+үлдэнэ. Flag-ийг `false` болгоход үндсэн нүүр код rollback хийхгүйгээр хуучин
+dashboard руу буцна. Хотхоны insight нь registry validation бүрэн болоогүй тул
+өөрийн `COMPLEX_INSIGHTS_ENABLED` flag-аар тусдаа хаалттай байна.
+
 ### Database
 
 `db/schema.sql`-д schema, `db/migrations/`-д migration файлууд байрлана.

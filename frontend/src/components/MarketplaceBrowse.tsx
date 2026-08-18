@@ -210,7 +210,7 @@ export function MarketplaceBrowse({
               Түрээслэх
             </Link>
           </nav>
-          <Link href="/" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 sm:block">
+          <Link href="/dashboard" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 sm:block">
             Хөрөнгө оруулалтын самбар
           </Link>
         </div>
