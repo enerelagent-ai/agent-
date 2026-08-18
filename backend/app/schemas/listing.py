@@ -102,3 +102,9 @@ class ListingOut(BaseModel):
     rental_yield_payback_years: float | None = None
     rental_yield_n_sale: int | None = None
     rental_yield_n_rent: int | None = None
+
+
+class MarketplaceListingPage(BaseModel):
+    items: list[ListingOut]
+    next_cursor: str | None
+    has_more: bool

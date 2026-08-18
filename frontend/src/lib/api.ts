@@ -78,6 +78,23 @@ export interface ListingFacets {
   };
 }
 
+export interface MarketplaceListingPage {
+  items: Listing[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface MarketplaceSearchFilters {
+  listingType: TransactionType;
+  district?: string;
+  propertyType?: string;
+  rooms?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  cursor?: string;
+  limit?: number;
+}
+
 export interface DealAlertItem {
   id: number;
   title: string;
@@ -216,6 +233,20 @@ export function getListingFacets(
   listingType: TransactionType,
 ): Promise<ListingFacets> {
   return getJSON(`/listings/facets?listing_type=${listingType}`);
+}
+
+export function searchMarketplaceListings(
+  filters: MarketplaceSearchFilters,
+): Promise<MarketplaceListingPage> {
+  const params = new URLSearchParams({ listing_type: filters.listingType });
+  if (filters.district) params.set("district", filters.district);
+  if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.rooms !== undefined) params.set("rooms", String(filters.rooms));
+  if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
+  if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
+  if (filters.cursor) params.set("cursor", filters.cursor);
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit));
+  return getJSON(`/listings/search?${params.toString()}`);
 }
 
 export function getRecentListings(limit = 5): Promise<Listing[]> {

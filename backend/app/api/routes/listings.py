@@ -1,15 +1,41 @@
+import base64
+import binascii
+import json
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 from analytics.matches import superseded_listing_ids_conn
 from app.api.deps import DbSession
 from app.config import settings
 from app.models.listing import Listing
-from app.schemas.listing import ListingFacets, ListingOut
+from app.schemas.listing import ListingFacets, ListingOut, MarketplaceListingPage
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+def _encode_cursor(scraped_at: datetime, listing_id: int) -> str:
+    payload = json.dumps(
+        [scraped_at.isoformat(), listing_id], separators=(",", ":")
+    ).encode()
+    return base64.urlsafe_b64encode(payload).decode().rstrip("=")
+
+
+def _decode_cursor(cursor: str) -> tuple[datetime, int]:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(cursor + padding))
+        if not isinstance(payload, list) or len(payload) != 2:
+            raise ValueError
+        scraped_at = datetime.fromisoformat(payload[0])
+        listing_id = payload[1]
+        if scraped_at.tzinfo is None or not isinstance(listing_id, int):
+            raise ValueError
+        return scraped_at, listing_id
+    except (ValueError, TypeError, binascii.Error, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="Invalid marketplace cursor") from exc
 
 
 @router.get("/facets", response_model=ListingFacets)
@@ -85,6 +111,66 @@ def listing_facets(
             "count": price_count,
         },
     }
+
+
+@router.get("/search", response_model=MarketplaceListingPage)
+def search_marketplace_listings(
+    db: DbSession,
+    listing_type: Literal["sale", "rent"] = Query(...),
+    district: str | None = Query(None),
+    property_type: str | None = Query(None),
+    rooms: int | None = Query(None, ge=1),
+    min_price: float | None = Query(None, ge=0),
+    max_price: float | None = Query(None, ge=0),
+    cursor: str | None = Query(None),
+    limit: int = Query(24, ge=1, le=100),
+) -> dict:
+    """Active canonical marketplace browse using stable keyset pagination."""
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=422, detail="min_price cannot exceed max_price")
+    decoded_cursor = _decode_cursor(cursor) if cursor is not None else None
+
+    excluded_ids = superseded_listing_ids_conn(settings.database_url)
+    query = db.query(Listing).filter(
+        Listing.is_active.is_(True),
+        Listing.listing_type == listing_type,
+        Listing.id.notin_(excluded_ids),
+    )
+    if district is not None:
+        query = query.filter(Listing.district == district)
+    if property_type is not None:
+        query = query.filter(Listing.property_type == property_type)
+    if rooms is not None:
+        query = query.filter(Listing.rooms == rooms)
+    if min_price is not None:
+        query = query.filter(Listing.price >= min_price)
+    if max_price is not None:
+        query = query.filter(Listing.price <= max_price)
+    if decoded_cursor is not None:
+        cursor_time, cursor_id = decoded_cursor
+        query = query.filter(
+            or_(
+                Listing.scraped_at < cursor_time,
+                and_(
+                    Listing.scraped_at == cursor_time,
+                    Listing.id < cursor_id,
+                ),
+            )
+        )
+
+    rows = (
+        query.order_by(Listing.scraped_at.desc(), Listing.id.desc())
+        .limit(limit + 1)
+        .all()
+    )
+    has_more = len(rows) > limit
+    items = rows[:limit]
+    next_cursor = (
+        _encode_cursor(items[-1].scraped_at, items[-1].id)
+        if has_more and items
+        else None
+    )
+    return {"items": items, "next_cursor": next_cursor, "has_more": has_more}
 
 
 @router.get("", response_model=list[ListingOut])
