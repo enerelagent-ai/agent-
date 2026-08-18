@@ -52,3 +52,8 @@ scrape_log.txt
 # Scheduled scrape run artifacts
 scraper/logs/
 scraper/.daily_scrape.lock/
+
+# Regenerable local data-audit snapshots (reviewed fixtures/actions are tracked)
+analytics/scripts/complex_district_audit.json
+analytics/scripts/complex_reextract_dry_run.json
+analytics/scripts/verified_complex_district_dry_run.json

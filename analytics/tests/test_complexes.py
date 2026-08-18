@@ -8,6 +8,7 @@ from scripts.backfill_complexes import apply_backfill
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "complex_ground_truth.json"
+LANDMARK_FIXTURE = Path(__file__).parent / "fixtures" / "landmark_relabel_69.json"
 
 
 def test_normalize_complex_name_unifies_case_spacing_and_punctuation() -> None:
@@ -36,6 +37,20 @@ def test_landmark_reference_is_not_a_unit_relation() -> None:
     match = extract_complex("Элеганс хотхоны баруун талд 2 айлын газар")
     assert match is not None
     assert match.relation == "landmark"
+
+
+def test_session0_exception_aliases_select_the_actual_unit() -> None:
+    romana = extract_complex("Төв цэнгэлдэхийн хойно романа резиденс 150мкв оффис")
+    assert romana is not None
+    assert romana.canonical_name == "Romana residence"
+    assert romana.relation == "unit"
+
+    dream = extract_complex(
+        "Green house баруун талд humana-тай шинэ мөрөөдөл хотхонд 2 өрөө"
+    )
+    assert dream is not None
+    assert dream.canonical_name == "Зайсан шинэ мөрөөдөл"
+    assert dream.relation == "unit"
 
 
 def test_ground_truth_metrics_are_reported_separately() -> None:
@@ -67,6 +82,49 @@ def test_ground_truth_metrics_are_reported_separately() -> None:
     assert correct / len(positives) >= 0.95
     assert false_positives == 0
     assert stale_label_reused == 0
+
+
+def test_landmark_after_catches_the_69_session0_cue_words() -> None:
+    """Regression fixture for the Session 0 audit (2026-08-17): 69 listings
+    that were assigned complex_id via a unit match, but whose title was
+    actually a landmark reference the old _LANDMARK_AFTER pattern missed
+    ("хойно", "баруун/зvvн талд", a genitive suffix before the cue, ...).
+    Manually labeled by reading every row (see the fixture's own file), not
+    inferred from a majority vote -- that would be circular (Session 0.5's
+    stated risk).
+
+    label == "landmark_reassign": a different, already-canonical complex is
+        named in the same title; the fixed extractor must resolve THAT one
+        as the unit match (not just flag the old assignment as landmark).
+    label == "landmark_none" / "ambiguous": no canonical complex names the
+        real unit (a generic phrase, a building number, or a name not yet
+        in CANONICAL_COMPLEXES); the fixed extractor must at least stop
+        resolving it as a unit match of the wrongly-assigned complex.
+
+    3 known remaining gaps (asserted as an explicit exception list, not
+    silently skipped): missing alias entries unrelated to the landmark-cue
+    fix itself (a Cyrillic transliteration, a short-form alias) -- tracked
+    here so a future alias addition is expected to shrink this list, not
+    grow it.
+    """
+    fixture = json.loads(LANDMARK_FIXTURE.read_text(encoding="utf-8"))
+    known_remaining_gaps = {61758, 35527, 29890}  # missing-alias, not landmark-cue, gaps
+
+    failures = []
+    for row in fixture["rows"]:
+        if row["listing_id"] in known_remaining_gaps:
+            continue
+        match = extract_complex(row["title"])
+        now_relation = match.relation if match else None
+        now_canonical = match.canonical_name if match else None
+        if row["label"] == "landmark_reassign":
+            ok = now_relation == "unit" and now_canonical == row["suggested_canonical"]
+        else:
+            ok = not (now_relation == "unit" and now_canonical == row["assigned_canonical"])
+        if not ok:
+            failures.append((row["listing_id"], row["label"], now_relation, now_canonical, row["title"]))
+
+    assert not failures, f"{len(failures)} regression(s): {failures}"
 
 
 def test_apply_backfill_links_listing_to_canonical_complex(cur) -> None:

@@ -3,6 +3,7 @@
 from scraper.save import (
     _resolve_complex_ids,
     compute_dedup_hash,
+    has_explicit_district_evidence,
     known_urls,
     listing_row_from_parsed,
     normalize_dsn,
@@ -135,6 +136,110 @@ def test_resolve_complex_ids_upserts_canonical_complex(cur) -> None:
     assert isinstance(rows[0]["complex_id"], int)
     cur.execute("SELECT canonical_name FROM complexes WHERE id = %s", (rows[0]["complex_id"],))
     assert cur.fetchone()["canonical_name"] == "Buti Town"
+
+
+def test_resolve_complex_ids_enforces_verified_district(cur) -> None:
+    cur.execute(
+        """
+        INSERT INTO complexes (canonical_name, normalized_name)
+        VALUES ('Registry Test Complex', 'registry test complex')
+        RETURNING id
+        """
+    )
+    complex_id = cur.fetchone()["id"]
+    cur.execute(
+        """
+        INSERT INTO verified_complex_locations
+            (complex_id, district, evidence_text, registry_version)
+        VALUES (%s, 'Хан-Уул', 'test evidence', 'test-v1')
+        """,
+        (complex_id,),
+    )
+    rows = [
+        {"complex_name": "Registry Test Complex", "complex_id": None, "district": "Хан-Уул"},
+        {"complex_name": "Registry Test Complex", "complex_id": None, "district": "Баянзүрх"},
+    ]
+
+    _resolve_complex_ids(cur, rows)
+
+    assert rows[0]["complex_id"] == complex_id
+    assert rows[0]["complex_name"] == "Registry Test Complex"
+    assert rows[1]["complex_id"] is None
+    assert rows[1]["complex_name"] is None
+
+
+def test_verified_district_guard_accepts_explicit_seller_text(cur) -> None:
+    cur.execute(
+        """
+        INSERT INTO complexes (canonical_name, normalized_name)
+        VALUES ('Registry Text Evidence', 'registry text evidence')
+        RETURNING id
+        """
+    )
+    complex_id = cur.fetchone()["id"]
+    cur.execute(
+        """
+        INSERT INTO verified_complex_locations
+            (complex_id, district, evidence_text, registry_version)
+        VALUES (%s, 'Хан-Уул', 'test evidence', 'test-v1')
+        """,
+        (complex_id,),
+    )
+    rows = [{
+        "complex_name": "Registry Text Evidence",
+        "complex_id": None,
+        "district": "Баянзүрх",
+        "title": "ХУД-15 хороо 2 өрөө байр",
+        "description": "Хан-Уул дүүрэгт байрлалтай",
+    }]
+
+    _resolve_complex_ids(cur, rows)
+
+    assert rows[0]["complex_id"] == complex_id
+
+
+def test_explicit_district_evidence_is_token_bounded() -> None:
+    assert has_explicit_district_evidence({"title": "ХУД-15 хороо"}, "Хан-Уул")
+    assert has_explicit_district_evidence({"description": "Хан-Уул дүүрэг"}, "Хан-Уул")
+    assert not has_explicit_district_evidence({"title": "худалдах байр"}, "Хан-Уул")
+
+
+def test_verified_listing_override_is_exact_and_does_not_weaken_guard(cur) -> None:
+    cur.execute(
+        """
+        INSERT INTO complexes (canonical_name, normalized_name)
+        VALUES ('Registry Exact Override', 'registry exact override')
+        RETURNING id
+        """
+    )
+    complex_id = cur.fetchone()["id"]
+    cur.execute(
+        """
+        INSERT INTO verified_complex_locations
+            (complex_id, district, evidence_text, registry_version)
+        VALUES (%s, 'Хан-Уул', 'test evidence', 'test-v1')
+        """,
+        (complex_id,),
+    )
+    cur.execute(
+        """
+        INSERT INTO verified_listing_complex_overrides
+            (source, source_url, complex_id, reason, evidence_text, registry_version)
+        VALUES ('unegui', 'test://allowed-exactly', %s,
+                'source conflict', 'reviewed exact listing', 'test-v1')
+        """,
+        (complex_id,),
+    )
+    rows = [
+        {"source_url": "test://allowed-exactly", "complex_name": "Registry Exact Override", "complex_id": None, "district": "Баянзүрх"},
+        {"source_url": "test://still-blocked", "complex_name": "Registry Exact Override", "complex_id": None, "district": "Баянзүрх"},
+    ]
+
+    _resolve_complex_ids(cur, rows)
+
+    assert rows[0]["complex_id"] == complex_id
+    assert rows[1]["complex_id"] is None
+    assert rows[1]["complex_name"] is None
 
 
 def test_unusable_records_are_skipped() -> None:

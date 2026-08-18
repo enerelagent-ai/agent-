@@ -54,6 +54,7 @@ COMPLEX_ALIASES: dict[str, tuple[str, ...]] = {
     "River Garden": ("ривер гарден",),
     "River Plaza": ("ривер плаза",),
     "River Villa": ("ривер вилла",),
+    "Romana residence": ("романа резиденс",),
     "Sky Garden Residence": ("sky garden", "skygarden", "скай гарден"),
     "Sn tower": ("sn тауэр",),
     "Solaris Residence": ("solaris plus residence", "solaris plus"),
@@ -61,17 +62,33 @@ COMPLEX_ALIASES: dict[str, tuple[str, ...]] = {
     "Vega City": ("вега сити",),
     "Жаргалан": ("jargalan",),
     "Зайсан Green House": ("green house",),
+    "Зайсан шинэ мөрөөдөл": ("шинэ мөрөөдөл",),
     "Зайсан Энхжин": ("энхжин хотхон",),
     "Рапид": ("хурд рапид", "хурд хороолол"),
     "Хүннү 2222": ("хүннү-2222", "хүннү-222", "hunnu 2222", "hunnu2222"),
     "Хүннү Плюс": ("хүннү plus", "хүннү пласт", "hunnu plus"),
 }
 
+# Session 0 audit (2026-08-17): the original two-branch pattern only
+# reached "хажууд/ойролцоо/харалдаа" directly after an alias (branch 2) --
+# missing "хойно", "баруун/зvvн талд", "баруун урд/хойд", "зvvн урд/хойд",
+# "эсрэг талд", and a genitive suffix (-ын/-ийн/-ы/-ий/-ны/-ний) between the
+# alias and the cue (e.g. "home plaza-ийн хойно"). Real-DB impact was
+# severe, not cosmetic: 69/4,024 assigned listings were actually landmark
+# references to a DIFFERENT complex or no complex at all, concentrated in
+# a few names -- Home Plaza alone was 28/55 (51%) misclassified as unit
+# because nearly every one of its landmark mentions used "хойно" or a
+# "баруун/зvvн талд" variant this pattern didn't reach.
+_LANDMARK_CUE = (
+    r"(?:хажууд|ойролцоо|харалдаа|ард|урд|хойно|"
+    r"баруун(?:\s+урд|\s+хойд|\s+талд)?|зүүн(?:\s+урд|\s+хойд|\s+талд)?|"
+    r"эсрэг\s+талд|замын\s+эсрэг\s+талд)"
+)
 _LANDMARK_AFTER = re.compile(
     r"(?:"
     r"(?:хотхон|хороолол|residence|garden|town|apartment)(?:ы|ий|ын|ийн|оос|аас|ээс|д)?"
-    r"\s+(?:ард|урд|хажууд|баруун\s+талд|зүүн\s+талд|ойролцоо|харалдаа)"
-    r"|\s+(?:хажууд|ойролцоо|харалдаа)"
+    r"\s+" + _LANDMARK_CUE +
+    r"|\s*(?:(?:ын|ийн|ы|ий|ны|ний)\s+)?" + _LANDMARK_CUE +
     r")\b",
     re.IGNORECASE,
 )

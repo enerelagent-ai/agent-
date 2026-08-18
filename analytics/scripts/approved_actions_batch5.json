@@ -1,0 +1,7 @@
+{
+  "batch": "verified_registry_canonical_collision_unlink_1",
+  "approved_by": "Source title, category address and coordinates consistently indicate Баянзүрх, outside verified Хан-Уул Нархан",
+  "actions": [
+    {"listing_id":37993,"action":"unlink","old_complex_name":"Нархан","new_complex_name":null,"reason":"canonical_name_collision_outside_verified_district","evidence_text":"Бзд нархан 2 өрөө дулаан зогсоолтой 70.7мкв","district":"Баянзүрх"}
+  ]
+}

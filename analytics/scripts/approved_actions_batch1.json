@@ -1,0 +1,258 @@
+{
+  "batch": "confirmed_unlink_28",
+  "approved_by": "human-labeled Session 0 fixture, landmark_none; id=24017 moved back to ambiguous review",
+  "actions": [
+    {
+      "listing_id": 1105,
+      "action": "unlink",
+      "old_complex_name": "King Tower",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ king tower-ын урд 2 өрөө орон сууц 54мкв",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 1438,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Цэнгэлдэхийн хажууд 286мкв 5 өрөө 170мкв террастай",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 2613,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Сансар home plaza-ийн хажууд 46мкв оффис, үйлчилгээний талбай",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 3616,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Бзд сансрын home plaza-ын хойно 52.9мкв 2 өрөө",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 3710,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Сансар home plaza зүүн тийшээ зам дагуу 58-р байранд оффис 433мкв талбай",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 3753,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Сансар home plaza зүүн тийш зам дагуу үйлчилгээний 433 мкв талбай",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 5161,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ 15-р хороо баруун талд home plaza баруун талд 2 өрөө байр 50.0мкв",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 10521,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ 15-р хороо home plaza-ийн хойно 68.46мкв 2 өрөө байр",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 10694,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Емарт home plaza-ын баруун талд 5 давхар 1490мкв обьект",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 11295,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ 15-р хороо home plaza-ийн хойно 2 өрөө байр 68.46мкв",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 11952,
+      "action": "unlink",
+      "old_complex_name": "Buti Town",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Бүти тауны хажууд ceo оффист 59мкв талбай",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 14449,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Бзд сансрын home plaza-ын хойно 2 өрөө 52.9мкв байр",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 16045,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Төв цэнгэлдэхийн урд 103 мкв оффис",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 18427,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Сэлэнгэ аймгийн төв, төв цэнгэлдэхийн замын эсрэг талд 6 айлын газар",
+      "district": "Сэлэнгэ"
+    },
+    {
+      "listing_id": 23734,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Өмнөговь Даланзадгад цэнгэлдэхийн урд 112-р байр 1 давхрын үйлчилгээний 40.7мкв талбай",
+      "district": "Өмнөговь"
+    },
+    {
+      "listing_id": 24629,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ home plaza баруун талд 2 өрөө 50м2",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 25327,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Home plaza баруун урд 5 давхар бие даасан 1490мкв объект",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 26836,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Сансрын home plaza эсрэг талд хуучны 5 давхрын 4 давхарт 1 өрөө байр 30м2",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 29054,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Цэнгэлдэхийн хойно талбай",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 31613,
+      "action": "unlink",
+      "old_complex_name": "Зайсан Green House",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Green house урд 280мкв хагас тавилгатай таунхаус",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 32228,
+      "action": "unlink",
+      "old_complex_name": "Оргил Стар",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Зайсангын оргил старын эсрэг талд 435 мкв 3 давхар таунхаус",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 34160,
+      "action": "unlink",
+      "old_complex_name": "Цэнгэлдэх",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ төв цэнгэлдэхийн урд 100м2 оффис",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 36039,
+      "action": "unlink",
+      "old_complex_name": "Sky Tower",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Хотын төвд blue sky tower урд 200 мкв 4 өрөө",
+      "district": "Сүхбаатар"
+    },
+    {
+      "listing_id": 61492,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Бзд сансар home plaza хойно 52.9мкв 2 өрөө",
+      "district": "Баянзүрх"
+    },
+    {
+      "listing_id": 66095,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ home plaza-ийн хажууд 2 өрөө гал тогооны тавилгатай 50мкв",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 67415,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ home plaza ийн баруун 50мкв 2 өрөө байр",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 68915,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ home plaza баруун талд 2 өрөө байр",
+      "district": "Хан-Уул"
+    },
+    {
+      "listing_id": 69762,
+      "action": "unlink",
+      "old_complex_name": "Home Plaza",
+      "new_complex_name": null,
+      "reason": "confirmed_landmark_no_other_complex_named",
+      "evidence_text": "Худ home plaza баруун хойно 60-р байр мастертай 4 өрөө 121.1мкв",
+      "district": "Хан-Уул"
+    }
+  ]
+}

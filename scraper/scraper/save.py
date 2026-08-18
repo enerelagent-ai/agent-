@@ -13,6 +13,15 @@ AREA_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")
 LEADING_INT_RE = re.compile(r"^(\d+)")
 NEGOTIABLE_MARKER = "үнэ тохирно"
 
+_DISTRICT_TEXT_PATTERNS = {
+    "Хан-Уул": re.compile(r"(?<!\w)(?:худ|хан[ -]?уул)(?!\w)", re.IGNORECASE),
+    "Баянзүрх": re.compile(r"(?<!\w)(?:бзд|баянз[үv]рх)(?!\w)", re.IGNORECASE),
+    "Сүхбаатар": re.compile(r"(?<!\w)(?:сбд|с[үv]хбаатар)(?!\w)", re.IGNORECASE),
+    "Баянгол": re.compile(r"(?<!\w)(?:бгд|баянгол)(?!\w)", re.IGNORECASE),
+    "Сонгинохайрхан": re.compile(r"(?<!\w)(?:схд|сонгинохайрхан)(?!\w)", re.IGNORECASE),
+    "Чингэлтэй": re.compile(r"(?<!\w)(?:чд|чингэлтэй)(?!\w)", re.IGNORECASE),
+}
+
 # Coarse duplicate-candidate key: same unit re-posted should collide, price
 # edits should not. Week 4 dedup logic refines matching beyond this hash.
 _DEDUP_FIELDS = ("listing_type", "property_type", "district", "address", "rooms", "area_sqm")
@@ -128,6 +137,20 @@ def compute_dedup_hash(row: dict[str, Any]) -> str:
     return hashlib.sha256("|".join(parts).lower().encode("utf-8")).hexdigest()
 
 
+def has_explicit_district_evidence(row: dict[str, Any], district: str) -> bool:
+    """Whether seller-authored title/description explicitly names district.
+
+    Unegui's location dropdown is occasionally wrong while both title and
+    description say e.g. ``ХУД-15``.  This is a narrow override for a verified
+    complex registry guard, not a general district inference mechanism.
+    """
+    pattern = _DISTRICT_TEXT_PATTERNS.get(district)
+    if pattern is None:
+        return False
+    text = " ".join(str(row.get(field) or "") for field in ("title", "description"))
+    return pattern.search(text) is not None
+
+
 def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
     """Map one parse_detail_page() dict onto listings columns.
 
@@ -185,7 +208,65 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
 def _resolve_complex_ids(
     cur: psycopg2.extensions.cursor, rows: list[dict[str, Any]]
 ) -> None:
-    """Upsert reviewed complex names and attach their IDs to listing rows."""
+    """Upsert reviewed complex names and attach IDs with location guards.
+
+    A complex absent from the verified-location registry retains the existing
+    conservative reviewed-alias behaviour.  Once a complex has at least one
+    registry entry, its listing district must match an allowed district;
+    otherwise the candidate stays unlinked for human audit.
+    """
+    names = sorted({row["complex_name"] for row in rows if row.get("complex_name")})
+    if not names:
+        return
+    cur.execute(
+        """
+        SELECT c.canonical_name, array_agg(DISTINCT v.district) AS districts
+        FROM complexes c
+        JOIN verified_complex_locations v ON v.complex_id = c.id
+        WHERE c.canonical_name = ANY(%s)
+        GROUP BY c.canonical_name
+        """,
+        (names,),
+    )
+    allowed_districts = {
+        row["canonical_name"]: set(row["districts"])
+        for row in cur.fetchall()
+    }
+    guarded_rows = [
+        row for row in rows
+        if row.get("complex_name") in allowed_districts and row.get("source_url")
+    ]
+    override_keys: set[tuple[str, str]] = set()
+    if guarded_rows:
+        cur.execute(
+            """
+            SELECT o.source_url, c.canonical_name
+            FROM verified_listing_complex_overrides o
+            JOIN complexes c ON c.id = o.complex_id
+            WHERE o.source = 'unegui'
+              AND o.source_url = ANY(%s)
+            """,
+            ([row["source_url"] for row in guarded_rows],),
+        )
+        override_keys = {
+            (row["source_url"], row["canonical_name"])
+            for row in cur.fetchall()
+        }
+    for row in rows:
+        name = row.get("complex_name")
+        allowed = allowed_districts.get(name)
+        has_allowed_text_evidence = allowed is not None and any(
+            has_explicit_district_evidence(row, district) for district in allowed
+        )
+        has_listing_override = (row.get("source_url"), name) in override_keys
+        if (
+            allowed is not None
+            and row.get("district") not in allowed
+            and not has_allowed_text_evidence
+            and not has_listing_override
+        ):
+            row["complex_name"] = None
+
     names = sorted({row["complex_name"] for row in rows if row.get("complex_name")})
     if not names:
         return
