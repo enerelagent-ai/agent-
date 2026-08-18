@@ -67,6 +67,13 @@ export interface TodaysOpportunity {
   top_deal_pct: number | null;
   n_deals_analyzed: number;
   last_scraped_at: string;
+  confidence_tier: "high" | "medium" | "low" | "unavailable";
+  data_as_of: string;
+  room_coverage_pct: number;
+  area_coverage_pct: number;
+  price_guard_excluded_pct: number;
+  confidence_formula_version: string;
+  reproducibility: DistrictInvestmentSummary["reproducibility"];
 }
 
 export interface ListingTypeCount {

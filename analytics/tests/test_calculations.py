@@ -1113,6 +1113,15 @@ def test_todays_opportunity_uses_investment_summarys_top_ranked_district(cur) ->
     assert result["n_rent"] == 20
     assert float(result["avg_sale_price"]) == 100_000_000.0
     assert float(result["gross_rental_yield_pct"]) == 12.0
+    assert result["confidence_tier"] == ranked[0]["confidence_tier"]
+    result_repro = result["reproducibility"]
+    ranked_repro = ranked[0]["reproducibility"]
+    assert result_repro["calculated_at"] is not None
+    assert {
+        key: value for key, value in result_repro.items() if key != "calculated_at"
+    } == {
+        key: value for key, value in ranked_repro.items() if key != "calculated_at"
+    }
     # investment_score itself must never be surfaced by this function --
     # see its docstring on why (avoids reading as an "AI score").
     assert "investment_score" not in result

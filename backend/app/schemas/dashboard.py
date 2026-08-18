@@ -114,3 +114,10 @@ class TodaysOpportunity(BaseModel):
     top_deal_pct: float | None
     n_deals_analyzed: int
     last_scraped_at: datetime
+    confidence_tier: Literal["high", "medium", "low", "unavailable"]
+    data_as_of: datetime
+    room_coverage_pct: float
+    area_coverage_pct: float
+    price_guard_excluded_pct: float
+    confidence_formula_version: str
+    reproducibility: InvestmentReproducibility

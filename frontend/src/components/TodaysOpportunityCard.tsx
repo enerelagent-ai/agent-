@@ -2,6 +2,7 @@ import { TrendingUp } from "lucide-react";
 import type { TodaysOpportunity } from "@/lib/api";
 import { formatMnt, formatPercent, timeAgo } from "@/lib/format";
 import { InfoTooltip } from "./InfoTooltip";
+import { InvestmentConfidenceBadge } from "./InvestmentConfidenceBadge";
 
 const METHODOLOGY_TEXT =
   "Investment_summary_by_district-ийн эрэмбэлсэн жагсаалтын №1 дүүрэг (дундаж " +
@@ -61,7 +62,10 @@ export function TodaysOpportunityCard({ data }: { data: TodaysOpportunity | null
         <span className="text-white/40">— Өгөгдөлд суурилсан боломж</span>
       </div>
 
-      <h2 className="mt-2 text-3xl font-semibold">{data.district}</h2>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <h2 className="text-3xl font-semibold">{data.district}</h2>
+        <InvestmentConfidenceBadge data={data} dark />
+      </div>
 
       <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
         <Stat

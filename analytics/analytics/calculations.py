@@ -1327,6 +1327,13 @@ def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None
         "top_deal_pct": top_deal_pct,
         "n_deals_analyzed": n_deals_analyzed,
         "last_scraped_at": last_scraped_at,
+        "confidence_tier": top["confidence_tier"],
+        "data_as_of": top["data_as_of"],
+        "room_coverage_pct": top["room_coverage_pct"],
+        "area_coverage_pct": top["area_coverage_pct"],
+        "price_guard_excluded_pct": top["price_guard_excluded_pct"],
+        "confidence_formula_version": top["confidence_formula_version"],
+        "reproducibility": top["reproducibility"],
     }
 
 

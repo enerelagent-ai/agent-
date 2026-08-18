@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DistrictInvestmentSummary } from "@/lib/api";
 import { formatMnt, formatPercent } from "@/lib/format";
 import { InfoTooltip } from "./InfoTooltip";
+import { InvestmentConfidenceBadge } from "./InvestmentConfidenceBadge";
 import { PriceDistributionBar } from "./PriceDistributionBar";
 
 const METHODOLOGY_TEXT =
@@ -13,7 +14,9 @@ const METHODOLOGY_TEXT =
   "түрээслэх тус бүрд дор хаяж 20 харьцуулах боломжтой зартай дүүргийг л харуулсан — " +
   "цөөн тооны зартай дүүргийг санаатайгаар оруулаагүй, учир нь тийм тохиолдолд тоо " +
   "буруу ойлголт өгч болзошгүй. Түрээсийн өгөөж = (жилийн дундаж түрээс ÷ дундаж " +
-  "зарах үнэ) × 100 — ижил дүүрэг, ижил өрөөний тоотой байруудын бүлгээр тооцсон.";
+  "зарах үнэ) × 100 — ижил дүүрэг, ижил өрөөний тоотой байруудын бүлгээр тооцсон. " +
+  "Итгэлцлийн түвшин нь эрэмбэ эсвэл өгөөжийн оноо биш; зарын тоо, өгөгдлийн нас, " +
+  "өрөө/талбайн бүрэн байдал болон үнийн хамгаалалтын шүүлтүүрт тулгуурлана.";
 
 type SortKey = "avg_sale_price" | "gross_rental_yield_pct" | "roi_pct";
 
@@ -63,6 +66,7 @@ export function DistrictTable({ rows, highlightedDistrict }: DistrictTableProps)
           <thead>
             <tr className="border-b border-line-grid text-ink-secondary">
               <th className="py-2 pr-4 font-medium">Дүүрэг</th>
+              <th className="py-2 pr-4 font-medium">Итгэлцэл</th>
               <SortableHeader
                 column={SORTABLE_COLUMNS[0]}
                 activeKey={sortKey}
@@ -102,6 +106,9 @@ export function DistrictTable({ rows, highlightedDistrict }: DistrictTableProps)
                 }`}
               >
                 <td className="py-2.5 pr-4 font-medium text-ink-primary">{row.district}</td>
+                <td className="py-2.5 pr-4">
+                  <InvestmentConfidenceBadge data={row} />
+                </td>
                 <td className="py-2.5 pr-4 tabular-nums text-ink-secondary">
                   {formatMnt(row.avg_sale_price)}
                 </td>
