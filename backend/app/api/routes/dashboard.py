@@ -38,6 +38,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 def _deal_candidate_ids(
     deals_by_id: dict[int, dict],
     status: str,
+    listing_type: str | None,
     district: str | None,
     property_type: str | None,
     complex_id: int | None,
@@ -49,6 +50,7 @@ def _deal_candidate_ids(
         deal_id
         for deal_id, deal in deals_by_id.items()
         if deal["deal_status"] == status
+        and (listing_type is None or deal["listing_type"] == listing_type)
         and (district is None or deal["district"] == district)
         and (property_type is None or deal["property_type"] == property_type)
         and (complex_id is None or deal["complex_id"] == complex_id)
@@ -225,6 +227,7 @@ def _attach_computed_fields(
 @router.get("/listings", response_model=list[ListingOut])
 def list_dashboard_listings(
     db: DbSession,
+    listing_type: Literal["sale", "rent"] | None = Query(None),
     district: str | None = Query(None),
     property_type: str | None = Query(None),
     complex_id: int | None = Query(None, ge=1),
@@ -312,6 +315,7 @@ def list_dashboard_listings(
         _deal_candidate_ids(
             deals_by_id,
             deal_status,
+            listing_type,
             district,
             property_type,
             complex_id,
@@ -339,6 +343,7 @@ def list_dashboard_listings(
             else _deal_candidate_ids(
                 deals_by_id,
                 "top_deal",
+                listing_type,
                 district,
                 property_type,
                 complex_id,
@@ -362,6 +367,8 @@ def list_dashboard_listings(
             query = query.filter(Listing.id.in_(status_candidate_ids))
         if district is not None:
             query = query.filter(Listing.district == district)
+        if listing_type is not None:
+            query = query.filter(Listing.listing_type == listing_type)
         if property_type is not None:
             query = query.filter(Listing.property_type == property_type)
         if complex_id is not None:
