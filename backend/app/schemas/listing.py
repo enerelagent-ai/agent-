@@ -1,6 +1,32 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+
+
+class FacetValue(BaseModel):
+    value: str
+    count: int
+
+
+class RoomFacetValue(BaseModel):
+    value: int
+    count: int
+
+
+class PriceFacet(BaseModel):
+    min: float | None
+    max: float | None
+    count: int
+
+
+class ListingFacets(BaseModel):
+    listing_type: Literal["sale", "rent"]
+    total: int
+    districts: list[FacetValue]
+    property_types: list[FacetValue]
+    rooms: list[RoomFacetValue]
+    price: PriceFacet
 
 
 class ListingOut(BaseModel):

@@ -16,6 +16,8 @@ const SERVER_API_URL = process.env.BACKEND_API_URL ?? "http://localhost:8000";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+export type TransactionType = "sale" | "rent";
+
 export interface DistrictInvestmentSummary {
   district: string;
   n_sale: number;
@@ -61,6 +63,19 @@ export interface ListingTypeCount {
 export interface ComplexOption {
   id: number;
   canonical_name: string;
+}
+
+export interface ListingFacets {
+  listing_type: TransactionType;
+  total: number;
+  districts: Array<{ value: string; count: number }>;
+  property_types: Array<{ value: string; count: number }>;
+  rooms: Array<{ value: number; count: number }>;
+  price: {
+    min: number | null;
+    max: number | null;
+    count: number;
+  };
 }
 
 export interface DealAlertItem {
@@ -197,11 +212,18 @@ export function getComplexes(): Promise<ComplexOption[]> {
   return getJSON("/dashboard/complexes");
 }
 
+export function getListingFacets(
+  listingType: TransactionType,
+): Promise<ListingFacets> {
+  return getJSON(`/listings/facets?listing_type=${listingType}`);
+}
+
 export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
 }
 
 export interface ListingFilters {
+  listingType?: TransactionType;
   district?: string;
   propertyType?: string;
   complexId?: number;
@@ -217,6 +239,7 @@ export interface ListingFilters {
 // controls — same endpoint, just with whichever params are actually set.
 export function getFilteredListings(filters: ListingFilters = {}): Promise<Listing[]> {
   const params = new URLSearchParams();
+  if (filters.listingType) params.set("listing_type", filters.listingType);
   if (filters.district) params.set("district", filters.district);
   if (filters.propertyType) params.set("property_type", filters.propertyType);
   if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
