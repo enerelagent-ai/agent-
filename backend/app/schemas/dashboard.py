@@ -4,6 +4,16 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class InvestmentReproducibility(BaseModel):
+    calculated_at: datetime
+    comparison_group: str
+    n_sale: int
+    n_rent: int
+    median_sale_price: float
+    median_rent_price: float
+    formula_version: str
+
+
 class DistrictInvestmentSummary(BaseModel):
     district: str
     n_sale: int
@@ -22,6 +32,7 @@ class DistrictInvestmentSummary(BaseModel):
     area_coverage_pct: float
     price_guard_excluded_pct: float
     confidence_formula_version: str
+    reproducibility: InvestmentReproducibility
 
 
 class PriceTrendPoint(BaseModel):

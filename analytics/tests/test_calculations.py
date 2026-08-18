@@ -14,6 +14,8 @@ from analytics.calculations import (
     _MIN_AREA_SQM_FOR_DEAL,
     _OPEN_ENDED_ROOMS,
     INVESTMENT_CONFIDENCE_FORMULA_VERSION,
+    INVESTMENT_COMPARISON_GROUP,
+    INVESTMENT_FORMULA_VERSION,
     average_price_by_group,
     classify_deal,
     classify_investment_confidence,
@@ -472,6 +474,14 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
     assert row["price_guard_excluded_pct"] == 0.0
     assert row["confidence_formula_version"] == INVESTMENT_CONFIDENCE_FORMULA_VERSION
     assert row["data_as_of"] is not None
+    assert row["reproducibility"]["comparison_group"] == INVESTMENT_COMPARISON_GROUP
+    assert "complex" not in row["reproducibility"]["comparison_group"]
+    assert row["reproducibility"]["n_sale"] == 20
+    assert row["reproducibility"]["n_rent"] == 20
+    assert float(row["reproducibility"]["median_sale_price"]) == 100_000_000
+    assert float(row["reproducibility"]["median_rent_price"]) == 1_500_000
+    assert row["reproducibility"]["formula_version"] == INVESTMENT_FORMULA_VERSION
+    assert row["reproducibility"]["calculated_at"] is not None
     assert float(row["min_sale_price"]) == 100_000_000
     assert float(row["median_sale_price"]) == 100_000_000
     assert float(row["max_sale_price"]) == 300_000_000
@@ -488,6 +498,31 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
 )
 def test_investment_confidence_uses_all_quality_dimensions(values, expected) -> None:
     assert classify_investment_confidence(**values) == expected
+
+
+def test_investment_comparison_group_does_not_split_by_complex(cur) -> None:
+    complex_a = _complex(cur, "Investment metadata complex A")
+    complex_b = _complex(cur, "Investment metadata complex B")
+    for complex_id, suffix in ((complex_a, "a"), (complex_b, "b")):
+        _insert_many(
+            cur, f"test://metadata-{suffix}-sale", 10, 200_000_000, 50,
+            district="Metadata дүүрэг", property_subtype="2 өрөө", rooms=2,
+            complex_id=complex_id,
+        )
+        _insert_many(
+            cur, f"test://metadata-{suffix}-rent", 10, 2_000_000, 50,
+            listing_type="rent", property_type="Орон сууц түрээслүүлнэ",
+            district="Metadata дүүрэг", property_subtype="2 өрөө", rooms=2,
+            complex_id=complex_id,
+        )
+
+    row = _district_row(investment_summary_by_district(cur), "Metadata дүүрэг")
+
+    assert row["n_sale"] == 20
+    assert row["n_rent"] == 20
+    assert row["reproducibility"]["n_sale"] == 20
+    assert row["reproducibility"]["n_rent"] == 20
+    assert row["reproducibility"]["comparison_group"] == INVESTMENT_COMPARISON_GROUP
 
 
 def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:

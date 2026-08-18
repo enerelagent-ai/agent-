@@ -36,6 +36,15 @@ export interface DistrictInvestmentSummary {
   area_coverage_pct: number;
   price_guard_excluded_pct: number;
   confidence_formula_version: string;
+  reproducibility: {
+    calculated_at: string;
+    comparison_group: string;
+    n_sale: number;
+    n_rent: number;
+    median_sale_price: number;
+    median_rent_price: number;
+    formula_version: string;
+  };
 }
 
 export interface PriceTrendPoint {
