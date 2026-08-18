@@ -1,11 +1,12 @@
 import {
   Building2,
-  ExternalLink,
+  ChevronRight,
   Eye,
   ImageIcon,
   MapPin,
   Ruler,
 } from "lucide-react";
+import Link from "next/link";
 
 import type { Listing } from "@/lib/api";
 import { formatListingPrice, formatMnt, timeAgo } from "@/lib/format";
@@ -44,10 +45,8 @@ export function MarketplaceListingCard({ listing }: { listing: Listing }) {
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-      <a
-        href={listing.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={`/listings/${listing.id}`}
         className="flex h-full flex-col"
         aria-label={`${listing.title} — эх зарыг нээх`}
       >
@@ -141,11 +140,11 @@ export function MarketplaceListingCard({ listing }: { listing: Listing }) {
                   {listing.view_count.toLocaleString("mn-MN")}
                 </span>
               )}
-              <ExternalLink className="h-4 w-4 text-[#d92d2d]" aria-hidden />
+              <ChevronRight className="h-4 w-4 text-[#d92d2d]" aria-hidden />
             </div>
           </div>
         </div>
-      </a>
+      </Link>
     </article>
   );
 }

@@ -145,3 +145,42 @@ def test_dashboard_listings_rejects_unknown_listing_type(client) -> None:
     response = client.get("/dashboard/listings", params={"listing_type": "lease"})
 
     assert response.status_code == 422
+
+
+def test_listing_detail_only_publishes_active_canonical_rows(
+    client, db_session, monkeypatch
+) -> None:
+    rows = []
+    for suffix, active in (("active", True), ("inactive", False), ("duplicate", True)):
+        row = Listing(
+            source="unegui",
+            source_url=f"test://detail-{suffix}",
+            title=f"detail {suffix}",
+            listing_type="sale",
+            property_type="Орон сууц зарна",
+            dedup_hash=f"test-detail-{suffix}",
+            is_active=active,
+            scraped_at=_FUTURE_SCRAPED_AT,
+            created_at=_FUTURE_SCRAPED_AT,
+            updated_at=_FUTURE_SCRAPED_AT,
+            photo_urls=[],
+        )
+        db_session.add(row)
+        rows.append(row)
+    db_session.flush()
+    from app.api.routes import listings as listings_route
+
+    monkeypatch.setattr(
+        listings_route,
+        "superseded_listing_ids_conn",
+        lambda _dsn: {rows[2].id},
+    )
+
+    active = client.get(f"/listings/{rows[0].id}")
+    inactive = client.get(f"/listings/{rows[1].id}")
+    duplicate = client.get(f"/listings/{rows[2].id}")
+
+    assert active.status_code == 200
+    assert active.json()["id"] == rows[0].id
+    assert inactive.status_code == 404
+    assert duplicate.status_code == 404

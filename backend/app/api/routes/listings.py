@@ -10,7 +10,7 @@ from sqlalchemy import and_, func, or_
 from analytics.matches import superseded_listing_ids_conn
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Listing
+from app.models.listing import Complex, Listing
 from app.schemas.listing import ListingFacets, ListingOut, MarketplaceListingPage
 
 router = APIRouter(prefix="/listings", tags=["listings"])
@@ -195,7 +195,23 @@ def list_listings(
 
 @router.get("/{listing_id}", response_model=ListingOut)
 def get_listing(listing_id: int, db: DbSession) -> Listing:
-    listing = db.get(Listing, listing_id)
+    excluded_ids = superseded_listing_ids_conn(settings.database_url)
+    listing = (
+        db.query(Listing)
+        .filter(
+            Listing.id == listing_id,
+            Listing.is_active.is_(True),
+            Listing.id.notin_(excluded_ids),
+        )
+        .one_or_none()
+    )
     if listing is None:
         raise HTTPException(status_code=404, detail="Listing not found")
+    listing.complex_name = (
+        db.query(Complex.canonical_name)
+        .filter(Complex.id == listing.complex_id)
+        .scalar()
+        if listing.complex_id is not None
+        else None
+    )
     return listing

@@ -181,9 +181,19 @@ async function getJSON<T>(path: string): Promise<T> {
   const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
   const res = await fetch(url, { cache: "no-store", headers });
   if (!res.ok) {
-    throw new Error(`${path} returned ${res.status}`);
+    throw new ApiError(path, res.status);
   }
   return res.json();
+}
+
+export class ApiError extends Error {
+  constructor(
+    public readonly path: string,
+    public readonly status: number,
+  ) {
+    super(`${path} returned ${status}`);
+    this.name = "ApiError";
+  }
 }
 
 async function postJSON<T>(path: string): Promise<T> {
@@ -251,6 +261,10 @@ export function searchMarketplaceListings(
 
 export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
+}
+
+export function getListing(listingId: number): Promise<Listing> {
+  return getJSON(`/listings/${listingId}`);
 }
 
 export interface ListingFilters {
