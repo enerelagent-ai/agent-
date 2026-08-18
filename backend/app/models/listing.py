@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Computed, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, Text, text
+from sqlalchemy import ARRAY, BigInteger, Boolean, CheckConstraint, Computed, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,8 +15,64 @@ class Complex(Base):
     canonical_name: Mapped[str] = mapped_column(Text, unique=True)
     normalized_name: Mapped[str] = mapped_column(Text, unique=True)
     aliases: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class ComplexAlias(Base):
+    """Reviewed spelling that resolves to exactly one canonical complex."""
+
+    __tablename__ = "complex_aliases"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    complex_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("complexes.id", ondelete="CASCADE")
+    )
+    alias: Mapped[str] = mapped_column(Text)
+    normalized_alias: Mapped[str] = mapped_column(Text, unique=True)
+    source: Mapped[str] = mapped_column(Text, server_default=text("'reviewed'"))
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class ListingComplexMatch(Base):
+    """Reviewable extraction evidence; independent of listings.complex_id."""
+
+    __tablename__ = "listing_complex_matches"
+    __table_args__ = (
+        CheckConstraint("relation IN ('unit', 'landmark', 'unknown')"),
+        CheckConstraint("confidence >= 0 AND confidence <= 1"),
+        CheckConstraint("source_field IN ('title', 'description', 'address', 'manual')"),
+        CheckConstraint("review_status IN ('pending', 'approved', 'rejected')"),
+        CheckConstraint(
+            "(review_status = 'pending' AND reviewed_at IS NULL) OR "
+            "(review_status IN ('approved', 'rejected') AND reviewed_at IS NOT NULL)"
+        ),
+        UniqueConstraint("listing_id", "complex_id", "extractor_version", "evidence_text"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    listing_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("listings.id", ondelete="CASCADE")
+    )
+    complex_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("complexes.id", ondelete="CASCADE")
+    )
+    matched_alias_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("complex_aliases.id", ondelete="SET NULL")
+    )
+    relation: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[float] = mapped_column(Numeric(4, 3))
+    evidence_text: Mapped[str] = mapped_column(Text)
+    source_field: Mapped[str] = mapped_column(Text, server_default=text("'title'"))
+    extractor_version: Mapped[str] = mapped_column(Text)
+    review_status: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))
+    reviewer_note: Mapped[str | None] = mapped_column(Text)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_current: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 
 
 class NotificationState(Base):

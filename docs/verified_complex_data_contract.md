@@ -1,0 +1,44 @@
+# Verified Complex Data contract
+
+Release 3 separates three concerns that were previously collapsed into
+`listings.complex_id`.
+
+## Canonical identity
+
+`complexes` owns the stable complex identity. `complex_aliases` owns each
+reviewed spelling and maps one normalized alias to exactly one complex.
+Canonical names and the reviewed aliases from the legacy `complexes.aliases`
+array are backfilled by migration 017. The array remains temporarily for
+backward compatibility and is not the new source of truth.
+
+Alias sources:
+
+- `canonical`: the complex's canonical name
+- `reviewed`: a human-reviewed spelling variant
+- `discovered`: a candidate admitted for review, not implicitly trusted
+
+## Match evidence
+
+`listing_complex_matches` records what the extractor observed without
+silently asserting that the listing is a unit in that complex:
+
+- `relation`: `unit`, `landmark`, or `unknown`
+- `confidence`: extractor confidence from 0 through 1
+- `evidence_text` and `source_field`: the text behind the match
+- `extractor_version`: makes a result reproducible across extractor changes
+- `review_status`: `pending`, `approved`, or `rejected`
+- `reviewer_note` / `reviewed_at`: review audit metadata
+- `is_current`: separates the current extractor result from retained history
+
+An approved or rejected match must have `reviewed_at`; pending matches must
+not. Database constraints enforce these invariants.
+
+## Compatibility boundary
+
+`listings.complex_id` remains the existing fast read pointer used by the
+marketplace and analytics. Migration 017 does not populate matches from that
+pointer and does not change it. The next ingestion session will write match
+evidence first; only an approved, district-safe unit match may update the
+pointer. This prevents legacy assignments from being relabeled as verified
+without evidence.
+
