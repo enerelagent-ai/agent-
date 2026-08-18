@@ -9,7 +9,7 @@ analysis over time, which is a different, deliberately separate concern
 from anything in this module.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -382,6 +382,82 @@ def listing_counts_by_property_type_conn(dsn: str) -> list[dict[str, Any]]:
 # regardless of sample size.
 _MIN_SAMPLE_SIZE = 20
 
+INVESTMENT_CONFIDENCE_FORMULA_VERSION = "investment-confidence-v1"
+
+
+def classify_investment_confidence(
+    *,
+    n_sale: int,
+    n_rent: int,
+    data_age_days: float,
+    room_coverage_pct: float,
+    area_coverage_pct: float,
+    price_guard_excluded_pct: float,
+) -> str:
+    """Transparent confidence tier for a district investment estimate."""
+    if n_sale < _MIN_SAMPLE_SIZE or n_rent < _MIN_SAMPLE_SIZE:
+        return "unavailable"
+    if (
+        min(n_sale, n_rent) >= 100
+        and data_age_days <= 2
+        and room_coverage_pct >= 95
+        and area_coverage_pct >= 80
+        and price_guard_excluded_pct <= 5
+    ):
+        return "high"
+    if (
+        min(n_sale, n_rent) >= 40
+        and data_age_days <= 7
+        and room_coverage_pct >= 90
+        and area_coverage_pct >= 60
+        and price_guard_excluded_pct <= 10
+    ):
+        return "medium"
+    return "low"
+
+
+_INVESTMENT_DATA_QUALITY_SQL = """
+    SELECT district,
+           max(scraped_at) AS data_as_of,
+           round((count(*) FILTER (WHERE rooms IS NOT NULL)::numeric
+                 / NULLIF(count(*), 0)) * 100, 2) AS room_coverage_pct,
+           round((count(*) FILTER (
+                    WHERE listing_type = 'sale' AND area_sqm >= %(min_area_sqm)s
+                  )::numeric
+                 / NULLIF(count(*) FILTER (WHERE listing_type = 'sale'), 0)) * 100, 2)
+                 AS area_coverage_pct,
+           round((count(*) FILTER (
+                    WHERE price_negotiable IS NOT TRUE
+                      AND (price IS NULL OR price <= 0 OR price > %(max_plausible_price)s)
+                  )::numeric
+                 / NULLIF(count(*) FILTER (WHERE price_negotiable IS NOT TRUE), 0)) * 100, 2)
+                 AS price_guard_excluded_pct
+    FROM listings
+    WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
+      AND district IS NOT NULL
+      AND (
+        (listing_type = 'sale' AND property_type = %(sale_label)s)
+        OR (listing_type = 'rent' AND property_type = %(rent_label)s)
+      )
+    GROUP BY district
+"""
+
+
+def investment_data_quality(
+    cur: psycopg2.extensions.cursor,
+) -> dict[str, dict[str, Any]]:
+    """Coverage, freshness and existing price-guard exclusions by district."""
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_INVESTMENT_DATA_QUALITY_SQL, {
+        "excluded_ids": excluded,
+        "sale_label": _APARTMENT_SALE_LABEL,
+        "rent_label": _APARTMENT_RENT_LABEL,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+    })
+    return {row["district"]: dict(row) for row in cur.fetchall()}
+
 
 _DISTRICT_SALE_DISTRIBUTION_SQL = """
     WITH eligible_rent_groups AS (
@@ -459,6 +535,7 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     """
     buckets = rental_yield_by_district_rooms(cur)
     distributions = district_sale_price_distribution(cur)
+    quality_by_district = investment_data_quality(cur)
 
     totals: dict[str, dict[str, Any]] = {}
     for b in buckets:
@@ -487,6 +564,17 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
         avg_price_per_sqm = (
             t["sale_price_per_sqm_sum"] / t["n_sale_with_sqm"] if t["n_sale_with_sqm"] else None
         )
+        quality = quality_by_district[district]
+        data_as_of = quality["data_as_of"]
+        data_age_days = max(
+            0.0,
+            (datetime.now(timezone.utc) - data_as_of).total_seconds() / 86_400,
+        )
+        room_coverage_pct = float(quality["room_coverage_pct"] or 0)
+        area_coverage_pct = float(quality["area_coverage_pct"] or 0)
+        price_guard_excluded_pct = float(
+            quality["price_guard_excluded_pct"] or 0
+        )
         rows.append({
             "district": district,
             "n_sale": t["n_sale"],
@@ -498,6 +586,19 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
             "min_sale_price": distributions[district]["min_sale_price"],
             "median_sale_price": distributions[district]["median_sale_price"],
             "max_sale_price": distributions[district]["max_sale_price"],
+            "confidence_tier": classify_investment_confidence(
+                n_sale=t["n_sale"],
+                n_rent=t["n_rent"],
+                data_age_days=data_age_days,
+                room_coverage_pct=room_coverage_pct,
+                area_coverage_pct=area_coverage_pct,
+                price_guard_excluded_pct=price_guard_excluded_pct,
+            ),
+            "data_as_of": data_as_of,
+            "room_coverage_pct": room_coverage_pct,
+            "area_coverage_pct": area_coverage_pct,
+            "price_guard_excluded_pct": price_guard_excluded_pct,
+            "confidence_formula_version": INVESTMENT_CONFIDENCE_FORMULA_VERSION,
         })
 
     n = len(rows)

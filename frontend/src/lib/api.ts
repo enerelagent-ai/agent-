@@ -30,6 +30,12 @@ export interface DistrictInvestmentSummary {
   gross_rental_yield_pct: number;
   roi_pct: number;
   investment_score: number;
+  confidence_tier: "high" | "medium" | "low" | "unavailable";
+  data_as_of: string;
+  room_coverage_pct: number;
+  area_coverage_pct: number;
+  price_guard_excluded_pct: number;
+  confidence_formula_version: string;
 }
 
 export interface PriceTrendPoint {

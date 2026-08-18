@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -15,6 +16,12 @@ class DistrictInvestmentSummary(BaseModel):
     gross_rental_yield_pct: float
     roi_pct: float
     investment_score: float
+    confidence_tier: Literal["high", "medium", "low", "unavailable"]
+    data_as_of: datetime
+    room_coverage_pct: float
+    area_coverage_pct: float
+    price_guard_excluded_pct: float
+    confidence_formula_version: str
 
 
 class PriceTrendPoint(BaseModel):

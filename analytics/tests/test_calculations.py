@@ -13,8 +13,10 @@ from analytics.calculations import (
     _MAX_PLAUSIBLE_PRICE,
     _MIN_AREA_SQM_FOR_DEAL,
     _OPEN_ENDED_ROOMS,
+    INVESTMENT_CONFIDENCE_FORMULA_VERSION,
     average_price_by_group,
     classify_deal,
+    classify_investment_confidence,
     complex_average_price,
     complex_deal_percentages,
     deal_percentages,
@@ -464,9 +466,28 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
     assert row["roi_pct"] == row["gross_rental_yield_pct"]
     assert row["n_sale"] == 20
     assert row["n_rent"] == 20
+    assert row["confidence_tier"] == "low"
+    assert row["room_coverage_pct"] == 100.0
+    assert row["area_coverage_pct"] == 100.0
+    assert row["price_guard_excluded_pct"] == 0.0
+    assert row["confidence_formula_version"] == INVESTMENT_CONFIDENCE_FORMULA_VERSION
+    assert row["data_as_of"] is not None
     assert float(row["min_sale_price"]) == 100_000_000
     assert float(row["median_sale_price"]) == 100_000_000
     assert float(row["max_sale_price"]) == 300_000_000
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ({"n_sale": 19, "n_rent": 200, "data_age_days": 0, "room_coverage_pct": 100, "area_coverage_pct": 100, "price_guard_excluded_pct": 0}, "unavailable"),
+        ({"n_sale": 100, "n_rent": 100, "data_age_days": 2, "room_coverage_pct": 95, "area_coverage_pct": 80, "price_guard_excluded_pct": 5}, "high"),
+        ({"n_sale": 40, "n_rent": 40, "data_age_days": 7, "room_coverage_pct": 90, "area_coverage_pct": 60, "price_guard_excluded_pct": 10}, "medium"),
+        ({"n_sale": 100, "n_rent": 100, "data_age_days": 8, "room_coverage_pct": 100, "area_coverage_pct": 100, "price_guard_excluded_pct": 0}, "low"),
+    ],
+)
+def test_investment_confidence_uses_all_quality_dimensions(values, expected) -> None:
+    assert classify_investment_confidence(**values) == expected
 
 
 def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:
