@@ -51,6 +51,21 @@ npm install
 npm run dev
 ```
 
+### Marketplace smoke тест
+
+Backend-ийн virtual environment-д dependencies суусан, local PostgreSQL
+ажиллаж байх үед:
+
+```bash
+cd frontend
+npx playwright install chromium
+DATABASE_URL=postgresql://localhost:5432/postgres npm run test:e2e
+```
+
+Smoke suite нь хэрэглэгчийн dev server-тэй мөргөлдөхгүйгээр backend/frontend-ийг
+`8100`/`3100` портууд дээр түр асааж, `/sale`, `/rent`, filter, cursor pagination,
+detail page болон mobile filter drawer урсгалыг шалгана.
+
 ### Database
 
 `db/schema.sql`-д schema, `db/migrations/`-д migration файлууд байрлана.

@@ -86,3 +86,50 @@ def test_marketplace_cursor_and_price_range_are_validated(client) -> None:
     assert invalid_cursor.json()["detail"] == "Invalid marketplace cursor"
     assert invalid_range.status_code == 422
     assert invalid_range.json()["detail"] == "min_price cannot exceed max_price"
+
+
+def test_marketplace_search_enforces_transaction_district_and_publication_boundary(
+    client, db_session, monkeypatch
+) -> None:
+    wanted = _insert_tied_marketplace_rows(db_session, 1)[0]
+    other_district = Listing(
+        source="unegui", source_url="test://marketplace-other-district",
+        title="other district", listing_type="sale", property_type="Орон сууц зарна",
+        district="TEST OTHER DISTRICT", dedup_hash="test-marketplace-other-district",
+        is_active=True, scraped_at=_TIED_AT, created_at=_TIED_AT, updated_at=_TIED_AT,
+        photo_urls=[],
+    )
+    rent = Listing(
+        source="unegui", source_url="test://marketplace-wrong-transaction",
+        title="rent", listing_type="rent", property_type="Орон сууц түрээслүүлнэ",
+        district=_DISTRICT, dedup_hash="test-marketplace-wrong-transaction",
+        is_active=True, scraped_at=_TIED_AT, created_at=_TIED_AT, updated_at=_TIED_AT,
+        photo_urls=[],
+    )
+    inactive = Listing(
+        source="unegui", source_url="test://marketplace-inactive",
+        title="inactive", listing_type="sale", property_type="Орон сууц зарна",
+        district=_DISTRICT, dedup_hash="test-marketplace-inactive", is_active=False,
+        scraped_at=_TIED_AT, created_at=_TIED_AT, updated_at=_TIED_AT, photo_urls=[],
+    )
+    duplicate = Listing(
+        source="unegui", source_url="test://marketplace-duplicate",
+        title="duplicate", listing_type="sale", property_type="Орон сууц зарна",
+        district=_DISTRICT, dedup_hash="test-marketplace-duplicate", is_active=True,
+        scraped_at=_TIED_AT, created_at=_TIED_AT, updated_at=_TIED_AT, photo_urls=[],
+    )
+    db_session.add_all([other_district, rent, inactive, duplicate])
+    db_session.flush()
+    monkeypatch.setattr(
+        listings_route,
+        "superseded_listing_ids_conn",
+        lambda _dsn: {duplicate.id},
+    )
+
+    response = client.get(
+        "/listings/search",
+        params={"listing_type": "sale", "district": _DISTRICT, "limit": 100},
+    )
+
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json()["items"]] == [wanted]
