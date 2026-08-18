@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -10,7 +10,8 @@ import {
   type MarketplaceListingPage,
   type TransactionType,
 } from "@/lib/api";
-import { formatListingPrice, formatMnt, timeAgo } from "@/lib/format";
+import { formatMnt } from "@/lib/format";
+import { MarketplaceListingCard } from "./MarketplaceListingCard";
 
 const PAGE_SIZE = 24;
 
@@ -186,30 +187,9 @@ export function MarketplaceBrowse({
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">Энэ шүүлтээр зар олдсонгүй.</div>
             ) : (
               <div className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${loading ? "opacity-60" : ""}`}>
-                {page.items.map((listing) => {
-                  const price = formatListingPrice(listing);
-                  return (
-                    <a key={listing.id} href={listing.source_url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                      <div className="relative aspect-[4/3] bg-slate-100">
-                        {listing.photo_urls[0] ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- source CDN domains vary by listing
-                          <img src={listing.photo_urls[0]} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-                        ) : <div className="flex h-full items-center justify-center text-sm text-slate-400">Зураггүй</div>}
-                        <span className={`absolute left-3 top-3 rounded-md px-2 py-1 text-xs font-bold text-white ${listingType === "sale" ? "bg-[#e53935]" : "bg-blue-600"}`}>{transactionLabel.toUpperCase()}</span>
-                      </div>
-                      <div className="p-4">
-                        <p className={`text-lg font-bold ${price.isEstimate ? "text-slate-600" : "text-slate-950"}`}>{price.text}</p>
-                        {listing.price_per_sqm !== null && !listing.price_negotiable && <p className="mt-0.5 text-xs text-slate-500">{formatMnt(listing.price_per_sqm)} / м²</p>}
-                        <h2 className="mt-2 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-800">{listing.title}</h2>
-                        <p className="mt-2 flex items-center gap-1 truncate text-xs text-slate-500"><MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />{listing.district ?? listing.address ?? "Байршил тодорхойгүй"}</p>
-                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                          <span>{listing.rooms ? `${listing.rooms} өрөө` : categoryLabel(listing.property_type ?? "")}{listing.area_sqm ? ` · ${listing.area_sqm} м²` : ""}</span>
-                          <span>{timeAgo(listing.scraped_at)}</span>
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
+                {page.items.map((listing) => (
+                  <MarketplaceListingCard key={listing.id} listing={listing} />
+                ))}
               </div>
             )}
 
