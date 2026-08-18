@@ -37,8 +37,10 @@ not. Database constraints enforce these invariants.
 
 `listings.complex_id` remains the existing fast read pointer used by the
 marketplace and analytics. Migration 017 does not populate matches from that
-pointer and does not change it. The next ingestion session will write match
-evidence first; only an approved, district-safe unit match may update the
-pointer. This prevents legacy assignments from being relabeled as verified
-without evidence.
-
+pointer and does not change it. New ingestion writes reviewed-alias evidence
+after the listing upsert, in the same transaction. A `unit` match updates the
+pointer and receives policy approval only when its complex has an independently
+verified location and the listing passes the district guard (or an exact
+reviewed listing override). Landmark and unregistered/mismatched candidates
+remain pending and unlinked. Re-scraping replaces the current marker without
+deleting historical evidence.

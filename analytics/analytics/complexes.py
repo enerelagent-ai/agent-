@@ -14,6 +14,9 @@ from functools import lru_cache
 from typing import Iterable
 
 
+COMPLEX_EXTRACTOR_VERSION = "complex-extractor-v2"
+
+
 CANONICAL_COMPLEXES: tuple[str, ...] = (
     "Akoya Residence", "Alpha Zone", "Aqua Garden", "Arvai villa",
     "Buti Town", "Cozy Apartment", "Encanto Tower", "FLOWERS хотхон",

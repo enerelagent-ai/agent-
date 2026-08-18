@@ -2,6 +2,7 @@
 
 from scraper.save import (
     _resolve_complex_ids,
+    _persist_complex_matches,
     compute_dedup_hash,
     has_explicit_district_evidence,
     known_urls,
@@ -128,14 +129,117 @@ def test_listing_row_maps_reviewed_complex_without_rooms() -> None:
     assert row is not None
     assert row["rooms"] is None
     assert row["complex_name"] == "Buti Town"
+    assert row["complex_match"]["relation"] == "unit"
+    assert row["complex_match"]["matched_alias"] == "бүти таун"
 
 
-def test_resolve_complex_ids_upserts_canonical_complex(cur) -> None:
+def test_listing_row_keeps_landmark_evidence_without_assignment() -> None:
+    parsed = dict(SAMPLE_PARSED, title="Home Plaza-ийн хойно байр зарна")
+    row = listing_row_from_parsed(parsed)
+    assert row is not None
+    assert row["complex_name"] is None
+    assert row["complex_match"]["canonical_name"] == "Home Plaza"
+    assert row["complex_match"]["relation"] == "landmark"
+
+
+def test_resolve_complex_ids_does_not_link_unregistered_complex(cur) -> None:
     rows = [{"complex_name": "Buti Town", "complex_id": None}]
     _resolve_complex_ids(cur, rows)
-    assert isinstance(rows[0]["complex_id"], int)
-    cur.execute("SELECT canonical_name FROM complexes WHERE id = %s", (rows[0]["complex_id"],))
-    assert cur.fetchone()["canonical_name"] == "Buti Town"
+    assert rows[0]["complex_id"] is None
+    assert rows[0]["complex_name"] is None
+
+
+def test_persist_complex_match_approves_only_district_safe_unit(cur) -> None:
+    parsed = dict(
+        SAMPLE_PARSED,
+        url="test://verified-unit-evidence",
+        title="Нархан хотхонд үйлчилгээний талбай",
+        district="Хан-Уул",
+    )
+    row = listing_row_from_parsed(parsed)
+    assert row is not None
+    _resolve_complex_ids(cur, [row])
+    cur.execute(
+        """
+        INSERT INTO listings (source, source_url, title, dedup_hash, complex_id)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (row["source"], row["source_url"], row["title"], row["dedup_hash"], row["complex_id"]),
+    )
+
+    assert _persist_complex_matches(cur, [row]) == 1
+    cur.execute(
+        """
+        SELECT m.relation, m.review_status, m.reviewed_at, m.evidence_text,
+               a.alias, m.is_current
+        FROM listing_complex_matches m
+        JOIN complex_aliases a ON a.id = m.matched_alias_id
+        JOIN listings l ON l.id = m.listing_id
+        WHERE l.source_url = %s
+        """,
+        (row["source_url"],),
+    )
+    match = cur.fetchone()
+    assert match["relation"] == "unit"
+    assert match["review_status"] == "approved"
+    assert match["reviewed_at"] is not None
+    assert match["evidence_text"] == row["title"]
+    assert match["alias"] == "Нархан"
+    assert match["is_current"] is True
+
+    # Same extractor result updates the existing evidence row, rather than
+    # creating a duplicate. If a later scrape has no match, the old evidence
+    # remains as history but is no longer current.
+    assert _persist_complex_matches(cur, [row]) == 1
+    cur.execute(
+        "SELECT count(*) AS n FROM listing_complex_matches WHERE listing_id = "
+        "(SELECT id FROM listings WHERE source_url = %s)",
+        (row["source_url"],),
+    )
+    assert cur.fetchone()["n"] == 1
+    no_match_row = dict(row, complex_match=None)
+    assert _persist_complex_matches(cur, [no_match_row]) == 0
+    cur.execute(
+        "SELECT is_current FROM listing_complex_matches WHERE listing_id = "
+        "(SELECT id FROM listings WHERE source_url = %s)",
+        (row["source_url"],),
+    )
+    assert cur.fetchone()["is_current"] is False
+
+
+def test_persist_complex_match_keeps_landmark_pending_and_unlinked(cur) -> None:
+    parsed = dict(
+        SAMPLE_PARSED,
+        url="test://verified-landmark-evidence",
+        title="Home Plaza-ийн хойно байр зарна",
+        district="Хан-Уул",
+    )
+    row = listing_row_from_parsed(parsed)
+    assert row is not None
+    _resolve_complex_ids(cur, [row])
+    cur.execute(
+        """
+        INSERT INTO listings (source, source_url, title, dedup_hash, complex_id)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (row["source"], row["source_url"], row["title"], row["dedup_hash"], row["complex_id"]),
+    )
+
+    assert _persist_complex_matches(cur, [row]) == 1
+    cur.execute(
+        """
+        SELECT l.complex_id, m.relation, m.review_status, m.reviewed_at
+        FROM listings l
+        JOIN listing_complex_matches m ON m.listing_id = l.id AND m.is_current
+        WHERE l.source_url = %s
+        """,
+        (row["source_url"],),
+    )
+    match = cur.fetchone()
+    assert match["complex_id"] is None
+    assert match["relation"] == "landmark"
+    assert match["review_status"] == "pending"
+    assert match["reviewed_at"] is None
 
 
 def test_resolve_complex_ids_enforces_verified_district(cur) -> None:
