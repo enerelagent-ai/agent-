@@ -57,3 +57,4 @@ scraper/.daily_scrape.lock/
 analytics/scripts/complex_district_audit.json
 analytics/scripts/complex_reextract_dry_run.json
 analytics/scripts/verified_complex_district_dry_run.json
+analytics/scripts/verified_complex_match_backfill_dry_run.json
