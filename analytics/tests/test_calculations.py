@@ -13,8 +13,12 @@ from analytics.calculations import (
     _MAX_PLAUSIBLE_PRICE,
     _MIN_AREA_SQM_FOR_DEAL,
     _OPEN_ENDED_ROOMS,
+    INVESTMENT_CONFIDENCE_FORMULA_VERSION,
+    INVESTMENT_COMPARISON_GROUP,
+    INVESTMENT_FORMULA_VERSION,
     average_price_by_group,
     classify_deal,
+    classify_investment_confidence,
     complex_average_price,
     complex_deal_percentages,
     deal_percentages,
@@ -99,6 +103,22 @@ def _complex(cur, name: str) -> int:
     return cur.fetchone()["id"]
 
 
+def _approve_complex_matches(cur, complex_id: int) -> None:
+    cur.execute(
+        """
+        INSERT INTO listing_complex_matches
+            (listing_id, complex_id, relation, confidence, evidence_text,
+             source_field, extractor_version, review_status, reviewer_note,
+             reviewed_at, is_current)
+        SELECT id, complex_id, 'unit', 0.99, title, 'title', 'test-v1',
+               'approved', 'test verified evidence', now(), true
+        FROM listings
+        WHERE complex_id = %s
+        """,
+        (complex_id,),
+    )
+
+
 def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
     complex_id = _complex(cur, "Тест Phase 3 хотхон")
     _insert_many(
@@ -120,6 +140,7 @@ def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
         district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
         price_negotiable=False,
     )
+    _approve_complex_matches(cur, complex_id)
 
     rows = complex_average_price(cur, complex_id)
     assert len(rows) == 1
@@ -139,6 +160,7 @@ def test_complex_average_price_keeps_transaction_and_property_type_separate(cur)
                  complex_id=complex_id)
     _insert_many(cur, "test://complex-sale-garage", 20, 30_000_000, 15.0,
                  property_type="Гараж, контейнер, з-сууц зарна", complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
 
     rows = complex_average_price(cur, complex_id)
     assert len(rows) == 3
@@ -155,6 +177,7 @@ def test_complex_deal_uses_20_pct_threshold_and_median(cur) -> None:
                  rooms=2, complex_id=complex_id)
     deal_id = _insert(cur, "test://complex-deal-target", 120_000_000, 50.0,
                       rooms=2, complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
 
     row = next(r for r in complex_deal_percentages(cur) if r["id"] == deal_id)
     assert float(row["complex_median_price_per_sqm"]) == 3_000_000.0
@@ -167,7 +190,19 @@ def test_complex_deal_drops_thin_complex_groups(cur) -> None:
     complex_id = _complex(cur, "Тест Нимгэн хотхон")
     _insert_many(cur, "test://complex-thin", 19, 150_000_000, 50.0,
                  rooms=2, complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
     assert all(r["complex_id"] != complex_id for r in complex_deal_percentages(cur))
+
+
+def test_complex_insights_exclude_unverified_legacy_pointer(cur) -> None:
+    complex_id = _complex(cur, "Тест Баталгаажаагүй хотхон")
+    _insert_many(
+        cur, "test://complex-unverified", 20, 150_000_000, 50.0,
+        rooms=2, complex_id=complex_id,
+    )
+
+    assert complex_average_price(cur, complex_id) == []
+    assert all(row["complex_id"] != complex_id for row in complex_deal_percentages(cur))
 
 
 def test_average_price_by_group_computes_correct_stats(cur) -> None:
@@ -464,9 +499,61 @@ def test_investment_summary_recombines_weighted_avg_price_and_yield_per_district
     assert row["roi_pct"] == row["gross_rental_yield_pct"]
     assert row["n_sale"] == 20
     assert row["n_rent"] == 20
+    assert row["confidence_tier"] == "low"
+    assert row["room_coverage_pct"] == 100.0
+    assert row["area_coverage_pct"] == 100.0
+    assert row["price_guard_excluded_pct"] == 0.0
+    assert row["confidence_formula_version"] == INVESTMENT_CONFIDENCE_FORMULA_VERSION
+    assert row["data_as_of"] is not None
+    assert row["reproducibility"]["comparison_group"] == INVESTMENT_COMPARISON_GROUP
+    assert "complex" not in row["reproducibility"]["comparison_group"]
+    assert row["reproducibility"]["n_sale"] == 20
+    assert row["reproducibility"]["n_rent"] == 20
+    assert float(row["reproducibility"]["median_sale_price"]) == 100_000_000
+    assert float(row["reproducibility"]["median_rent_price"]) == 1_500_000
+    assert row["reproducibility"]["formula_version"] == INVESTMENT_FORMULA_VERSION
+    assert row["reproducibility"]["calculated_at"] is not None
     assert float(row["min_sale_price"]) == 100_000_000
     assert float(row["median_sale_price"]) == 100_000_000
     assert float(row["max_sale_price"]) == 300_000_000
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ({"n_sale": 19, "n_rent": 200, "data_age_days": 0, "room_coverage_pct": 100, "area_coverage_pct": 100, "price_guard_excluded_pct": 0}, "unavailable"),
+        ({"n_sale": 100, "n_rent": 100, "data_age_days": 2, "room_coverage_pct": 95, "area_coverage_pct": 80, "price_guard_excluded_pct": 5}, "high"),
+        ({"n_sale": 40, "n_rent": 40, "data_age_days": 7, "room_coverage_pct": 90, "area_coverage_pct": 60, "price_guard_excluded_pct": 10}, "medium"),
+        ({"n_sale": 100, "n_rent": 100, "data_age_days": 8, "room_coverage_pct": 100, "area_coverage_pct": 100, "price_guard_excluded_pct": 0}, "low"),
+    ],
+)
+def test_investment_confidence_uses_all_quality_dimensions(values, expected) -> None:
+    assert classify_investment_confidence(**values) == expected
+
+
+def test_investment_comparison_group_does_not_split_by_complex(cur) -> None:
+    complex_a = _complex(cur, "Investment metadata complex A")
+    complex_b = _complex(cur, "Investment metadata complex B")
+    for complex_id, suffix in ((complex_a, "a"), (complex_b, "b")):
+        _insert_many(
+            cur, f"test://metadata-{suffix}-sale", 10, 200_000_000, 50,
+            district="Metadata дүүрэг", property_subtype="2 өрөө", rooms=2,
+            complex_id=complex_id,
+        )
+        _insert_many(
+            cur, f"test://metadata-{suffix}-rent", 10, 2_000_000, 50,
+            listing_type="rent", property_type="Орон сууц түрээслүүлнэ",
+            district="Metadata дүүрэг", property_subtype="2 өрөө", rooms=2,
+            complex_id=complex_id,
+        )
+
+    row = _district_row(investment_summary_by_district(cur), "Metadata дүүрэг")
+
+    assert row["n_sale"] == 20
+    assert row["n_rent"] == 20
+    assert row["reproducibility"]["n_sale"] == 20
+    assert row["reproducibility"]["n_rent"] == 20
+    assert row["reproducibility"]["comparison_group"] == INVESTMENT_COMPARISON_GROUP
 
 
 def test_investment_summary_drops_districts_below_min_sample_size(cur) -> None:
@@ -1057,6 +1144,15 @@ def test_todays_opportunity_uses_investment_summarys_top_ranked_district(cur) ->
     assert result["n_rent"] == 20
     assert float(result["avg_sale_price"]) == 100_000_000.0
     assert float(result["gross_rental_yield_pct"]) == 12.0
+    assert result["confidence_tier"] == ranked[0]["confidence_tier"]
+    result_repro = result["reproducibility"]
+    ranked_repro = ranked[0]["reproducibility"]
+    assert result_repro["calculated_at"] is not None
+    assert {
+        key: value for key, value in result_repro.items() if key != "calculated_at"
+    } == {
+        key: value for key, value in ranked_repro.items() if key != "calculated_at"
+    }
     # investment_score itself must never be surfaced by this function --
     # see its docstring on why (avoids reading as an "AI score").
     assert "investment_score" not in result

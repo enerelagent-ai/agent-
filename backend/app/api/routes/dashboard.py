@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import re
 from typing import Literal
 
 from analytics.calculations import (
@@ -14,16 +15,29 @@ from analytics.calculations import (
     todays_opportunity_conn,
 )
 from analytics.matches import superseded_listing_ids_conn
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import text
 
 from app.api.deps import DbSession
+from app.api.routes.listings import attach_complex_metadata
 from app.config import settings
-from app.models.listing import Complex, Listing, NotificationState
+from app.models.listing import (
+    Complex,
+    ComplexAlias,
+    Listing,
+    ListingComplexMatch,
+    NotificationState,
+    VerifiedComplexLocation,
+    VerifiedListingComplexOverride,
+)
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
     DealAlertFeed,
     ComplexPriceSummary,
     ComplexOption,
+    ComplexReviewQueue,
+    ComplexReviewDecision,
+    ComplexReviewResult,
     ListingTypeCount,
     MonthlyDelistingPoint,
     NotificationReadState,
@@ -34,10 +48,56 @@ from app.schemas.listing import ListingOut
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+_DISTRICT_TEXT_PATTERNS = {
+    "Хан-Уул": re.compile(r"(?<!\w)(?:худ|хан[ -]?уул)(?!\w)", re.IGNORECASE),
+    "Баянзүрх": re.compile(r"(?<!\w)(?:бзд|баянз[үv]рх)(?!\w)", re.IGNORECASE),
+    "Сүхбаатар": re.compile(r"(?<!\w)(?:сбд|с[үv]хбаатар)(?!\w)", re.IGNORECASE),
+    "Баянгол": re.compile(r"(?<!\w)(?:бгд|баянгол)(?!\w)", re.IGNORECASE),
+    "Сонгинохайрхан": re.compile(r"(?<!\w)(?:схд|сонгинохайрхан)(?!\w)", re.IGNORECASE),
+    "Чингэлтэй": re.compile(r"(?<!\w)(?:чд|чингэлтэй)(?!\w)", re.IGNORECASE),
+}
+
+
+def _complex_approval_gate(
+    db: DbSession, match: ListingComplexMatch, listing: Listing
+) -> tuple[bool, str | None]:
+    if match.relation != "unit":
+        return False, "landmark_or_unknown_relation"
+    allowed = {
+        row.district
+        for row in db.query(VerifiedComplexLocation)
+        .filter(VerifiedComplexLocation.complex_id == match.complex_id)
+        .all()
+    }
+    if not allowed:
+        return False, "complex_location_not_verified"
+    exact_override = (
+        db.query(VerifiedListingComplexOverride.id)
+        .filter(
+            VerifiedListingComplexOverride.source == listing.source,
+            VerifiedListingComplexOverride.source_url == listing.source_url,
+            VerifiedListingComplexOverride.complex_id == match.complex_id,
+        )
+        .first()
+        is not None
+    )
+    text_value = f"{listing.title or ''} {listing.description or ''}"
+    explicit_verified_text = any(
+        (pattern := _DISTRICT_TEXT_PATTERNS.get(district)) is not None
+        and pattern.search(text_value)
+        for district in allowed
+    )
+    if listing.district not in allowed and not exact_override and not explicit_verified_text:
+        return False, "district_guard_failed"
+    if listing.complex_id != match.complex_id:
+        return False, "listing_pointer_changed"
+    return True, None
+
 
 def _deal_candidate_ids(
     deals_by_id: dict[int, dict],
     status: str,
+    listing_type: str | None,
     district: str | None,
     property_type: str | None,
     complex_id: int | None,
@@ -49,6 +109,7 @@ def _deal_candidate_ids(
         deal_id
         for deal_id, deal in deals_by_id.items()
         if deal["deal_status"] == status
+        and (listing_type is None or deal["listing_type"] == listing_type)
         and (district is None or deal["district"] == district)
         and (property_type is None or deal["property_type"] == property_type)
         and (complex_id is None or deal["complex_id"] == complex_id)
@@ -168,6 +229,8 @@ def mark_deal_alerts_seen(db: DbSession) -> dict:
 @router.get("/complex-prices", response_model=list[ComplexPriceSummary])
 def complex_prices(complex_id: int | None = Query(None, ge=1)) -> list[dict]:
     """Current canonical price statistics, optionally for one complex."""
+    if not settings.complex_insights_enabled:
+        return []
     return complex_average_price_conn(settings.database_url, complex_id)
 
 
@@ -183,6 +246,154 @@ def complexes(db: DbSession) -> list[dict]:
         .all()
     )
     return [{"id": row.id, "canonical_name": row.canonical_name} for row in rows]
+
+
+@router.get("/complex-review-queue", response_model=ComplexReviewQueue)
+def complex_review_queue(
+    db: DbSession,
+    relation: Literal["unit", "landmark", "unknown"] | None = Query(None),
+    complex_id: int | None = Query(None, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    """Current pending complex evidence; read-only human-review workspace."""
+    base = (
+        db.query(ListingComplexMatch)
+        .filter(
+            ListingComplexMatch.is_current.is_(True),
+            ListingComplexMatch.review_status == "pending",
+        )
+    )
+    pending_unit = base.filter(ListingComplexMatch.relation == "unit").count()
+    pending_landmark = base.filter(ListingComplexMatch.relation == "landmark").count()
+    filtered = base
+    if relation is not None:
+        filtered = filtered.filter(ListingComplexMatch.relation == relation)
+    if complex_id is not None:
+        filtered = filtered.filter(ListingComplexMatch.complex_id == complex_id)
+    total = filtered.count()
+    matches = (
+        filtered.order_by(
+            ListingComplexMatch.confidence.desc(),
+            ListingComplexMatch.detected_at.desc(),
+            ListingComplexMatch.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    listing_ids = [row.listing_id for row in matches]
+    complex_ids = {row.complex_id for row in matches}
+    alias_ids = {row.matched_alias_id for row in matches if row.matched_alias_id is not None}
+    listings = {
+        row.id: row for row in db.query(Listing).filter(Listing.id.in_(listing_ids)).all()
+    } if listing_ids else {}
+    complexes_by_id = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+    aliases = {
+        row.id: row.alias
+        for row in db.query(ComplexAlias).filter(ComplexAlias.id.in_(alias_ids)).all()
+    } if alias_ids else {}
+    items = []
+    for match in matches:
+        listing = listings[match.listing_id]
+        note = match.reviewer_note or ""
+        reason = note.split(": ", 1)[1] if note.startswith("legacy pending-match backfill") else note or None
+        can_approve, block_reason = _complex_approval_gate(db, match, listing)
+        items.append({
+            "listing_id": listing.id,
+            "complex_id": match.complex_id,
+            "complex_name": complexes_by_id[match.complex_id],
+            "matched_alias": aliases.get(match.matched_alias_id),
+            "relation": match.relation,
+            "confidence": float(match.confidence),
+            "evidence_text": match.evidence_text,
+            "district": listing.district,
+            "address": listing.address,
+            "source_url": listing.source_url,
+            "review_reason": reason,
+            "can_approve": can_approve,
+            "approval_block_reason": block_reason,
+            "detected_at": match.detected_at,
+        })
+    return {
+        "items": items,
+        "total": total,
+        "pending_unit": pending_unit,
+        "pending_landmark": pending_landmark,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.post(
+    "/complex-review-queue/{listing_id}/decision",
+    response_model=ComplexReviewResult,
+)
+def decide_complex_review(
+    listing_id: int,
+    decision: ComplexReviewDecision,
+    db: DbSession,
+) -> dict:
+    match = (
+        db.query(ListingComplexMatch)
+        .filter(
+            ListingComplexMatch.listing_id == listing_id,
+            ListingComplexMatch.is_current.is_(True),
+            ListingComplexMatch.review_status == "pending",
+        )
+        .with_for_update()
+        .one_or_none()
+    )
+    if match is None:
+        raise HTTPException(status_code=404, detail="Pending complex match not found")
+    listing = db.query(Listing).filter(Listing.id == listing_id).with_for_update().one()
+    complex_row = db.query(Complex).filter(Complex.id == match.complex_id).one()
+    now = datetime.now(timezone.utc)
+    note = decision.note.strip() if decision.note and decision.note.strip() else None
+
+    if decision.decision == "approve":
+        allowed, reason = _complex_approval_gate(db, match, listing)
+        if not allowed:
+            raise HTTPException(status_code=409, detail=f"Cannot approve: {reason}")
+        match.review_status = "approved"
+        match.reviewer_note = note or "manual review approved"
+        match.reviewed_at = now
+    else:
+        match.review_status = "rejected"
+        match.reviewer_note = note or "manual review rejected"
+        match.reviewed_at = now
+        if listing.complex_id == match.complex_id:
+            old_complex_id = listing.complex_id
+            listing.complex_id = None
+            db.execute(
+                text("""
+                INSERT INTO complex_link_audit
+                    (listing_id, action, old_complex_id, old_complex_name,
+                     new_complex_id, new_complex_name, reason, evidence_text,
+                     district, script_version)
+                VALUES
+                    (:listing_id, 'unlink', :old_complex_id, :old_complex_name,
+                     NULL, NULL, 'human_review_rejected_complex_match', :evidence_text,
+                     :district, 'complex-review-api-v1')
+                """),
+                {
+                    "listing_id": listing.id,
+                    "old_complex_id": old_complex_id,
+                    "old_complex_name": complex_row.canonical_name,
+                    "evidence_text": match.evidence_text,
+                    "district": listing.district,
+                },
+            )
+    db.commit()
+    return {
+        "listing_id": listing.id,
+        "complex_id": match.complex_id,
+        "review_status": match.review_status,
+        "complex_id_after": listing.complex_id,
+    }
 
 
 def _attach_computed_fields(
@@ -225,6 +436,7 @@ def _attach_computed_fields(
 @router.get("/listings", response_model=list[ListingOut])
 def list_dashboard_listings(
     db: DbSession,
+    listing_type: Literal["sale", "rent"] | None = Query(None),
     district: str | None = Query(None),
     property_type: str | None = Query(None),
     complex_id: int | None = Query(None, ge=1),
@@ -302,7 +514,11 @@ def list_dashboard_listings(
     """
     excluded_ids = superseded_listing_ids_conn(settings.database_url)
     deals_by_id = {d["id"]: d for d in deal_percentages_conn(settings.database_url)}
-    complex_deals_by_id = {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
+    complex_deals_by_id = (
+        {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
+        if settings.complex_insights_enabled
+        else {}
+    )
     estimates_by_id = {e["id"]: e for e in estimate_negotiable_price_conn(settings.database_url)}
     yield_by_district_rooms = {
         (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
@@ -312,6 +528,7 @@ def list_dashboard_listings(
         _deal_candidate_ids(
             deals_by_id,
             deal_status,
+            listing_type,
             district,
             property_type,
             complex_id,
@@ -339,6 +556,7 @@ def list_dashboard_listings(
             else _deal_candidate_ids(
                 deals_by_id,
                 "top_deal",
+                listing_type,
                 district,
                 property_type,
                 complex_id,
@@ -362,6 +580,8 @@ def list_dashboard_listings(
             query = query.filter(Listing.id.in_(status_candidate_ids))
         if district is not None:
             query = query.filter(Listing.district == district)
+        if listing_type is not None:
+            query = query.filter(Listing.listing_type == listing_type)
         if property_type is not None:
             query = query.filter(Listing.property_type == property_type)
         if complex_id is not None:
@@ -377,18 +597,14 @@ def list_dashboard_listings(
             .all()
         )
 
-    complex_ids = {listing.complex_id for listing in ordered if listing.complex_id is not None}
-    complex_names_by_id = {
-        row.id: row.canonical_name
-        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
-    } if complex_ids else {}
+    attach_complex_metadata(db, ordered)
 
     return [
         _attach_computed_fields(
             listing,
             deals_by_id.get(listing.id),
             complex_deals_by_id.get(listing.id),
-            complex_names_by_id.get(listing.complex_id),
+            listing.complex_name,
             estimates_by_id.get(listing.id),
             yield_by_district_rooms.get((listing.district, listing.rooms)),
         )

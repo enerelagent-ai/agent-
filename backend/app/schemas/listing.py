@@ -1,6 +1,32 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+
+
+class FacetValue(BaseModel):
+    value: str
+    count: int
+
+
+class RoomFacetValue(BaseModel):
+    value: int
+    count: int
+
+
+class PriceFacet(BaseModel):
+    min: float | None
+    max: float | None
+    count: int
+
+
+class ListingFacets(BaseModel):
+    listing_type: Literal["sale", "rent"]
+    total: int
+    districts: list[FacetValue]
+    property_types: list[FacetValue]
+    rooms: list[RoomFacetValue]
+    price: PriceFacet
 
 
 class ListingOut(BaseModel):
@@ -20,6 +46,7 @@ class ListingOut(BaseModel):
     total_floors: int | None
     complex_id: int | None
     complex_name: str | None = None
+    complex_verified: bool = False
     listing_type: str | None
     property_type: str | None
     district: str | None
@@ -76,3 +103,9 @@ class ListingOut(BaseModel):
     rental_yield_payback_years: float | None = None
     rental_yield_n_sale: int | None = None
     rental_yield_n_rent: int | None = None
+
+
+class MarketplaceListingPage(BaseModel):
+    items: list[ListingOut]
+    next_cursor: str | None
+    has_more: bool

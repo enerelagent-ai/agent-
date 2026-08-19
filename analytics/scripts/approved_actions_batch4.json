@@ -1,0 +1,18 @@
+{
+  "batch": "verified_registry_district_unlink_12",
+  "approved_by": "Verified Жаргалан location registry plus manual title/address review",
+  "actions": [
+    {"listing_id":12731,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймгийн жаргалант суманд 163 га жаргалантын шар төмс тариалдаг газар","district":"Төв"},
+    {"listing_id":14981,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"different_named_complex_jargalant_urguu","evidence_text":"Найрамдалд жаргалант өргөө хотхонд сингл хаус 146мкв","district":"Сонгинохайрхан"},
+    {"listing_id":15193,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_landmark","evidence_text":"Орбит, жаргалант төвийн хойно 700м2 газартай хашаа байшин","district":"Сонгинохайрхан"},
+    {"listing_id":15217,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_landmark","evidence_text":"Орбит, жаргалант төвийн хойно 700м2 газартай хашаа байшин","district":"Сонгинохайрхан"},
+    {"listing_id":16271,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"canonical_name_collision_outside_verified_district","evidence_text":"Жаргалан хотхон 135.1мкв 4 өрөө орон сууц","district":"Баянзүрх"},
+    {"listing_id":16483,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Жаргалант суманд өмчилсөн 1.6 га газар байшин","district":"Төв"},
+    {"listing_id":20150,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймаг жаргалант-д 5 нүхэн зоорьтой 2 айлын газартай погончиктой хашаа 1400мкв","district":"Төв"},
+    {"listing_id":21670,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Гахайн байр - төв аймаг/жаргалант","district":"Төв"},
+    {"listing_id":22091,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймгийн жаргалант суманд 𝟏𝟔𝟑га тариалангийн талбай","district":"Төв"},
+    {"listing_id":24535,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймаг жаргалант сум 14790м2 газар","district":"Төв"},
+    {"listing_id":37769,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймаг жаргалант суманд 2 өрөө байр 55м2","district":"Төв"},
+    {"listing_id":59967,"action":"unlink","old_complex_name":"Жаргалан","new_complex_name":null,"reason":"verified_district_mismatch_common_place_name","evidence_text":"Төв аймаг, жаргалант сум 14790м2 газар","district":"Төв"}
+  ]
+}

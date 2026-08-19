@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/real_estate"
     cors_origins: list[str] = ["http://localhost:3000"]
+    complex_insights_enabled: bool = False
 
     # Unset (the local-dev default) -- see app.api.deps.require_admin --
     # leaves every route open, matching CLAUDE.md's "no auth yet, local

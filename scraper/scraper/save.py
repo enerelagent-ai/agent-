@@ -7,11 +7,25 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
-from analytics.complexes import COMPLEX_ALIASES, extract_complex, normalize_complex_name
+from analytics.complexes import (
+    COMPLEX_ALIASES,
+    COMPLEX_EXTRACTOR_VERSION,
+    extract_complex,
+    normalize_complex_name,
+)
 
 AREA_NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)?")
 LEADING_INT_RE = re.compile(r"^(\d+)")
 NEGOTIABLE_MARKER = "үнэ тохирно"
+
+_DISTRICT_TEXT_PATTERNS = {
+    "Хан-Уул": re.compile(r"(?<!\w)(?:худ|хан[ -]?уул)(?!\w)", re.IGNORECASE),
+    "Баянзүрх": re.compile(r"(?<!\w)(?:бзд|баянз[үv]рх)(?!\w)", re.IGNORECASE),
+    "Сүхбаатар": re.compile(r"(?<!\w)(?:сбд|с[үv]хбаатар)(?!\w)", re.IGNORECASE),
+    "Баянгол": re.compile(r"(?<!\w)(?:бгд|баянгол)(?!\w)", re.IGNORECASE),
+    "Сонгинохайрхан": re.compile(r"(?<!\w)(?:схд|сонгинохайрхан)(?!\w)", re.IGNORECASE),
+    "Чингэлтэй": re.compile(r"(?<!\w)(?:чд|чингэлтэй)(?!\w)", re.IGNORECASE),
+}
 
 # Coarse duplicate-candidate key: same unit re-posted should collide, price
 # edits should not. Week 4 dedup logic refines matching beyond this hash.
@@ -128,6 +142,20 @@ def compute_dedup_hash(row: dict[str, Any]) -> str:
     return hashlib.sha256("|".join(parts).lower().encode("utf-8")).hexdigest()
 
 
+def has_explicit_district_evidence(row: dict[str, Any], district: str) -> bool:
+    """Whether seller-authored title/description explicitly names district.
+
+    Unegui's location dropdown is occasionally wrong while both title and
+    description say e.g. ``ХУД-15``.  This is a narrow override for a verified
+    complex registry guard, not a general district inference mechanism.
+    """
+    pattern = _DISTRICT_TEXT_PATTERNS.get(district)
+    if pattern is None:
+        return False
+    text = " ".join(str(row.get(field) or "") for field in ("title", "description"))
+    return pattern.search(text) is not None
+
+
 def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
     """Map one parse_detail_page() dict onto listings columns.
 
@@ -164,6 +192,20 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
         "total_floors": parse_floor(specs.get("Барилгын давхар")),
         "complex_id": None,
         "complex_name": complex_name,
+        # Keep evidence even when the match is a landmark and therefore must
+        # never become listings.complex_id. Trigger-only unknown names are not
+        # admitted to the verified tables until their alias is reviewed.
+        "complex_match": (
+            {
+                "canonical_name": complex_match.canonical_name,
+                "matched_alias": complex_match.matched_alias,
+                "relation": complex_match.relation,
+                "confidence": complex_match.confidence,
+                "evidence_text": parsed["title"],
+            }
+            if complex_match and complex_match.matched_alias is not None
+            else None
+        ),
         "district": parsed.get("district"),
         "address": parsed.get("location_raw"),
         "lat": parsed.get("latitude"),
@@ -185,7 +227,67 @@ def listing_row_from_parsed(parsed: dict[str, Any]) -> dict[str, Any] | None:
 def _resolve_complex_ids(
     cur: psycopg2.extensions.cursor, rows: list[dict[str, Any]]
 ) -> None:
-    """Upsert reviewed complex names and attach their IDs to listing rows."""
+    """Upsert reviewed complex names and attach IDs with location guards.
+
+    Release 3 only updates the fast pointer for a reviewed unit alias whose
+    complex has an independently verified location and whose listing passes
+    that district guard (or an exact reviewed override). All other candidates
+    stay unlinked and are persisted to the review queue separately.
+    """
+    names = sorted({row["complex_name"] for row in rows if row.get("complex_name")})
+    if not names:
+        return
+    cur.execute(
+        """
+        SELECT c.canonical_name, array_agg(DISTINCT v.district) AS districts
+        FROM complexes c
+        JOIN verified_complex_locations v ON v.complex_id = c.id
+        WHERE c.canonical_name = ANY(%s)
+        GROUP BY c.canonical_name
+        """,
+        (names,),
+    )
+    allowed_districts = {
+        row["canonical_name"]: set(row["districts"])
+        for row in cur.fetchall()
+    }
+    guarded_rows = [
+        row for row in rows
+        if row.get("complex_name") in allowed_districts and row.get("source_url")
+    ]
+    override_keys: set[tuple[str, str]] = set()
+    if guarded_rows:
+        cur.execute(
+            """
+            SELECT o.source_url, c.canonical_name
+            FROM verified_listing_complex_overrides o
+            JOIN complexes c ON c.id = o.complex_id
+            WHERE o.source = 'unegui'
+              AND o.source_url = ANY(%s)
+            """,
+            ([row["source_url"] for row in guarded_rows],),
+        )
+        override_keys = {
+            (row["source_url"], row["canonical_name"])
+            for row in cur.fetchall()
+        }
+    for row in rows:
+        name = row.get("complex_name")
+        allowed = allowed_districts.get(name)
+        has_allowed_text_evidence = allowed is not None and any(
+            has_explicit_district_evidence(row, district) for district in allowed
+        )
+        has_listing_override = (row.get("source_url"), name) in override_keys
+        if (
+            allowed is None
+            or (
+                row.get("district") not in allowed
+                and not has_allowed_text_evidence
+                and not has_listing_override
+            )
+        ):
+            row["complex_name"] = None
+
     names = sorted({row["complex_name"] for row in rows if row.get("complex_name")})
     if not names:
         return
@@ -207,6 +309,95 @@ def _resolve_complex_ids(
         ids[name] = returned["id"] if isinstance(returned, dict) else returned[0]
     for row in rows:
         row["complex_id"] = ids.get(row.get("complex_name"))
+
+
+def _persist_complex_matches(
+    cur: psycopg2.extensions.cursor, rows: list[dict[str, Any]]
+) -> int:
+    """Persist current reviewed-alias evidence after listing upsert.
+
+    This never creates canonical identities from trigger-only guesses. A
+    district-safe unit assignment is policy-approved in the same transaction;
+    landmarks and blocked/unregistered unit candidates remain pending.
+    Re-scraping is idempotent and retains older extractor results as history.
+    """
+    if not rows:
+        return 0
+    candidates = [row for row in rows if row.get("complex_match")]
+    urls = [row["source_url"] for row in rows]
+    cur.execute(
+        "SELECT source_url, id FROM listings WHERE source = 'unegui' AND source_url = ANY(%s)",
+        (urls,),
+    )
+    listing_ids = {row["source_url"]: row["id"] for row in cur.fetchall()}
+    if listing_ids:
+        cur.execute(
+            """
+            UPDATE listing_complex_matches
+            SET is_current = false, updated_at = now()
+            WHERE listing_id = ANY(%s) AND is_current
+            """,
+            (list(listing_ids.values()),),
+        )
+    if not candidates:
+        return 0
+
+    names = sorted({row["complex_match"]["canonical_name"] for row in candidates})
+    aliases = sorted({
+        normalize_complex_name(row["complex_match"]["matched_alias"])
+        for row in candidates
+    })
+    cur.execute(
+        "SELECT canonical_name, id FROM complexes WHERE canonical_name = ANY(%s)",
+        (names,),
+    )
+    complex_ids = {row["canonical_name"]: row["id"] for row in cur.fetchall()}
+    cur.execute(
+        "SELECT normalized_alias, id FROM complex_aliases WHERE normalized_alias = ANY(%s) AND is_active",
+        (aliases,),
+    )
+    alias_ids = {row["normalized_alias"]: row["id"] for row in cur.fetchall()}
+
+    persisted = 0
+    for row in candidates:
+        match = row["complex_match"]
+        listing_id = listing_ids.get(row["source_url"])
+        complex_id = complex_ids.get(match["canonical_name"])
+        alias_id = alias_ids.get(normalize_complex_name(match["matched_alias"]))
+        if listing_id is None or complex_id is None or alias_id is None:
+            continue
+        approved = match["relation"] == "unit" and row.get("complex_id") == complex_id
+        review_status = "approved" if approved else "pending"
+        reviewer_note = "district-safe verified-location policy" if approved else None
+        cur.execute(
+            """
+            INSERT INTO listing_complex_matches
+                (listing_id, complex_id, matched_alias_id, relation, confidence,
+                 evidence_text, source_field, extractor_version, review_status,
+                 reviewer_note, reviewed_at, is_current)
+            VALUES
+                (%s, %s, %s, %s, %s, %s, 'title', %s, %s, %s,
+                 CASE WHEN %s = 'approved' THEN now() ELSE NULL END, true)
+            ON CONFLICT (listing_id, complex_id, extractor_version, evidence_text)
+            DO UPDATE SET
+                matched_alias_id = EXCLUDED.matched_alias_id,
+                relation = EXCLUDED.relation,
+                confidence = EXCLUDED.confidence,
+                review_status = EXCLUDED.review_status,
+                reviewer_note = EXCLUDED.reviewer_note,
+                reviewed_at = EXCLUDED.reviewed_at,
+                is_current = true,
+                detected_at = now(),
+                updated_at = now()
+            """,
+            (
+                listing_id, complex_id, alias_id, match["relation"], match["confidence"],
+                match["evidence_text"], COMPLEX_EXTRACTOR_VERSION, review_status,
+                reviewer_note, review_status,
+            ),
+        )
+        persisted += 1
+    return persisted
 
 
 def recently_scraped(
@@ -332,9 +523,10 @@ def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
     try:
         try:
             with conn:
-                with conn.cursor() as cur:
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                     _resolve_complex_ids(cur, rows)
                     psycopg2.extras.execute_batch(cur, _UPSERT_SQL, rows)
+                    _persist_complex_matches(cur, rows)
             return len(rows)
         except psycopg2.DataError:
             conn.rollback()
@@ -342,9 +534,10 @@ def upsert_listings(dsn: str, rows: list[dict[str, Any]]) -> int:
             for row in rows:
                 try:
                     with conn:
-                        with conn.cursor() as cur:
+                        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                             _resolve_complex_ids(cur, [row])
                             cur.execute(_UPSERT_SQL, row)
+                            _persist_complex_matches(cur, [row])
                     saved += 1
                 except psycopg2.DataError as exc:
                     reason = str(exc).splitlines()[0]

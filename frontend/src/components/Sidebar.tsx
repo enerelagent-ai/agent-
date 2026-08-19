@@ -9,8 +9,10 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  Store,
   PiggyBank,
   Settings,
+  ShieldQuestion,
   TrendingUp,
 } from "lucide-react";
 
@@ -21,13 +23,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/" },
+  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Зарын зах", icon: Store, href: "/market" },
   { label: "Зар мэдээлэл", icon: ListChecks, href: "/listings" },
   { label: "Зах зээлийн тойм", icon: TrendingUp, href: null },
   { label: "Хөрөнгө оруулалтын өгөөж", icon: PiggyBank, href: "/calculator" },
   { label: "Түрээсийн өгөөж", icon: KeyRound, href: null },
   { label: "Дүрслэл & Тайлан", icon: FileBarChart, href: null },
   { label: "Мэдэгдэл", icon: Bell, href: "/notifications" },
+  { label: "Хотхон шалгах", icon: ShieldQuestion, href: "/complex-review" },
   { label: "Тохиргоо", icon: Settings, href: null },
 ];
 
@@ -47,7 +51,7 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 pt-2">
         {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
-          const active = href === "/" ? pathname === "/" : href !== null && pathname.startsWith(href);
+          const active = href !== null && pathname.startsWith(href);
           return href ? (
             <Link
               key={label}

@@ -1,6 +1,17 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel
+
+
+class InvestmentReproducibility(BaseModel):
+    calculated_at: datetime
+    comparison_group: str
+    n_sale: int
+    n_rent: int
+    median_sale_price: float
+    median_rent_price: float
+    formula_version: str
 
 
 class DistrictInvestmentSummary(BaseModel):
@@ -15,6 +26,13 @@ class DistrictInvestmentSummary(BaseModel):
     gross_rental_yield_pct: float
     roi_pct: float
     investment_score: float
+    confidence_tier: Literal["high", "medium", "low", "unavailable"]
+    data_as_of: datetime
+    room_coverage_pct: float
+    area_coverage_pct: float
+    price_guard_excluded_pct: float
+    confidence_formula_version: str
+    reproducibility: InvestmentReproducibility
 
 
 class PriceTrendPoint(BaseModel):
@@ -76,6 +94,44 @@ class ComplexOption(BaseModel):
     canonical_name: str
 
 
+class ComplexReviewItem(BaseModel):
+    listing_id: int
+    complex_id: int
+    complex_name: str
+    matched_alias: str | None
+    relation: Literal["unit", "landmark", "unknown"]
+    confidence: float
+    evidence_text: str
+    district: str | None
+    address: str | None
+    source_url: str
+    review_reason: str | None
+    can_approve: bool
+    approval_block_reason: str | None
+    detected_at: datetime
+
+
+class ComplexReviewQueue(BaseModel):
+    items: list[ComplexReviewItem]
+    total: int
+    pending_unit: int
+    pending_landmark: int
+    limit: int
+    offset: int
+
+
+class ComplexReviewDecision(BaseModel):
+    decision: Literal["approve", "reject"]
+    note: str | None = None
+
+
+class ComplexReviewResult(BaseModel):
+    listing_id: int
+    complex_id: int
+    review_status: Literal["approved", "rejected"]
+    complex_id_after: int | None
+
+
 class TodaysOpportunity(BaseModel):
     # No investment_score/roi_pct here on purpose -- see
     # analytics.calculations.todays_opportunity's docstring. Only the
@@ -96,3 +152,10 @@ class TodaysOpportunity(BaseModel):
     top_deal_pct: float | None
     n_deals_analyzed: int
     last_scraped_at: datetime
+    confidence_tier: Literal["high", "medium", "low", "unavailable"]
+    data_as_of: datetime
+    room_coverage_pct: float
+    area_coverage_pct: float
+    price_guard_excluded_pct: float
+    confidence_formula_version: str
+    reproducibility: InvestmentReproducibility

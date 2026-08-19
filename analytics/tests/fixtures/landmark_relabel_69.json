@@ -1,0 +1,558 @@
+{
+  "schema_version": 1,
+  "source": "assignment_consistency_check (Session 0 audit, 2026-08-17)",
+  "rows": [
+    {
+      "listing_id": 11952,
+      "assigned_canonical": "Buti Town",
+      "evidence_text": "хажууд",
+      "title": "Бүти тауны хажууд ceo оффист 59мкв талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 61492,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хойно",
+      "title": "Бзд сансар home plaza хойно 52.9мкв 2 өрөө",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 3398,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун урд",
+      "title": "Худ home plaza баруун урд нархан хотхонд 150мкв 5 өрөө орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 61956,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун урд",
+      "title": "Худ, home plaza баруун урд нархан хотхонд 150мкв 5 өрөө орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 14449,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хойно",
+      "title": "Бзд сансрын home plaza-ын хойно 2 өрөө 52.9мкв байр",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 10135,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "зүүн талд",
+      "title": "Home plaza зүүн талд дүнжингарав хотхонд 4 өрөө 130.21мкв байр",
+      "label": "ambiguous",
+      "suggested_canonical": "Дvнжингарав (шинэ, canonical биш)"
+    },
+    {
+      "listing_id": 66095,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хажууд",
+      "title": "Худ home plaza-ийн хажууд 2 өрөө гал тогооны тавилгатай 50мкв",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 67415,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун",
+      "title": "Худ home plaza ийн баруун 50мкв 2 өрөө байр",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 68915,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Худ home plaza баруун талд 2 өрөө байр",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 69762,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун",
+      "title": "Худ home plaza баруун хойно 60-р байр мастертай 4 өрөө 121.1мкв",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 359,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун",
+      "title": "Home plaza баруун тал жаргалан хотхонд дуплекс 5 өрөө 241.47 мкв орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Жаргалан"
+    },
+    {
+      "listing_id": 1797,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Home plaza баруун талд нархан хотхонд 113.0мкв 3 өрөө дуплекс байр",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 24629,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Худ home plaza баруун талд 2 өрөө 50м2",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 3616,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хойно",
+      "title": "Бзд сансрын home plaza-ын хойно 52.9мкв 2 өрөө",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 5161,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Худ 15-р хороо баруун талд home plaza баруун талд 2 өрөө байр 50.0мкв",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 10521,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хойно",
+      "title": "Худ 15-р хороо home plaza-ийн хойно 68.46мкв 2 өрөө байр",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 11295,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хойно",
+      "title": "Худ 15-р хороо home plaza-ийн хойно 2 өрөө байр 68.46мкв",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 20203,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун урд",
+      "title": "Худ 15-р хороо home plaza баруун урд нархан хотхонд 150мкв 5 өрөө",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 26836,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "эсрэг талд",
+      "title": "Сансрын home plaza эсрэг талд хуучны 5 давхрын 4 давхарт 1 өрөө байр 30м2",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 29531,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Худ home plaza-ын баруун талд нархан хотхонд 60м2 граштай 2 өрөө байр",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 2613,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "хажууд",
+      "title": "Сансар home plaza-ийн хажууд 46мкв оффис, үйлчилгээний талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 3710,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "зүүн",
+      "title": "Сансар home plaza зүүн тийшээ зам дагуу 58-р байранд оффис 433мкв талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 3753,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "зүүн",
+      "title": "Сансар home plaza зүүн тийш зам дагуу үйлчилгээний 433 мкв талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 10694,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун талд",
+      "title": "Емарт home plaza-ын баруун талд 5 давхар 1490мкв обьект",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 25327,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун урд",
+      "title": "Home plaza баруун урд 5 давхар бие даасан 1490мкв объект",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 32109,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун",
+      "title": "ХУД home plaza баруун тал forum center 150мkв талбай",
+      "label": "ambiguous",
+      "suggested_canonical": "forum center (canonical биш, эргэлзээтэй)"
+    },
+    {
+      "listing_id": 63380,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун урд",
+      "title": "Худ 15-р хороо home plaza баруун урд нархан хотхон 150 мкв 5 өрөө",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 64255,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "зүүн талд",
+      "title": "Худ home plaza-ын зүүн талд дүнжингарав хотхонд дулаан зогсоол",
+      "label": "ambiguous",
+      "suggested_canonical": "Дvнжингарав (шинэ, canonical биш)"
+    },
+    {
+      "listing_id": 30410,
+      "assigned_canonical": "Home Plaza",
+      "evidence_text": "баруун",
+      "title": "Худ home plaza баруун нархан хотхонд 251.2мкв хаус",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Нархан"
+    },
+    {
+      "listing_id": 12715,
+      "assigned_canonical": "Japan Town",
+      "evidence_text": "хажууд",
+      "title": "Худ 120 мянгат japan town-ы хажууд ss garden-д 155м.кв 4 өрөө байр",
+      "label": "landmark_reassign",
+      "suggested_canonical": "SS Garden"
+    },
+    {
+      "listing_id": 16070,
+      "assigned_canonical": "Japan Town",
+      "evidence_text": "баруун талд",
+      "title": "Japan town баруун талд royal residence хотхонд таун хаус 303m2",
+      "label": "ambiguous",
+      "suggested_canonical": "royal residence (canonical биш -- Royal garden-ээс өөр нэр)"
+    },
+    {
+      "listing_id": 1105,
+      "assigned_canonical": "King Tower",
+      "evidence_text": "урд",
+      "title": "Худ king tower-ын урд 2 өрөө орон сууц 54мкв",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 61221,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "баруун талд",
+      "title": "River garden баруун талд khan hills 1 хотхонд 4 өрөө 140.7мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Khan Hills"
+    },
+    {
+      "listing_id": 61762,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "ард",
+      "title": "River garden ард river plaza 97.5мкв 3 өрөө орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "River Plaza"
+    },
+    {
+      "listing_id": 29517,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "замын эсрэг талд",
+      "title": "Худ river garden замын эсрэг талд modun town 3 өрөө 94мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Modun Town"
+    },
+    {
+      "listing_id": 65396,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "хойно",
+      "title": "Худ модун таунд ривер гардены хойно 3 өрөө тавилгатай байр 95мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Modun Town"
+    },
+    {
+      "listing_id": 69825,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "зүүн",
+      "title": "River garden зүүн хойно modun town хотхонд 94мкв 3 өрөө байр",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Modun Town"
+    },
+    {
+      "listing_id": 19217,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "ард",
+      "title": "Худ, river garden ард sky garden скай гарден хотхонд намханд 201.33мкв 5 өрөө",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Sky Garden Residence"
+    },
+    {
+      "listing_id": 24017,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "урд",
+      "title": "River garden урд захын блок дээр 4 өрөө 120м2 байр",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 27332,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "зүүн талд",
+      "title": "River garden зүүн талд river tower 366.7 мкв 8 өрөө орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "River Tower"
+    },
+    {
+      "listing_id": 31330,
+      "assigned_canonical": "River Garden",
+      "evidence_text": "баруун талд",
+      "title": "River garden баруун талд river plaza river office 473.79мкв үйлчилгээний талбай",
+      "label": "landmark_reassign",
+      "suggested_canonical": "River Plaza"
+    },
+    {
+      "listing_id": 32083,
+      "assigned_canonical": "Sky Tower",
+      "evidence_text": "урд",
+      "title": "Хотын төвд blue sky tower-ийн урд байрлах the down town оффис барилгад 451мкв",
+      "label": "ambiguous",
+      "suggested_canonical": "the down town (canonical биш)"
+    },
+    {
+      "listing_id": 36039,
+      "assigned_canonical": "Sky Tower",
+      "evidence_text": "урд",
+      "title": "Хотын төвд blue sky tower урд 200 мкв 4 өрөө",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 28520,
+      "assigned_canonical": "Гэгээнтэн",
+      "evidence_text": "урд",
+      "title": "Гэгээнтэний урд оргил шилтгээн хотхонд 4 өрөө 88м2",
+      "label": "ambiguous",
+      "suggested_canonical": "Оргил шилтгээн (Оргил Стар-тай төстэй ч өөр нэр)"
+    },
+    {
+      "listing_id": 61758,
+      "assigned_canonical": "Зайсан Green House",
+      "evidence_text": "баруун талд",
+      "title": "Green house баруун талд humana-тай шинэ мөрөөдөл хотхонд 2 өрөө 67.88м2 орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Зайсан шинэ мөрөөдөл"
+    },
+    {
+      "listing_id": 31613,
+      "assigned_canonical": "Зайсан Green House",
+      "evidence_text": "урд",
+      "title": "Green house урд 280мкв хагас тавилгатай таунхаус",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 32228,
+      "assigned_canonical": "Оргил Стар",
+      "evidence_text": "эсрэг талд",
+      "title": "Зайсангын оргил старын эсрэг талд 435 мкв 3 давхар таунхаус",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 61656,
+      "assigned_canonical": "Хүннү 2222",
+      "evidence_text": "урд",
+      "title": "Хүннү 2222-ийн урд агниста хотхонд 315.41мкв 7 өрөө пентхаус",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Агниста"
+    },
+    {
+      "listing_id": 5965,
+      "assigned_canonical": "Хүннү 2222",
+      "evidence_text": "урд",
+      "title": "Хүннү 2222-ийн урд агниста хотхонд 315.41м2, 7 өрөө пентхаус",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Агниста"
+    },
+    {
+      "listing_id": 68425,
+      "assigned_canonical": "Хүннү 2222",
+      "evidence_text": "урд",
+      "title": "Худ 17р хороо хүннү 2222ын урд талд агниста хотхонд мастeртай 3 өрөө байр",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Агниста"
+    },
+    {
+      "listing_id": 37868,
+      "assigned_canonical": "Хүннү 2222",
+      "evidence_text": "урд",
+      "title": "Хүннү 2222 урд агниста хотхон 7 өрөө пентхаус 315.41мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Агниста"
+    },
+    {
+      "listing_id": 58215,
+      "assigned_canonical": "Хүннү 2222",
+      "evidence_text": "баруун талд",
+      "title": "Худ хүннү-2222 баруун талд академи-1 хотхонд тохижуулсан агуулах",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Академи 1"
+    },
+    {
+      "listing_id": 60489,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Худ, төв цэнгэлдэхийн урд академи хотхон 3 өрөө байр 79.98мкв",
+      "label": "ambiguous",
+      "suggested_canonical": "Академи хотхон (Академи 1 эсвэл 2 тодорхойгvй)"
+    },
+    {
+      "listing_id": 66728,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "зүүн талд",
+      "title": "Худ цэнгэлдэхийн зүүн талд рапид харш хороололд бүрэн тавилгатай 2 өрөө 58мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Рапид"
+    },
+    {
+      "listing_id": 1438,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хажууд",
+      "title": "Цэнгэлдэхийн хажууд 286мкв 5 өрөө 170мкв террастай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 2883,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Худ цэнгэлдэхийн урд тансаг зэрэглэлийн 4 өрөө 155м2 орон сууц /ss garden/",
+      "label": "landmark_reassign",
+      "suggested_canonical": "SS Garden"
+    },
+    {
+      "listing_id": 12371,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хажууд",
+      "title": "Төв цэнгэлдэхийн хажууд рапид хотхонд 65 м2 2 өрөө орон сууц",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Рапид"
+    },
+    {
+      "listing_id": 23883,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Худ цэнгэлдэхийн урд байршилтай 209.72мкв 5 өрөө байр",
+      "label": "ambiguous",
+      "suggested_canonical": "нэр дурдаагvй, хэмжээ SS Garden-тэй төстэй ч баталгаагvй"
+    },
+    {
+      "listing_id": 32629,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хажууд",
+      "title": "Цэнгэлдэхийн хажууд рапид хотхонд 2өрөө байр 48мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Рапид"
+    },
+    {
+      "listing_id": 35527,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хажууд",
+      "title": "Худ,120 мянгат, цэнгэлдэхийн хажууд хурд хотхонд тавилгатай 2 өрөө 41мкв",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Рапид"
+    },
+    {
+      "listing_id": 4089,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Цэнгэлдэхийн урд pg plaza 103мкв оффис",
+      "label": "ambiguous",
+      "suggested_canonical": "pg plaza (canonical биш)"
+    },
+    {
+      "listing_id": 18427,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "замын эсрэг талд",
+      "title": "Сэлэнгэ аймгийн төв, төв цэнгэлдэхийн замын эсрэг талд 6 айлын газар",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 16045,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Төв цэнгэлдэхийн урд 103 мкв оффис",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 23734,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Өмнөговь Даланзадгад цэнгэлдэхийн урд 112-р байр 1 давхрын үйлчилгээний 40.7мкв талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 29890,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хойно",
+      "title": "Төв цэнгэлдэхийн хойно романа резиденс 150мкв оффис талбай",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Romana residence"
+    },
+    {
+      "listing_id": 34160,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Худ төв цэнгэлдэхийн урд 100м2 оффис",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 2156,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "ард",
+      "title": "Төв цэнгэлдэх ард galaxy tower оффис үйлчилгээний 240м2 талбай",
+      "label": "ambiguous",
+      "suggested_canonical": "galaxy tower (canonical биш)"
+    },
+    {
+      "listing_id": 29054,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "хойно",
+      "title": "Цэнгэлдэхийн хойно талбай",
+      "label": "landmark_none",
+      "suggested_canonical": null
+    },
+    {
+      "listing_id": 60265,
+      "assigned_canonical": "Цэнгэлдэх",
+      "evidence_text": "урд",
+      "title": "Худ цэнгэлдэхийн урд рапид харш хотхонд 129 мкв 4 өрөө",
+      "label": "landmark_reassign",
+      "suggested_canonical": "Рапид"
+    }
+  ]
+}

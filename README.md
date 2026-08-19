@@ -51,6 +51,36 @@ npm install
 npm run dev
 ```
 
+### Marketplace smoke тест
+
+Backend-ийн virtual environment-д dependencies суусан, local PostgreSQL
+ажиллаж байх үед:
+
+```bash
+cd frontend
+npx playwright install chromium
+DATABASE_URL=postgresql://localhost:5432/postgres npm run test:e2e
+```
+
+Smoke suite нь хэрэглэгчийн dev server-тэй мөргөлдөхгүйгээр backend/frontend-ийг
+`8100`/`3100` портууд дээр түр асааж, `/sale`, `/rent`, filter, cursor pagination,
+detail page болон mobile filter drawer урсгалыг шалгана.
+
+### Marketplace release flag
+
+```bash
+MARKETPLACE_V2_ENABLED=true      # Vercel / frontend
+COMPLEX_INSIGHTS_ENABLED=false   # Render / backend
+```
+
+`MARKETPLACE_V2_ENABLED=true` үед үндсэн `/` зам `/market`-аар дамжин
+marketplace-ийн `/sale` нүүрийг нээнэ. Хуучин аналитик самбар `/dashboard` дээр
+үлдэнэ. Flag-ийг `false` болгоход үндсэн нүүр код rollback хийхгүйгээр хуучин
+dashboard руу буцна. Хотхоны insight нь registry validation бүрэн болоогүй тул
+backend-ийн `COMPLEX_INSIGHTS_ENABLED` flag-аар тусдаа хаалттай байна. Энэ
+flag `false` үед complex median/deal тооцоо API-аас гарахгүй; verified нэр ба
+data-provenance badge хэвээр харагдана.
+
 ### Database
 
 `db/schema.sql`-д schema, `db/migrations/`-д migration файлууд байрлана.

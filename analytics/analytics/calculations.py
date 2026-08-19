@@ -9,7 +9,7 @@ analysis over time, which is a different, deliberately separate concern
 from anything in this module.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -382,6 +382,87 @@ def listing_counts_by_property_type_conn(dsn: str) -> list[dict[str, Any]]:
 # regardless of sample size.
 _MIN_SAMPLE_SIZE = 20
 
+INVESTMENT_CONFIDENCE_FORMULA_VERSION = "investment-confidence-v1"
+INVESTMENT_FORMULA_VERSION = "district-investment-v1"
+INVESTMENT_COMPARISON_GROUP = (
+    "district + property_subtype + rooms; apartments only; "
+    "matched sale/rent; active canonical listings"
+)
+
+
+def classify_investment_confidence(
+    *,
+    n_sale: int,
+    n_rent: int,
+    data_age_days: float,
+    room_coverage_pct: float,
+    area_coverage_pct: float,
+    price_guard_excluded_pct: float,
+) -> str:
+    """Transparent confidence tier for a district investment estimate."""
+    if n_sale < _MIN_SAMPLE_SIZE or n_rent < _MIN_SAMPLE_SIZE:
+        return "unavailable"
+    if (
+        min(n_sale, n_rent) >= 100
+        and data_age_days <= 2
+        and room_coverage_pct >= 95
+        and area_coverage_pct >= 80
+        and price_guard_excluded_pct <= 5
+    ):
+        return "high"
+    if (
+        min(n_sale, n_rent) >= 40
+        and data_age_days <= 7
+        and room_coverage_pct >= 90
+        and area_coverage_pct >= 60
+        and price_guard_excluded_pct <= 10
+    ):
+        return "medium"
+    return "low"
+
+
+_INVESTMENT_DATA_QUALITY_SQL = """
+    SELECT district,
+           max(scraped_at) AS data_as_of,
+           round((count(*) FILTER (WHERE rooms IS NOT NULL)::numeric
+                 / NULLIF(count(*), 0)) * 100, 2) AS room_coverage_pct,
+           round((count(*) FILTER (
+                    WHERE listing_type = 'sale' AND area_sqm >= %(min_area_sqm)s
+                  )::numeric
+                 / NULLIF(count(*) FILTER (WHERE listing_type = 'sale'), 0)) * 100, 2)
+                 AS area_coverage_pct,
+           round((count(*) FILTER (
+                    WHERE price_negotiable IS NOT TRUE
+                      AND (price IS NULL OR price <= 0 OR price > %(max_plausible_price)s)
+                  )::numeric
+                 / NULLIF(count(*) FILTER (WHERE price_negotiable IS NOT TRUE), 0)) * 100, 2)
+                 AS price_guard_excluded_pct
+    FROM listings
+    WHERE id != ALL(%(excluded_ids)s)
+      AND is_active
+      AND district IS NOT NULL
+      AND (
+        (listing_type = 'sale' AND property_type = %(sale_label)s)
+        OR (listing_type = 'rent' AND property_type = %(rent_label)s)
+      )
+    GROUP BY district
+"""
+
+
+def investment_data_quality(
+    cur: psycopg2.extensions.cursor,
+) -> dict[str, dict[str, Any]]:
+    """Coverage, freshness and existing price-guard exclusions by district."""
+    excluded = list(superseded_listing_ids(cur))
+    cur.execute(_INVESTMENT_DATA_QUALITY_SQL, {
+        "excluded_ids": excluded,
+        "sale_label": _APARTMENT_SALE_LABEL,
+        "rent_label": _APARTMENT_RENT_LABEL,
+        "min_area_sqm": _MIN_AREA_SQM_FOR_DEAL,
+        "max_plausible_price": _MAX_PLAUSIBLE_PRICE,
+    })
+    return {row["district"]: dict(row) for row in cur.fetchall()}
+
 
 _DISTRICT_SALE_DISTRIBUTION_SQL = """
     WITH eligible_rent_groups AS (
@@ -393,29 +474,60 @@ _DISTRICT_SALE_DISTRIBUTION_SQL = """
           AND district IS NOT NULL AND rooms IS NOT NULL
           AND price_negotiable IS NOT TRUE
           AND price > 0 AND price <= %(max_plausible_price)s
+    ),
+    eligible_sale_groups AS (
+        SELECT DISTINCT district, property_subtype, rooms
+        FROM listings
+        WHERE id != ALL(%(excluded_ids)s)
+          AND is_active
+          AND listing_type = 'sale' AND property_type = %(sale_label)s
+          AND district IS NOT NULL AND rooms IS NOT NULL
+          AND price_negotiable IS NOT TRUE
+          AND price > 0 AND price <= %(max_plausible_price)s
+    ),
+    sale_distribution AS (
+        SELECT s.district,
+               min(s.price) AS min_sale_price,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY s.price) AS median_sale_price,
+               max(s.price) AS max_sale_price
+        FROM listings s
+        JOIN eligible_rent_groups r
+          ON s.district = r.district
+         AND s.property_subtype IS NOT DISTINCT FROM r.property_subtype
+         AND s.rooms = r.rooms
+        WHERE s.id != ALL(%(excluded_ids)s)
+          AND s.is_active
+          AND s.listing_type = 'sale' AND s.property_type = %(sale_label)s
+          AND s.price_negotiable IS NOT TRUE
+          AND s.price > 0 AND s.price <= %(max_plausible_price)s
+        GROUP BY s.district
+    ),
+    rent_distribution AS (
+        SELECT r.district,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY r.price) AS median_rent_price
+        FROM listings r
+        JOIN eligible_sale_groups s
+          ON r.district = s.district
+         AND r.property_subtype IS NOT DISTINCT FROM s.property_subtype
+         AND r.rooms = s.rooms
+        WHERE r.id != ALL(%(excluded_ids)s)
+          AND r.is_active
+          AND r.listing_type = 'rent' AND r.property_type = %(rent_label)s
+          AND r.price_negotiable IS NOT TRUE
+          AND r.price > 0 AND r.price <= %(max_plausible_price)s
+        GROUP BY r.district
     )
-    SELECT s.district,
-           min(s.price) AS min_sale_price,
-           percentile_cont(0.5) WITHIN GROUP (ORDER BY s.price) AS median_sale_price,
-           max(s.price) AS max_sale_price
-    FROM listings s
-    JOIN eligible_rent_groups r
-      ON s.district = r.district
-     AND s.property_subtype IS NOT DISTINCT FROM r.property_subtype
-     AND s.rooms = r.rooms
-    WHERE s.id != ALL(%(excluded_ids)s)
-      AND s.is_active
-      AND s.listing_type = 'sale' AND s.property_type = %(sale_label)s
-      AND s.price_negotiable IS NOT TRUE
-      AND s.price > 0 AND s.price <= %(max_plausible_price)s
-    GROUP BY s.district
+    SELECT s.district, s.min_sale_price, s.median_sale_price, s.max_sale_price,
+           r.median_rent_price
+    FROM sale_distribution s
+    JOIN rent_distribution r ON r.district = s.district
 """
 
 
 def district_sale_price_distribution(
     cur: psycopg2.extensions.cursor,
 ) -> dict[str, dict[str, Any]]:
-    """Min/median/max sale price for the same eligible apartment groups as yield."""
+    """Sale distribution and rent median for yield-eligible apartment groups."""
     excluded = list(superseded_listing_ids(cur))
     cur.execute(_DISTRICT_SALE_DISTRIBUTION_SQL, {
         "excluded_ids": excluded,
@@ -459,6 +571,8 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
     """
     buckets = rental_yield_by_district_rooms(cur)
     distributions = district_sale_price_distribution(cur)
+    quality_by_district = investment_data_quality(cur)
+    calculated_at = datetime.now(timezone.utc)
 
     totals: dict[str, dict[str, Any]] = {}
     for b in buckets:
@@ -487,6 +601,17 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
         avg_price_per_sqm = (
             t["sale_price_per_sqm_sum"] / t["n_sale_with_sqm"] if t["n_sale_with_sqm"] else None
         )
+        quality = quality_by_district[district]
+        data_as_of = quality["data_as_of"]
+        data_age_days = max(
+            0.0,
+            (datetime.now(timezone.utc) - data_as_of).total_seconds() / 86_400,
+        )
+        room_coverage_pct = float(quality["room_coverage_pct"] or 0)
+        area_coverage_pct = float(quality["area_coverage_pct"] or 0)
+        price_guard_excluded_pct = float(
+            quality["price_guard_excluded_pct"] or 0
+        )
         rows.append({
             "district": district,
             "n_sale": t["n_sale"],
@@ -498,6 +623,28 @@ def investment_summary_by_district(cur: psycopg2.extensions.cursor) -> list[dict
             "min_sale_price": distributions[district]["min_sale_price"],
             "median_sale_price": distributions[district]["median_sale_price"],
             "max_sale_price": distributions[district]["max_sale_price"],
+            "confidence_tier": classify_investment_confidence(
+                n_sale=t["n_sale"],
+                n_rent=t["n_rent"],
+                data_age_days=data_age_days,
+                room_coverage_pct=room_coverage_pct,
+                area_coverage_pct=area_coverage_pct,
+                price_guard_excluded_pct=price_guard_excluded_pct,
+            ),
+            "data_as_of": data_as_of,
+            "room_coverage_pct": room_coverage_pct,
+            "area_coverage_pct": area_coverage_pct,
+            "price_guard_excluded_pct": price_guard_excluded_pct,
+            "confidence_formula_version": INVESTMENT_CONFIDENCE_FORMULA_VERSION,
+            "reproducibility": {
+                "calculated_at": calculated_at,
+                "comparison_group": INVESTMENT_COMPARISON_GROUP,
+                "n_sale": t["n_sale"],
+                "n_rent": t["n_rent"],
+                "median_sale_price": distributions[district]["median_sale_price"],
+                "median_rent_price": distributions[district]["median_rent_price"],
+                "formula_version": INVESTMENT_FORMULA_VERSION,
+            },
         })
 
     n = len(rows)
@@ -888,6 +1035,15 @@ _COMPLEX_AVERAGE_PRICE_SQL = """
       AND l.price_negotiable IS NOT TRUE
       AND l.price <= %(max_plausible_price)s
       AND (%(complex_id)s IS NULL OR l.complex_id = %(complex_id)s)
+      AND EXISTS (
+          SELECT 1
+          FROM listing_complex_matches m
+          WHERE m.listing_id = l.id
+            AND m.complex_id = l.complex_id
+            AND m.is_current
+            AND m.relation = 'unit'
+            AND m.review_status = 'approved'
+      )
     GROUP BY l.complex_id, c.canonical_name, l.listing_type, l.property_type
     HAVING count(*) >= %(min_group_size)s
     ORDER BY n_listings DESC, c.canonical_name, l.listing_type, l.property_type
@@ -929,15 +1085,24 @@ _COMPLEX_DEAL_PERCENTAGES_SQL = """
                percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm)
                    AS complex_median_price_per_sqm,
                count(*) AS n_comparable
-        FROM listings
-        WHERE id != ALL(%(excluded_ids)s)
-          AND is_active
-          AND complex_id IS NOT NULL
-          AND listing_type IS NOT NULL AND property_type IS NOT NULL
-          AND price_per_sqm IS NOT NULL AND area_sqm >= %(min_area_sqm)s
-          AND price_negotiable IS NOT TRUE
-          AND price <= %(max_plausible_price)s
-        GROUP BY complex_id, listing_type, property_type
+        FROM listings l
+        WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
+          AND l.complex_id IS NOT NULL
+          AND l.listing_type IS NOT NULL AND l.property_type IS NOT NULL
+          AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+          AND l.price_negotiable IS NOT TRUE
+          AND l.price <= %(max_plausible_price)s
+          AND EXISTS (
+              SELECT 1
+              FROM listing_complex_matches m
+              WHERE m.listing_id = l.id
+                AND m.complex_id = l.complex_id
+                AND m.is_current
+                AND m.relation = 'unit'
+                AND m.review_status = 'approved'
+          )
+        GROUP BY l.complex_id, l.listing_type, l.property_type
         HAVING count(*) >= %(min_group_size)s
     ),
     priced AS (
@@ -961,6 +1126,15 @@ _COMPLEX_DEAL_PERCENTAGES_SQL = """
           AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
           AND l.price_negotiable IS NOT TRUE
           AND l.price <= %(max_plausible_price)s
+          AND EXISTS (
+              SELECT 1
+              FROM listing_complex_matches m
+              WHERE m.listing_id = l.id
+                AND m.complex_id = l.complex_id
+                AND m.is_current
+                AND m.relation = 'unit'
+                AND m.review_status = 'approved'
+          )
     )
     SELECT *,
         CASE
@@ -1180,6 +1354,13 @@ def todays_opportunity(cur: psycopg2.extensions.cursor) -> dict[str, Any] | None
         "top_deal_pct": top_deal_pct,
         "n_deals_analyzed": n_deals_analyzed,
         "last_scraped_at": last_scraped_at,
+        "confidence_tier": top["confidence_tier"],
+        "data_as_of": top["data_as_of"],
+        "room_coverage_pct": top["room_coverage_pct"],
+        "area_coverage_pct": top["area_coverage_pct"],
+        "price_guard_excluded_pct": top["price_guard_excluded_pct"],
+        "confidence_formula_version": top["confidence_formula_version"],
+        "reproducibility": top["reproducibility"],
     }
 
 

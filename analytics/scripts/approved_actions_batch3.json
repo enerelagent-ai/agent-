@@ -1,0 +1,8 @@
+{
+  "batch": "extractor_exception_reassignment_2",
+  "approved_by": "Session 0 exception review plus reviewed aliases and district registry guard",
+  "actions": [
+    {"listing_id":29890,"action":"reassign","old_complex_name":"Цэнгэлдэх","new_complex_name":"Romana residence","reason":"confirmed_landmark_with_reviewed_exception_alias","evidence_text":"Төв цэнгэлдэхийн хойно романа резиденс 150мкв оффис талбай","district":"Хан-Уул"},
+    {"listing_id":61758,"action":"reassign","old_complex_name":"Зайсан Green House","new_complex_name":"Зайсан шинэ мөрөөдөл","reason":"confirmed_landmark_with_reviewed_exception_alias","evidence_text":"Green house баруун талд humana-тай шинэ мөрөөдөл хотхонд 2 өрөө 67.88м2 орон сууц","district":"Хан-Уул"}
+  ]
+}

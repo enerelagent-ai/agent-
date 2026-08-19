@@ -16,6 +16,8 @@ const SERVER_API_URL = process.env.BACKEND_API_URL ?? "http://localhost:8000";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+export type TransactionType = "sale" | "rent";
+
 export interface DistrictInvestmentSummary {
   district: string;
   n_sale: number;
@@ -28,6 +30,21 @@ export interface DistrictInvestmentSummary {
   gross_rental_yield_pct: number;
   roi_pct: number;
   investment_score: number;
+  confidence_tier: "high" | "medium" | "low" | "unavailable";
+  data_as_of: string;
+  room_coverage_pct: number;
+  area_coverage_pct: number;
+  price_guard_excluded_pct: number;
+  confidence_formula_version: string;
+  reproducibility: {
+    calculated_at: string;
+    comparison_group: string;
+    n_sale: number;
+    n_rent: number;
+    median_sale_price: number;
+    median_rent_price: number;
+    formula_version: string;
+  };
 }
 
 export interface PriceTrendPoint {
@@ -50,6 +67,13 @@ export interface TodaysOpportunity {
   top_deal_pct: number | null;
   n_deals_analyzed: number;
   last_scraped_at: string;
+  confidence_tier: "high" | "medium" | "low" | "unavailable";
+  data_as_of: string;
+  room_coverage_pct: number;
+  area_coverage_pct: number;
+  price_guard_excluded_pct: number;
+  confidence_formula_version: string;
+  reproducibility: DistrictInvestmentSummary["reproducibility"];
 }
 
 export interface ListingTypeCount {
@@ -61,6 +85,36 @@ export interface ListingTypeCount {
 export interface ComplexOption {
   id: number;
   canonical_name: string;
+}
+
+export interface ListingFacets {
+  listing_type: TransactionType;
+  total: number;
+  districts: Array<{ value: string; count: number }>;
+  property_types: Array<{ value: string; count: number }>;
+  rooms: Array<{ value: number; count: number }>;
+  price: {
+    min: number | null;
+    max: number | null;
+    count: number;
+  };
+}
+
+export interface MarketplaceListingPage {
+  items: Listing[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface MarketplaceSearchFilters {
+  listingType: TransactionType;
+  district?: string;
+  propertyType?: string;
+  rooms?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  cursor?: string;
+  limit?: number;
 }
 
 export interface DealAlertItem {
@@ -80,6 +134,32 @@ export interface DealAlertFeed {
   last_seen_at: string;
 }
 
+export interface ComplexReviewItem {
+  listing_id: number;
+  complex_id: number;
+  complex_name: string;
+  matched_alias: string | null;
+  relation: "unit" | "landmark" | "unknown";
+  confidence: number;
+  evidence_text: string;
+  district: string | null;
+  address: string | null;
+  source_url: string;
+  review_reason: string | null;
+  can_approve: boolean;
+  approval_block_reason: string | null;
+  detected_at: string;
+}
+
+export interface ComplexReviewQueue {
+  items: ComplexReviewItem[];
+  total: number;
+  pending_unit: number;
+  pending_landmark: number;
+  limit: number;
+  offset: number;
+}
+
 export interface Listing {
   id: number;
   source: string;
@@ -95,6 +175,7 @@ export interface Listing {
   total_floors: number | null;
   complex_id: number | null;
   complex_name: string | null;
+  complex_verified: boolean;
   listing_type: string | null;
   property_type: string | null;
   district: string | null;
@@ -149,19 +230,35 @@ async function getJSON<T>(path: string): Promise<T> {
   const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
   const res = await fetch(url, { cache: "no-store", headers });
   if (!res.ok) {
-    throw new Error(`${path} returned ${res.status}`);
+    throw new ApiError(path, res.status);
   }
   return res.json();
 }
 
-async function postJSON<T>(path: string): Promise<T> {
+export class ApiError extends Error {
+  constructor(
+    public readonly path: string,
+    public readonly status: number,
+  ) {
+    super(`${path} returned ${status}`);
+    this.name = "ApiError";
+  }
+}
+
+async function postJSON<T>(path: string, body?: unknown): Promise<T> {
   const isServer = typeof window === "undefined";
   const headers: HeadersInit = {};
   if (isServer && ADMIN_USERNAME && ADMIN_PASSWORD) {
     headers["Authorization"] = `Basic ${btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)}`;
   }
+  if (body !== undefined) headers["Content-Type"] = "application/json";
   const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
-  const res = await fetch(url, { method: "POST", cache: "no-store", headers });
+  const res = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!res.ok) throw new Error(`${path} returned ${res.status}`);
   return res.json();
 }
@@ -197,11 +294,62 @@ export function getComplexes(): Promise<ComplexOption[]> {
   return getJSON("/dashboard/complexes");
 }
 
+export function getComplexReviewQueue(filters: {
+  relation?: "unit" | "landmark" | "unknown";
+  complexId?: number;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ComplexReviewQueue> {
+  const params = new URLSearchParams();
+  if (filters.relation) params.set("relation", filters.relation);
+  if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
+  params.set("limit", String(filters.limit ?? 50));
+  params.set("offset", String(filters.offset ?? 0));
+  return getJSON(`/dashboard/complex-review-queue?${params.toString()}`);
+}
+
+export function decideComplexReview(
+  listingId: number,
+  decision: "approve" | "reject",
+): Promise<{
+  listing_id: number;
+  complex_id: number;
+  review_status: "approved" | "rejected";
+  complex_id_after: number | null;
+}> {
+  return postJSON(`/dashboard/complex-review-queue/${listingId}/decision`, { decision });
+}
+
+export function getListingFacets(
+  listingType: TransactionType,
+): Promise<ListingFacets> {
+  return getJSON(`/listings/facets?listing_type=${listingType}`);
+}
+
+export function searchMarketplaceListings(
+  filters: MarketplaceSearchFilters,
+): Promise<MarketplaceListingPage> {
+  const params = new URLSearchParams({ listing_type: filters.listingType });
+  if (filters.district) params.set("district", filters.district);
+  if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.rooms !== undefined) params.set("rooms", String(filters.rooms));
+  if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
+  if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));
+  if (filters.cursor) params.set("cursor", filters.cursor);
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit));
+  return getJSON(`/listings/search?${params.toString()}`);
+}
+
 export function getRecentListings(limit = 5): Promise<Listing[]> {
   return getJSON(`/dashboard/listings?limit=${limit}`);
 }
 
+export function getListing(listingId: number): Promise<Listing> {
+  return getJSON(`/listings/${listingId}`);
+}
+
 export interface ListingFilters {
+  listingType?: TransactionType;
   district?: string;
   propertyType?: string;
   complexId?: number;
@@ -217,6 +365,7 @@ export interface ListingFilters {
 // controls — same endpoint, just with whichever params are actually set.
 export function getFilteredListings(filters: ListingFilters = {}): Promise<Listing[]> {
   const params = new URLSearchParams();
+  if (filters.listingType) params.set("listing_type", filters.listingType);
   if (filters.district) params.set("district", filters.district);
   if (filters.propertyType) params.set("property_type", filters.propertyType);
   if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
