@@ -9,6 +9,7 @@ from app.models.listing import (
     VerifiedComplexLocation,
 )
 from app.schemas.dashboard import ComplexPriceSummary
+from app.api.routes import dashboard
 
 
 def test_attach_computed_fields_keeps_complex_comparison_independent() -> None:
@@ -47,6 +48,38 @@ def test_complex_price_summary_schema_accepts_calculation_row() -> None:
     })
     assert summary.complex_name == "Buti Town"
     assert summary.n_listings == 24
+
+
+def test_complex_insights_feature_flag_is_an_authoritative_backend_gate(
+    client, monkeypatch
+) -> None:
+    monkeypatch.setattr(dashboard.settings, "complex_insights_enabled", False)
+    monkeypatch.setattr(
+        dashboard,
+        "complex_average_price_conn",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("must stay gated")),
+    )
+    response = client.get("/dashboard/complex-prices")
+    assert response.status_code == 200
+    assert response.json() == []
+
+    expected = [{
+        "complex_id": 1,
+        "complex_name": "Flag Test",
+        "listing_type": "sale",
+        "property_type": "Орон сууц зарна",
+        "n_listings": 20,
+        "avg_price": 100_000_000,
+        "median_price": 100_000_000,
+        "avg_price_per_sqm": 2_000_000,
+        "median_price_per_sqm": 2_000_000,
+        "n_with_price_per_sqm": 20,
+    }]
+    monkeypatch.setattr(dashboard.settings, "complex_insights_enabled", True)
+    monkeypatch.setattr(dashboard, "complex_average_price_conn", lambda *_args: expected)
+    enabled = client.get("/dashboard/complex-prices")
+    assert enabled.status_code == 200
+    assert enabled.json() == expected
 
 
 def test_complex_options_and_listing_filter_use_same_canonical_name(client, db_session) -> None:

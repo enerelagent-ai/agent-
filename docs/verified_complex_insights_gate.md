@@ -25,3 +25,12 @@ Local post-pilot coverage on 2026-08-19:
 Unverified legacy pointers remain visible as ordinary listing metadata but
 cannot produce a median, discount percentage, or investment claim.
 
+## Release switch
+
+The backend setting `COMPLEX_INSIGHTS_ENABLED` is the authoritative runtime
+gate and defaults to `false`. While false, `/dashboard/complex-prices` returns
+no insight rows and dashboard listing responses do not execute or attach
+complex deal calculations. Canonical names and `complex_verified` identity
+badges remain available because they are data provenance, not an investment
+claim. Enable the flag only after migrations 017–018 and the verified evidence
+backfill have completed in the target database.

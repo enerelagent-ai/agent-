@@ -1,0 +1,84 @@
+name: Verified complex evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Operation (audit before every apply)
+        required: true
+        type: choice
+        options: [audit, apply-approved, postcheck-approved, apply-pending, postcheck-pending]
+      expected_approved:
+        description: Reviewed eligible_approved_pilot count
+        required: false
+        default: "0"
+      expected_unit_pending:
+        description: Reviewed unit_unregistered_manual_review count
+        required: false
+        default: "0"
+      expected_landmark_pending:
+        description: Reviewed landmark_manual_review count
+        required: false
+        default: "0"
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install analytics package
+        run: pip install -e analytics psycopg2-binary==2.9.10
+      - name: Read-only evidence audit
+        if: inputs.mode == 'audit'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python analytics/scripts/dry_run_verified_complex_match_backfill.py \
+            --dsn "$DATABASE_URL" --md-output verified-complex-audit.md \
+            --json-output verified-complex-audit.json
+      - name: Upload audit artifact
+        if: inputs.mode == 'audit'
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-complex-audit-${{ github.run_id }}
+          path: |
+            verified-complex-audit.md
+            verified-complex-audit.json
+          retention-days: 30
+      - name: Apply approved evidence
+        if: inputs.mode == 'apply-approved'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python analytics/scripts/apply_verified_complex_match_backfill.py \
+            --dsn "$DATABASE_URL" --expected-count "${{ inputs.expected_approved }}" --apply
+      - name: Post-check approved evidence
+        if: inputs.mode == 'postcheck-approved'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python analytics/scripts/apply_verified_complex_match_backfill.py \
+            --dsn "$DATABASE_URL" --expected-count "${{ inputs.expected_approved }}" --post-check
+      - name: Apply pending evidence
+        if: inputs.mode == 'apply-pending'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python analytics/scripts/apply_pending_complex_match_backfill.py \
+            --dsn "$DATABASE_URL" \
+            --expected-unit-unregistered "${{ inputs.expected_unit_pending }}" \
+            --expected-landmark "${{ inputs.expected_landmark_pending }}" --apply
+      - name: Post-check pending evidence
+        if: inputs.mode == 'postcheck-pending'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python analytics/scripts/apply_pending_complex_match_backfill.py \
+            --dsn "$DATABASE_URL" \
+            --expected-unit-unregistered "${{ inputs.expected_unit_pending }}" \
+            --expected-landmark "${{ inputs.expected_landmark_pending }}" --post-check
+

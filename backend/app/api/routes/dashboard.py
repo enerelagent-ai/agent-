@@ -229,6 +229,8 @@ def mark_deal_alerts_seen(db: DbSession) -> dict:
 @router.get("/complex-prices", response_model=list[ComplexPriceSummary])
 def complex_prices(complex_id: int | None = Query(None, ge=1)) -> list[dict]:
     """Current canonical price statistics, optionally for one complex."""
+    if not settings.complex_insights_enabled:
+        return []
     return complex_average_price_conn(settings.database_url, complex_id)
 
 
@@ -512,7 +514,11 @@ def list_dashboard_listings(
     """
     excluded_ids = superseded_listing_ids_conn(settings.database_url)
     deals_by_id = {d["id"]: d for d in deal_percentages_conn(settings.database_url)}
-    complex_deals_by_id = {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
+    complex_deals_by_id = (
+        {d["id"]: d for d in complex_deal_percentages_conn(settings.database_url)}
+        if settings.complex_insights_enabled
+        else {}
+    )
     estimates_by_id = {e["id"]: e for e in estimate_negotiable_price_conn(settings.database_url)}
     yield_by_district_rooms = {
         (y["district"], y["rooms"]): y for y in rental_yield_by_district_rooms_conn(settings.database_url)
