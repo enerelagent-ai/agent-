@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
+function isPublicMarketplaceRequest(request: NextRequest): boolean {
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname === "/" ||
+    pathname === "/market" ||
+    pathname === "/sale" ||
+    pathname === "/rent" ||
+    /^\/listings\/\d+$/.test(pathname)
+  ) {
+    return request.method === "GET" || request.method === "HEAD";
+  }
+
+  // The public marketplace only needs read access to listing search, facets,
+  // and detail endpoints. Dashboard/review endpoints and every write remain
+  // behind the admin session even though the proxy can authenticate upstream.
+  return (
+    (request.method === "GET" || request.method === "HEAD") &&
+    pathname.startsWith("/api/backend/listings")
+  );
+}
+
 // Single-admin gate for the whole site (Week 8 deploy). Unset ADMIN_USERNAME/
 // ADMIN_PASSWORD (local dev's default -- see backend/app/config.py's same
 // opt-in pattern) leaves every route open.
@@ -24,6 +46,9 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  if (isPublicMarketplaceRequest(request)) {
+    return NextResponse.next();
+  }
   // The login page and its own API routes must stay reachable *without* a
   // session -- otherwise there's no way to ever reach the form that grants
   // one, and every request loops back to itself.

@@ -1,5 +1,6 @@
-function enabled(value: string | undefined): boolean {
-  return value?.trim().toLowerCase() === "true";
+function enabled(value: string | undefined, defaultValue = false): boolean {
+  if (value === undefined) return defaultValue;
+  return value.trim().toLowerCase() === "true";
 }
 
 // Server-side marketplace navigation switch. Complex insights are gated by
@@ -7,4 +8,5 @@ function enabled(value: string | undefined): boolean {
 // the same policy; keeping a second unused frontend copy would be misleading.
 export const marketplaceV2Enabled = enabled(
   process.env.MARKETPLACE_V2_ENABLED,
+  true,
 );
