@@ -46,7 +46,7 @@ missing, unexpected, invalid, and duplicate-current rows.
 - Analytics: 116 tests passed.
 - Backend: 20 tests passed (one dependency deprecation warning only).
 - Scraper: 32 tests passed.
-- Marketplace Playwright smoke: 5 tests passed.
+- Marketplace + review queue Playwright smoke: 6 tests passed.
 - Next.js production build and TypeScript validation passed with 15 routes.
 - Local evidence inventory: 922 approved unit, 3,049 pending unit, 12 pending
   landmark. These are local counts, not production deployment inputs.

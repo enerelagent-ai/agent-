@@ -75,3 +75,15 @@ test("@mobile filter opens as a dismissible modal drawer", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 });
+
+test("complex landmark review queue is visible but cannot be approved", async ({ page }) => {
+  await page.goto("/complex-review?relation=landmark");
+  await expect(
+    page.getByRole("heading", { name: "Хотхоны баталгаажуулалтын дараалал" }),
+  ).toBeVisible();
+  const firstRow = page.locator("tbody tr").first();
+  await expect(firstRow).toBeVisible();
+  await expect(firstRow.getByText("landmark", { exact: true })).toBeVisible();
+  await expect(firstRow.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await expect(firstRow.getByRole("link", { name: /#\d+/ })).toBeVisible();
+});
