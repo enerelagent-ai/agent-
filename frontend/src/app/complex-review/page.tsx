@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
+import { ComplexReviewActions } from "@/components/ComplexReviewActions";
 import { getComplexReviewQueue } from "@/lib/api";
 
 const PAGE_SIZE = 50;
@@ -38,7 +39,7 @@ export default async function ComplexReviewPage({
               <div>
                 <h2 className="font-semibold text-ink-primary">Evidence queue</h2>
                 <p className="mt-1 text-xs text-ink-muted">
-                  Энэ хуудас read-only. Pending мөрүүд verified insight-д ордоггүй.
+                  Approve нь зөвхөн registry болон district guard давсан unit-д нээлттэй. Reject хийхэд legacy хотхоны холбоос audit trail-тай сална.
                 </p>
               </div>
               <div className="flex gap-2 text-xs font-semibold">
@@ -82,6 +83,11 @@ export default async function ComplexReviewPage({
                         <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-series-1 hover:underline">
                           #{item.listing_id} <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                         </a>
+                        <ComplexReviewActions
+                          listingId={item.listing_id}
+                          canApprove={item.can_approve}
+                          blockReason={item.approval_block_reason}
+                        />
                       </td>
                     </tr>
                   ))}

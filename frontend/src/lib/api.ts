@@ -146,6 +146,8 @@ export interface ComplexReviewItem {
   address: string | null;
   source_url: string;
   review_reason: string | null;
+  can_approve: boolean;
+  approval_block_reason: string | null;
   detected_at: string;
 }
 
@@ -243,14 +245,20 @@ export class ApiError extends Error {
   }
 }
 
-async function postJSON<T>(path: string): Promise<T> {
+async function postJSON<T>(path: string, body?: unknown): Promise<T> {
   const isServer = typeof window === "undefined";
   const headers: HeadersInit = {};
   if (isServer && ADMIN_USERNAME && ADMIN_PASSWORD) {
     headers["Authorization"] = `Basic ${btoa(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`)}`;
   }
+  if (body !== undefined) headers["Content-Type"] = "application/json";
   const url = isServer ? `${SERVER_API_URL}${path}` : `${BROWSER_API_URL}${path}`;
-  const res = await fetch(url, { method: "POST", cache: "no-store", headers });
+  const res = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!res.ok) throw new Error(`${path} returned ${res.status}`);
   return res.json();
 }
@@ -298,6 +306,18 @@ export function getComplexReviewQueue(filters: {
   params.set("limit", String(filters.limit ?? 50));
   params.set("offset", String(filters.offset ?? 0));
   return getJSON(`/dashboard/complex-review-queue?${params.toString()}`);
+}
+
+export function decideComplexReview(
+  listingId: number,
+  decision: "approve" | "reject",
+): Promise<{
+  listing_id: number;
+  complex_id: number;
+  review_status: "approved" | "rejected";
+  complex_id_after: number | null;
+}> {
+  return postJSON(`/dashboard/complex-review-queue/${listingId}/decision`, { decision });
 }
 
 export function getListingFacets(

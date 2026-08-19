@@ -75,6 +75,35 @@ class ListingComplexMatch(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 
 
+class VerifiedComplexLocation(Base):
+    __tablename__ = "verified_complex_locations"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    complex_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("complexes.id", ondelete="CASCADE")
+    )
+    district: Mapped[str] = mapped_column(Text)
+    khoroo: Mapped[int | None] = mapped_column(SmallInteger)
+    evidence_text: Mapped[str] = mapped_column(Text)
+    registry_version: Mapped[str] = mapped_column(Text)
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class VerifiedListingComplexOverride(Base):
+    __tablename__ = "verified_listing_complex_overrides"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    source: Mapped[str] = mapped_column(Text)
+    source_url: Mapped[str] = mapped_column(Text)
+    complex_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("complexes.id", ondelete="CASCADE")
+    )
+    reason: Mapped[str] = mapped_column(Text)
+    evidence_text: Mapped[str] = mapped_column(Text)
+    registry_version: Mapped[str] = mapped_column(Text)
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
 class NotificationState(Base):
     """Singleton read cursor for the V1.5 single-admin deal feed."""
 

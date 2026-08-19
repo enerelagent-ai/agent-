@@ -106,6 +106,8 @@ class ComplexReviewItem(BaseModel):
     address: str | None
     source_url: str
     review_reason: str | None
+    can_approve: bool
+    approval_block_reason: str | None
     detected_at: datetime
 
 
@@ -116,6 +118,18 @@ class ComplexReviewQueue(BaseModel):
     pending_landmark: int
     limit: int
     offset: int
+
+
+class ComplexReviewDecision(BaseModel):
+    decision: Literal["approve", "reject"]
+    note: str | None = None
+
+
+class ComplexReviewResult(BaseModel):
+    listing_id: int
+    complex_id: int
+    review_status: Literal["approved", "rejected"]
+    complex_id_after: int | None
 
 
 class TodaysOpportunity(BaseModel):

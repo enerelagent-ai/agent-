@@ -63,3 +63,12 @@ with relation and optional complex filters plus offset pagination. The
 `/complex-review` dashboard page is deliberately read-only: it supports human
 inspection of evidence and source listings but cannot approve a unit before a
 verified registry workflow exists for that decision.
+
+Review decisions use `POST /dashboard/complex-review-queue/{listing_id}/decision`.
+Approval is accepted only for a current pending `unit` match whose complex has
+a verified location and whose listing passes the district guard (including the
+existing exact-override and explicit seller-text exceptions). Rejecting any
+pending match records the decision and, when the legacy pointer still targets
+that complex, unlinks it in the same transaction with a `complex_link_audit`
+row. Landmark/unknown relations, unregistered complexes, district conflicts,
+and changed listing pointers receive HTTP 409 instead of being force-approved.
