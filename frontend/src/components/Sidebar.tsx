@@ -12,6 +12,7 @@ import {
   Store,
   PiggyBank,
   Settings,
+  ShieldQuestion,
   TrendingUp,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Түрээсийн өгөөж", icon: KeyRound, href: null },
   { label: "Дүрслэл & Тайлан", icon: FileBarChart, href: null },
   { label: "Мэдэгдэл", icon: Bell, href: "/notifications" },
+  { label: "Хотхон шалгах", icon: ShieldQuestion, href: "/complex-review" },
   { label: "Тохиргоо", icon: Settings, href: null },
 ];
 

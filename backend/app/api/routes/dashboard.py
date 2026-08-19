@@ -19,12 +19,13 @@ from fastapi import APIRouter, Query
 from app.api.deps import DbSession
 from app.api.routes.listings import attach_complex_metadata
 from app.config import settings
-from app.models.listing import Complex, Listing, NotificationState
+from app.models.listing import Complex, ComplexAlias, Listing, ListingComplexMatch, NotificationState
 from app.schemas.dashboard import (
     DistrictInvestmentSummary,
     DealAlertFeed,
     ComplexPriceSummary,
     ComplexOption,
+    ComplexReviewQueue,
     ListingTypeCount,
     MonthlyDelistingPoint,
     NotificationReadState,
@@ -186,6 +187,83 @@ def complexes(db: DbSession) -> list[dict]:
         .all()
     )
     return [{"id": row.id, "canonical_name": row.canonical_name} for row in rows]
+
+
+@router.get("/complex-review-queue", response_model=ComplexReviewQueue)
+def complex_review_queue(
+    db: DbSession,
+    relation: Literal["unit", "landmark", "unknown"] | None = Query(None),
+    complex_id: int | None = Query(None, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    """Current pending complex evidence; read-only human-review workspace."""
+    base = (
+        db.query(ListingComplexMatch)
+        .filter(
+            ListingComplexMatch.is_current.is_(True),
+            ListingComplexMatch.review_status == "pending",
+        )
+    )
+    pending_unit = base.filter(ListingComplexMatch.relation == "unit").count()
+    pending_landmark = base.filter(ListingComplexMatch.relation == "landmark").count()
+    filtered = base
+    if relation is not None:
+        filtered = filtered.filter(ListingComplexMatch.relation == relation)
+    if complex_id is not None:
+        filtered = filtered.filter(ListingComplexMatch.complex_id == complex_id)
+    total = filtered.count()
+    matches = (
+        filtered.order_by(
+            ListingComplexMatch.confidence.desc(),
+            ListingComplexMatch.detected_at.desc(),
+            ListingComplexMatch.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    listing_ids = [row.listing_id for row in matches]
+    complex_ids = {row.complex_id for row in matches}
+    alias_ids = {row.matched_alias_id for row in matches if row.matched_alias_id is not None}
+    listings = {
+        row.id: row for row in db.query(Listing).filter(Listing.id.in_(listing_ids)).all()
+    } if listing_ids else {}
+    complexes_by_id = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+    aliases = {
+        row.id: row.alias
+        for row in db.query(ComplexAlias).filter(ComplexAlias.id.in_(alias_ids)).all()
+    } if alias_ids else {}
+    items = []
+    for match in matches:
+        listing = listings[match.listing_id]
+        note = match.reviewer_note or ""
+        reason = note.split(": ", 1)[1] if note.startswith("legacy pending-match backfill") else note or None
+        items.append({
+            "listing_id": listing.id,
+            "complex_id": match.complex_id,
+            "complex_name": complexes_by_id[match.complex_id],
+            "matched_alias": aliases.get(match.matched_alias_id),
+            "relation": match.relation,
+            "confidence": float(match.confidence),
+            "evidence_text": match.evidence_text,
+            "district": listing.district,
+            "address": listing.address,
+            "source_url": listing.source_url,
+            "review_reason": reason,
+            "detected_at": match.detected_at,
+        })
+    return {
+        "items": items,
+        "total": total,
+        "pending_unit": pending_unit,
+        "pending_landmark": pending_landmark,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 def _attach_computed_fields(

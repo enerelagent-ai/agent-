@@ -129,3 +129,69 @@ def test_listing_with_only_legacy_complex_pointer_is_not_verified(client, db_ses
     payload = response.json()
     assert payload["complex_name"] == complex_row.canonical_name
     assert payload["complex_verified"] is False
+
+
+def test_complex_review_queue_exposes_pending_evidence_read_only(client, db_session) -> None:
+    now = datetime(2099, 2, 3, tzinfo=timezone.utc)
+    complex_row = Complex(
+        canonical_name="Review Queue Test Complex",
+        normalized_name="review queue test complex",
+        aliases=[],
+        created_at=now,
+        updated_at=now,
+    )
+    db_session.add(complex_row)
+    db_session.flush()
+    listing = Listing(
+        source="unegui",
+        source_url="test://complex-review-queue",
+        title="Review Queue Test Complex хойно байр",
+        dedup_hash="complex-review-queue",
+        complex_id=complex_row.id,
+        district="Хан-Уул",
+        address="Хороо 15",
+        is_active=True,
+        scraped_at=now,
+        created_at=now,
+        updated_at=now,
+        photo_urls=[],
+    )
+    db_session.add(listing)
+    db_session.flush()
+    db_session.add(
+        ListingComplexMatch(
+            listing_id=listing.id,
+            complex_id=complex_row.id,
+            relation="landmark",
+            confidence=0.55,
+            evidence_text=listing.title,
+            extractor_version="test-v1",
+            review_status="pending",
+            reviewer_note="manual test queue",
+            reviewed_at=None,
+            is_current=True,
+        )
+    )
+    db_session.flush()
+
+    response = client.get(
+        "/dashboard/complex-review-queue",
+        params={"complex_id": complex_row.id, "relation": "landmark"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["items"] == [{
+        "listing_id": listing.id,
+        "complex_id": complex_row.id,
+        "complex_name": complex_row.canonical_name,
+        "matched_alias": None,
+        "relation": "landmark",
+        "confidence": 0.55,
+        "evidence_text": listing.title,
+        "district": "Хан-Уул",
+        "address": "Хороо 15",
+        "source_url": listing.source_url,
+        "review_reason": "manual test queue",
+        "detected_at": payload["items"][0]["detected_at"],
+    }]

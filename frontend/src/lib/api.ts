@@ -134,6 +134,30 @@ export interface DealAlertFeed {
   last_seen_at: string;
 }
 
+export interface ComplexReviewItem {
+  listing_id: number;
+  complex_id: number;
+  complex_name: string;
+  matched_alias: string | null;
+  relation: "unit" | "landmark" | "unknown";
+  confidence: number;
+  evidence_text: string;
+  district: string | null;
+  address: string | null;
+  source_url: string;
+  review_reason: string | null;
+  detected_at: string;
+}
+
+export interface ComplexReviewQueue {
+  items: ComplexReviewItem[];
+  total: number;
+  pending_unit: number;
+  pending_landmark: number;
+  limit: number;
+  offset: number;
+}
+
 export interface Listing {
   id: number;
   source: string;
@@ -260,6 +284,20 @@ export function getListingCountsByType(): Promise<ListingTypeCount[]> {
 
 export function getComplexes(): Promise<ComplexOption[]> {
   return getJSON("/dashboard/complexes");
+}
+
+export function getComplexReviewQueue(filters: {
+  relation?: "unit" | "landmark" | "unknown";
+  complexId?: number;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ComplexReviewQueue> {
+  const params = new URLSearchParams();
+  if (filters.relation) params.set("relation", filters.relation);
+  if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
+  params.set("limit", String(filters.limit ?? 50));
+  params.set("offset", String(filters.offset ?? 0));
+  return getJSON(`/dashboard/complex-review-queue?${params.toString()}`);
 }
 
 export function getListingFacets(

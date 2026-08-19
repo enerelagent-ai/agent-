@@ -57,3 +57,9 @@ Listing API responses expose `complex_verified` independently from
 `complex_verified = true` requires a current approved unit match for that same
 listing and complex. Frontends must use this boolean for a verified badge and
 must not infer verification from the presence of a name or a `complex_id`.
+
+`GET /dashboard/complex-review-queue` exposes only current pending evidence,
+with relation and optional complex filters plus offset pagination. The
+`/complex-review` dashboard page is deliberately read-only: it supports human
+inspection of evidence and source listings but cannot approve a unit before a
+verified registry workflow exists for that decision.
