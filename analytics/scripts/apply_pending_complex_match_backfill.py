@@ -16,7 +16,12 @@ import psycopg2
 import psycopg2.extras
 
 from analytics.complexes import normalize_complex_name
-from scripts.dry_run_verified_complex_match_backfill import audit
+try:
+    # Imported as ``scripts.*`` by the analytics test suite.
+    from scripts.dry_run_verified_complex_match_backfill import audit
+except ModuleNotFoundError:
+    # Executed by GitHub Actions as ``python analytics/scripts/<file>.py``.
+    from dry_run_verified_complex_match_backfill import audit
 
 
 PENDING_BUCKETS = {
@@ -194,4 +199,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
