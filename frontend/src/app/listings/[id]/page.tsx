@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 
 import { ApiError, getListing, type Listing } from "@/lib/api";
 import { formatListingPrice, formatMnt, timeAgo } from "@/lib/format";
+import { VerifiedComplexBadge } from "@/components/VerifiedComplexBadge";
 
 function categoryLabel(value: string | null): string {
   if (!value) return "Төрөл тодорхойгүй";
@@ -134,7 +135,15 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                 <DetailRow label="Өрөө" value={listing.rooms ? `${listing.rooms}` : null} />
                 <DetailRow label="Талбай" value={listing.area_sqm ? `${listing.area_sqm} м²` : null} />
                 <DetailRow label="Давхар" value={listing.floor ? `${listing.floor}${listing.total_floors ? ` / ${listing.total_floors}` : ""}` : null} />
-                <DetailRow label="Хотхон" value={listing.complex_name} />
+                {listing.complex_name && (
+                  <div className="flex items-center justify-between gap-5 border-b border-slate-100 py-3">
+                    <dt className="text-sm text-slate-500">Хотхон</dt>
+                    <dd className="flex flex-wrap items-center justify-end gap-2 text-right text-sm font-semibold text-slate-800">
+                      {listing.complex_name}
+                      {listing.complex_verified && <VerifiedComplexBadge compact />}
+                    </dd>
+                  </div>
+                )}
                 <DetailRow label="Дүүрэг" value={listing.district} />
               </dl>
             </section>

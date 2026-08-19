@@ -149,6 +149,7 @@ export interface Listing {
   total_floors: number | null;
   complex_id: number | null;
   complex_name: string | null;
+  complex_verified: boolean;
   listing_type: string | null;
   property_type: string | null;
   district: string | null;

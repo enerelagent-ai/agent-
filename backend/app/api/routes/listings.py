@@ -10,10 +10,37 @@ from sqlalchemy import and_, func, or_
 from analytics.matches import superseded_listing_ids_conn
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Complex, Listing
+from app.models.listing import Complex, Listing, ListingComplexMatch
 from app.schemas.listing import ListingFacets, ListingOut, MarketplaceListingPage
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+def attach_complex_metadata(db: DbSession, listings: list[Listing]) -> list[Listing]:
+    """Attach canonical display name and independent verification state."""
+    complex_ids = {row.complex_id for row in listings if row.complex_id is not None}
+    names = {
+        row.id: row.canonical_name
+        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
+    } if complex_ids else {}
+    listing_ids = [row.id for row in listings if row.complex_id is not None]
+    verified_pairs = set(
+        db.query(ListingComplexMatch.listing_id, ListingComplexMatch.complex_id)
+        .filter(
+            ListingComplexMatch.listing_id.in_(listing_ids),
+            ListingComplexMatch.is_current.is_(True),
+            ListingComplexMatch.relation == "unit",
+            ListingComplexMatch.review_status == "approved",
+        )
+        .all()
+    ) if listing_ids else set()
+    for listing in listings:
+        listing.complex_name = names.get(listing.complex_id)
+        listing.complex_verified = (
+            listing.complex_id is not None
+            and (listing.id, listing.complex_id) in verified_pairs
+        )
+    return listings
 
 
 def _encode_cursor(scraped_at: datetime, listing_id: int) -> str:
@@ -164,7 +191,7 @@ def search_marketplace_listings(
         .all()
     )
     has_more = len(rows) > limit
-    items = rows[:limit]
+    items = attach_complex_metadata(db, rows[:limit])
     next_cursor = (
         _encode_cursor(items[-1].scraped_at, items[-1].id)
         if has_more and items
@@ -184,13 +211,14 @@ def list_listings(
     # stable order for ties across separate queries -- offset pages could
     # overlap or skip rows. Same fix already applied to /dashboard/listings
     # (see dashboard.py) for the same reason.
-    return (
+    rows = (
         db.query(Listing)
         .order_by(Listing.scraped_at.desc(), Listing.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
     )
+    return attach_complex_metadata(db, rows)
 
 
 @router.get("/{listing_id}", response_model=ListingOut)
@@ -207,11 +235,4 @@ def get_listing(listing_id: int, db: DbSession) -> Listing:
     )
     if listing is None:
         raise HTTPException(status_code=404, detail="Listing not found")
-    listing.complex_name = (
-        db.query(Complex.canonical_name)
-        .filter(Complex.id == listing.complex_id)
-        .scalar()
-        if listing.complex_id is not None
-        else None
-    )
-    return listing
+    return attach_complex_metadata(db, [listing])[0]

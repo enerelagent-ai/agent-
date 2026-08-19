@@ -3,6 +3,7 @@
 import { X, ExternalLink } from "lucide-react";
 import type { Listing } from "@/lib/api";
 import { formatListingPrice, formatMnt, formatPercent } from "@/lib/format";
+import { VerifiedComplexBadge } from "./VerifiedComplexBadge";
 
 interface ListingDetailModalProps {
   listing: Listing | null;
@@ -109,7 +110,10 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
             <>
               <div className="flex justify-between gap-3 text-sm">
                 <span className="text-ink-secondary">Хотхон</span>
-                <span className="text-right text-ink-primary">{listing.complex_name}</span>
+                <span className="flex items-center gap-2 text-right text-ink-primary">
+                  {listing.complex_name}
+                  {listing.complex_verified && <VerifiedComplexBadge compact />}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-ink-secondary">Энэ зарын үнэ / мкв</span>
@@ -150,8 +154,10 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
             </>
           ) : (
             <p className="text-sm text-ink-muted">
-              {listing.complex_name
-                ? "Энэ хотхонд харьцуулах хангалттай тооны (дор хаяж 20) ижил төрлийн зар алга."
+              {listing.complex_name && listing.complex_verified
+                ? "Энэ баталгаатай хотхонд харьцуулах хангалттай тооны (дор хаяж 20) ижил төрлийн зар алга."
+                : listing.complex_name
+                  ? "Хотхоны нэр эх зараас илэрсэн боловч хараахан баталгаажаагүй тул complex-level харьцуулалт хийгээгүй."
                 : "Хотхоны нэр баталгаажаагүй тул complex-level харьцуулалт хийх боломжгүй."}
             </p>
           )}

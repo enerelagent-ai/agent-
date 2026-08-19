@@ -46,6 +46,7 @@ class ListingOut(BaseModel):
     total_floors: int | None
     complex_id: int | None
     complex_name: str | None = None
+    complex_verified: bool = False
     listing_type: str | None
     property_type: str | None
     district: str | None

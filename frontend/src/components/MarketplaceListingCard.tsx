@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import type { Listing } from "@/lib/api";
 import { formatListingPrice, formatMnt, timeAgo } from "@/lib/format";
+import { VerifiedComplexBadge } from "./VerifiedComplexBadge";
 
 function categoryLabel(value: string | null): string | null {
   if (!value) return null;
@@ -81,6 +82,12 @@ export function MarketplaceListingCard({ listing }: { listing: Listing }) {
         </div>
 
         <div className="flex flex-1 flex-col p-4">
+          {listing.complex_name && (
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
+              <span>{listing.complex_name}</span>
+              {listing.complex_verified && <VerifiedComplexBadge compact />}
+            </div>
+          )}
           <div>
             <p
               className={`leading-tight ${

@@ -17,6 +17,7 @@ from analytics.matches import superseded_listing_ids_conn
 from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession
+from app.api.routes.listings import attach_complex_metadata
 from app.config import settings
 from app.models.listing import Complex, Listing, NotificationState
 from app.schemas.dashboard import (
@@ -384,18 +385,14 @@ def list_dashboard_listings(
             .all()
         )
 
-    complex_ids = {listing.complex_id for listing in ordered if listing.complex_id is not None}
-    complex_names_by_id = {
-        row.id: row.canonical_name
-        for row in db.query(Complex).filter(Complex.id.in_(complex_ids)).all()
-    } if complex_ids else {}
+    attach_complex_metadata(db, ordered)
 
     return [
         _attach_computed_fields(
             listing,
             deals_by_id.get(listing.id),
             complex_deals_by_id.get(listing.id),
-            complex_names_by_id.get(listing.complex_id),
+            listing.complex_name,
             estimates_by_id.get(listing.id),
             yield_by_district_rooms.get((listing.district, listing.rooms)),
         )

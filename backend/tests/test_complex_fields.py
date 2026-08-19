@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from datetime import datetime, timezone
 
 from app.api.routes.dashboard import _attach_computed_fields
-from app.models.listing import Complex, Listing
+from app.models.listing import Complex, Listing, ListingComplexMatch
 from app.schemas.dashboard import ComplexPriceSummary
 
 
@@ -68,6 +68,21 @@ def test_complex_options_and_listing_filter_use_same_canonical_name(client, db_s
     )
     db_session.add(listing)
     db_session.flush()
+    db_session.add(
+        ListingComplexMatch(
+            listing_id=listing.id,
+            complex_id=complex_row.id,
+            relation="unit",
+            confidence=0.99,
+            evidence_text=listing.title,
+            extractor_version="test-v1",
+            review_status="approved",
+            reviewer_note="test verified complex",
+            reviewed_at=now,
+            is_current=True,
+        )
+    )
+    db_session.flush()
 
     options = client.get("/dashboard/complexes").json()
     assert {"id": complex_row.id, "canonical_name": complex_row.canonical_name} in options
@@ -80,3 +95,37 @@ def test_complex_options_and_listing_filter_use_same_canonical_name(client, db_s
     rows = response.json()
     assert [row["id"] for row in rows] == [listing.id]
     assert rows[0]["complex_name"] == complex_row.canonical_name
+    assert rows[0]["complex_verified"] is True
+
+
+def test_listing_with_only_legacy_complex_pointer_is_not_verified(client, db_session) -> None:
+    now = datetime(2099, 2, 2, tzinfo=timezone.utc)
+    complex_row = Complex(
+        canonical_name="Legacy Pointer Test Complex",
+        normalized_name="legacy pointer test complex",
+        aliases=[],
+        created_at=now,
+        updated_at=now,
+    )
+    db_session.add(complex_row)
+    db_session.flush()
+    listing = Listing(
+        source="unegui",
+        source_url="test://legacy-pointer-verification",
+        title="Legacy complex байр",
+        dedup_hash="legacy-pointer-verification",
+        complex_id=complex_row.id,
+        is_active=True,
+        scraped_at=now,
+        created_at=now,
+        updated_at=now,
+        photo_urls=[],
+    )
+    db_session.add(listing)
+    db_session.flush()
+
+    response = client.get(f"/listings/{listing.id}")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["complex_name"] == complex_row.canonical_name
+    assert payload["complex_verified"] is False
