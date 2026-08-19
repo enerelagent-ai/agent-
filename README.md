@@ -69,14 +69,16 @@ detail page болон mobile filter drawer урсгалыг шалгана.
 ### Marketplace release flag
 
 ```bash
-MARKETPLACE_V2_ENABLED=true      # Vercel / frontend
+MARKETPLACE_V2_ENABLED=true      # Vercel / frontend (default: true)
 COMPLEX_INSIGHTS_ENABLED=false   # Render / backend
 ```
 
-`MARKETPLACE_V2_ENABLED=true` үед үндсэн `/` зам `/market`-аар дамжин
+Marketplace нь default-аар нээлттэй. `MARKETPLACE_V2_ENABLED=true` үед үндсэн `/` зам `/market`-аар дамжин
 marketplace-ийн `/sale` нүүрийг нээнэ. Хуучин аналитик самбар `/dashboard` дээр
 үлдэнэ. Flag-ийг `false` болгоход үндсэн нүүр код rollback хийхгүйгээр хуучин
-dashboard руу буцна. Хотхоны insight нь registry validation бүрэн болоогүй тул
+dashboard руу буцна. `/sale`, `/rent`, зарын detail болон тэдгээрийн read-only
+listing API нийтэд нээлттэй; `/dashboard`, `/complex-review` болон write API
+admin session шаардана. Хотхоны insight нь registry validation бүрэн болоогүй тул
 backend-ийн `COMPLEX_INSIGHTS_ENABLED` flag-аар тусдаа хаалттай байна. Энэ
 flag `false` үед complex median/deal тооцоо API-аас гарахгүй; verified нэр ба
 data-provenance badge хэвээр харагдана.
