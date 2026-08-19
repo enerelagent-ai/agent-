@@ -103,6 +103,22 @@ def _complex(cur, name: str) -> int:
     return cur.fetchone()["id"]
 
 
+def _approve_complex_matches(cur, complex_id: int) -> None:
+    cur.execute(
+        """
+        INSERT INTO listing_complex_matches
+            (listing_id, complex_id, relation, confidence, evidence_text,
+             source_field, extractor_version, review_status, reviewer_note,
+             reviewed_at, is_current)
+        SELECT id, complex_id, 'unit', 0.99, title, 'title', 'test-v1',
+               'approved', 'test verified evidence', now(), true
+        FROM listings
+        WHERE complex_id = %s
+        """,
+        (complex_id,),
+    )
+
+
 def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
     complex_id = _complex(cur, "Тест Phase 3 хотхон")
     _insert_many(
@@ -124,6 +140,7 @@ def test_complex_average_price_reuses_phase0_market_guards(cur) -> None:
         district="Комплекс дүүрэг", rooms=2, complex_id=complex_id,
         price_negotiable=False,
     )
+    _approve_complex_matches(cur, complex_id)
 
     rows = complex_average_price(cur, complex_id)
     assert len(rows) == 1
@@ -143,6 +160,7 @@ def test_complex_average_price_keeps_transaction_and_property_type_separate(cur)
                  complex_id=complex_id)
     _insert_many(cur, "test://complex-sale-garage", 20, 30_000_000, 15.0,
                  property_type="Гараж, контейнер, з-сууц зарна", complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
 
     rows = complex_average_price(cur, complex_id)
     assert len(rows) == 3
@@ -159,6 +177,7 @@ def test_complex_deal_uses_20_pct_threshold_and_median(cur) -> None:
                  rooms=2, complex_id=complex_id)
     deal_id = _insert(cur, "test://complex-deal-target", 120_000_000, 50.0,
                       rooms=2, complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
 
     row = next(r for r in complex_deal_percentages(cur) if r["id"] == deal_id)
     assert float(row["complex_median_price_per_sqm"]) == 3_000_000.0
@@ -171,7 +190,19 @@ def test_complex_deal_drops_thin_complex_groups(cur) -> None:
     complex_id = _complex(cur, "Тест Нимгэн хотхон")
     _insert_many(cur, "test://complex-thin", 19, 150_000_000, 50.0,
                  rooms=2, complex_id=complex_id)
+    _approve_complex_matches(cur, complex_id)
     assert all(r["complex_id"] != complex_id for r in complex_deal_percentages(cur))
+
+
+def test_complex_insights_exclude_unverified_legacy_pointer(cur) -> None:
+    complex_id = _complex(cur, "Тест Баталгаажаагүй хотхон")
+    _insert_many(
+        cur, "test://complex-unverified", 20, 150_000_000, 50.0,
+        rooms=2, complex_id=complex_id,
+    )
+
+    assert complex_average_price(cur, complex_id) == []
+    assert all(row["complex_id"] != complex_id for row in complex_deal_percentages(cur))
 
 
 def test_average_price_by_group_computes_correct_stats(cur) -> None:

@@ -1035,6 +1035,15 @@ _COMPLEX_AVERAGE_PRICE_SQL = """
       AND l.price_negotiable IS NOT TRUE
       AND l.price <= %(max_plausible_price)s
       AND (%(complex_id)s IS NULL OR l.complex_id = %(complex_id)s)
+      AND EXISTS (
+          SELECT 1
+          FROM listing_complex_matches m
+          WHERE m.listing_id = l.id
+            AND m.complex_id = l.complex_id
+            AND m.is_current
+            AND m.relation = 'unit'
+            AND m.review_status = 'approved'
+      )
     GROUP BY l.complex_id, c.canonical_name, l.listing_type, l.property_type
     HAVING count(*) >= %(min_group_size)s
     ORDER BY n_listings DESC, c.canonical_name, l.listing_type, l.property_type
@@ -1076,15 +1085,24 @@ _COMPLEX_DEAL_PERCENTAGES_SQL = """
                percentile_cont(0.5) WITHIN GROUP (ORDER BY price_per_sqm)
                    AS complex_median_price_per_sqm,
                count(*) AS n_comparable
-        FROM listings
-        WHERE id != ALL(%(excluded_ids)s)
-          AND is_active
-          AND complex_id IS NOT NULL
-          AND listing_type IS NOT NULL AND property_type IS NOT NULL
-          AND price_per_sqm IS NOT NULL AND area_sqm >= %(min_area_sqm)s
-          AND price_negotiable IS NOT TRUE
-          AND price <= %(max_plausible_price)s
-        GROUP BY complex_id, listing_type, property_type
+        FROM listings l
+        WHERE l.id != ALL(%(excluded_ids)s)
+          AND l.is_active
+          AND l.complex_id IS NOT NULL
+          AND l.listing_type IS NOT NULL AND l.property_type IS NOT NULL
+          AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
+          AND l.price_negotiable IS NOT TRUE
+          AND l.price <= %(max_plausible_price)s
+          AND EXISTS (
+              SELECT 1
+              FROM listing_complex_matches m
+              WHERE m.listing_id = l.id
+                AND m.complex_id = l.complex_id
+                AND m.is_current
+                AND m.relation = 'unit'
+                AND m.review_status = 'approved'
+          )
+        GROUP BY l.complex_id, l.listing_type, l.property_type
         HAVING count(*) >= %(min_group_size)s
     ),
     priced AS (
@@ -1108,6 +1126,15 @@ _COMPLEX_DEAL_PERCENTAGES_SQL = """
           AND l.price_per_sqm IS NOT NULL AND l.area_sqm >= %(min_area_sqm)s
           AND l.price_negotiable IS NOT TRUE
           AND l.price <= %(max_plausible_price)s
+          AND EXISTS (
+              SELECT 1
+              FROM listing_complex_matches m
+              WHERE m.listing_id = l.id
+                AND m.complex_id = l.complex_id
+                AND m.is_current
+                AND m.relation = 'unit'
+                AND m.review_status = 'approved'
+          )
     )
     SELECT *,
         CASE

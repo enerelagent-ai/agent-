@@ -44,3 +44,10 @@ verified location and the listing passes the district guard (or an exact
 reviewed listing override). Landmark and unregistered/mismatched candidates
 remain pending and unlinked. Re-scraping replaces the current marker without
 deleting historical evidence.
+
+Complex-level price statistics and deal badges require a current `unit` match
+with `review_status = 'approved'` for the same listing and complex. A legacy
+`listings.complex_id` pointer by itself is deliberately insufficient for an
+insight. Marketplace browsing may still show/filter the raw canonical pointer;
+this gate applies to claims such as complex medians and “cheaper than this
+complex” badges.
