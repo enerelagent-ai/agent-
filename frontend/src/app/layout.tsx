@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./globals.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export const metadata = {
   title: "Улаанбаатар Үл Хөдлөх Хөрөнгө — Аналитик платформ",

@@ -14,6 +14,9 @@ function isPublicMarketplaceRequest(request: NextRequest): boolean {
     pathname === "/dashboard" ||
     pathname === "/calculator" ||
     pathname === "/listings" ||
+    pathname === "/complexes" ||
+    pathname === "/complexes/map" ||
+    /^\/complexes\/\d+$/.test(pathname) ||
     /^\/listings\/\d+$/.test(pathname)
   ) {
     return readOnly;
@@ -23,6 +26,7 @@ function isPublicMarketplaceRequest(request: NextRequest): boolean {
   // and detail endpoints. Dashboard/review endpoints and every write remain
   // behind the admin session even though the proxy can authenticate upstream.
   if (readOnly && pathname.startsWith("/api/backend/listings")) return true;
+  if (readOnly && pathname.startsWith("/api/backend/complexes")) return true;
 
   const publicAnalysisEndpoints = [
     "/api/backend/dashboard/investment-summary",
