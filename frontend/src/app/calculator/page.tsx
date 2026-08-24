@@ -5,10 +5,10 @@ import { Topbar } from "@/components/Topbar";
 export default function CalculatorPage() {
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar publicView />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title="Хөрөнгө оруулалтын өгөөж" />
-        <main className="flex flex-col gap-6 bg-surface-page p-8">
+        <Topbar title="Хөрөнгө оруулалтын өгөөж" publicView />
+        <main className="flex flex-col gap-6 bg-surface-page p-4 sm:p-8">
           <div>
             <h1 className="text-xl font-semibold text-ink-primary">Investment Calculator</h1>
             <p className="mt-1 max-w-3xl text-sm text-ink-secondary">
