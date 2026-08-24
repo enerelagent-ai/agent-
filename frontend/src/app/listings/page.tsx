@@ -14,10 +14,10 @@ export default async function ListingsPage() {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar publicView />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title="Зар мэдээлэл" />
-        <main className="flex flex-col gap-5 bg-surface-page p-8">
+        <Topbar title="Зар мэдээлэл" publicView />
+        <main className="flex flex-col gap-5 bg-surface-page p-4 sm:p-8">
           <div>
             <h1 className="text-xl font-semibold text-ink-primary">Бүх зар</h1>
             <p className="mt-1 text-sm text-ink-secondary">

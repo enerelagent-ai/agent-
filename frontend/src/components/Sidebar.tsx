@@ -35,11 +35,16 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Тохиргоо", icon: Settings, href: null },
 ];
 
-export function Sidebar() {
+export function Sidebar({ publicView = false }: { publicView?: boolean }) {
   const pathname = usePathname();
+  const items = publicView
+    ? NAV_ITEMS.filter(({ href }) =>
+        href === "/dashboard" || href === "/market" || href === "/listings" || href === "/calculator",
+      )
+    : NAV_ITEMS;
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col bg-[#111a3d] text-white">
+    <aside className={`${publicView ? "hidden lg:flex" : "flex"} w-64 shrink-0 flex-col bg-[#111a3d] text-white`}>
       <div className="flex items-center gap-2.5 px-5 py-6">
         <Building2 className="h-6 w-6 shrink-0 text-series-1" aria-hidden />
         <div className="min-w-0">
@@ -50,7 +55,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 pt-2">
-        {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
+        {items.map(({ label, icon: Icon, href }) => {
           const active = href !== null && pathname.startsWith(href);
           return href ? (
             <Link
@@ -78,7 +83,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 pb-5 text-xs text-white/30">V1.5 — Хувилбар 1.5.0</div>
+      <div className="px-3 pb-5 text-xs text-white/30">{publicView ? "Бодит өгөгдөл · Ил тод тооцоо" : "V1.5 — Хувилбар 1.5.0"}</div>
     </aside>
   );
 }

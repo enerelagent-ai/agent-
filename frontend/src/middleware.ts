@@ -4,23 +4,36 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
 function isPublicMarketplaceRequest(request: NextRequest): boolean {
   const { pathname } = request.nextUrl;
+  const readOnly = request.method === "GET" || request.method === "HEAD";
 
   if (
     pathname === "/" ||
     pathname === "/market" ||
     pathname === "/sale" ||
     pathname === "/rent" ||
+    pathname === "/dashboard" ||
+    pathname === "/calculator" ||
+    pathname === "/listings" ||
     /^\/listings\/\d+$/.test(pathname)
   ) {
-    return request.method === "GET" || request.method === "HEAD";
+    return readOnly;
   }
 
   // The public marketplace only needs read access to listing search, facets,
   // and detail endpoints. Dashboard/review endpoints and every write remain
   // behind the admin session even though the proxy can authenticate upstream.
-  return (
-    (request.method === "GET" || request.method === "HEAD") &&
-    pathname.startsWith("/api/backend/listings")
+  if (readOnly && pathname.startsWith("/api/backend/listings")) return true;
+
+  const publicAnalysisEndpoints = [
+    "/api/backend/dashboard/investment-summary",
+    "/api/backend/dashboard/todays-opportunity",
+    "/api/backend/dashboard/price-trend",
+    "/api/backend/dashboard/listing-counts-by-type",
+    "/api/backend/dashboard/complexes",
+    "/api/backend/dashboard/listings",
+  ];
+  return readOnly && publicAnalysisEndpoints.some(
+    (endpoint) => pathname === endpoint,
   );
 }
 

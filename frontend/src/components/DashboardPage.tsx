@@ -30,10 +30,10 @@ export async function DashboardPage() {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar publicView />
       <div className="flex flex-1 flex-col">
-        <Topbar title="Хяналтын самбар" />
-        <main className="flex flex-col gap-6 bg-surface-page p-8">
+        <Topbar title="Зах зээлийн анализ" publicView />
+        <main className="flex flex-col gap-6 bg-surface-page p-4 sm:p-8">
           <TodaysOpportunityCard data={todaysOpportunity} />
           <KpiRow totals={totals} />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
