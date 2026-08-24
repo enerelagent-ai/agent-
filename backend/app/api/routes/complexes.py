@@ -4,10 +4,29 @@ from sqlalchemy import and_, func
 from analytics.matches import superseded_listing_ids_conn
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Complex, Listing, ListingComplexMatch, PublicComplexContour, PublicComplexProfile
-from app.schemas.complex import ComplexIntelligenceDetail, ComplexIntelligenceSummary, PublicComplexMapData, PublicComplexSummary
+from app.models.listing import Complex, Listing, ListingComplexMatch, PublicAffordabilitySnapshot, PublicComplexContour, PublicComplexProfile
+from app.schemas.complex import ComplexIntelligenceDetail, ComplexIntelligenceSummary, PublicAffordabilitySnapshot as PublicAffordabilitySchema, PublicComplexMapData, PublicComplexSummary
 
 router = APIRouter(prefix="/complexes", tags=["complexes"])
+
+
+@router.get("/public-affordability/latest", response_model=PublicAffordabilitySchema)
+def get_public_affordability(db: DbSession) -> dict:
+    row = (
+        db.query(PublicAffordabilitySnapshot)
+        .filter(PublicAffordabilitySnapshot.source == "hotkhon.mn")
+        .order_by(PublicAffordabilitySnapshot.data_as_of.desc())
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Public affordability snapshot not found")
+    return {
+        "source_url": row.source_url,
+        "data_as_of": row.data_as_of.isoformat(),
+        "districts": row.districts,
+        "listings": row.listings,
+        "rules": row.rules,
+    }
 
 
 def _serialize_public(row: PublicComplexProfile) -> dict:

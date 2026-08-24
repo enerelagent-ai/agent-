@@ -1,4 +1,4 @@
-import { Building2, Home, Map, Search } from "lucide-react";
+import { Building2, Calculator, Home, Map, Search } from "lucide-react";
 import Link from "next/link";
 
 export function ComplexSiteHeader() {
@@ -13,6 +13,7 @@ export function ComplexSiteHeader() {
           <Link href="/sale" className="flex min-h-10 items-center gap-1.5 rounded-md px-3 hover:bg-white/10"><Home className="h-4 w-4" />Зарууд</Link>
           <Link href="/complexes" className="flex min-h-10 items-center gap-1.5 rounded-md px-3 hover:bg-white/10"><Search className="h-4 w-4" />Хотхонууд</Link>
           <Link href="/complexes/map" className="flex min-h-10 items-center gap-1.5 rounded-md px-3 hover:bg-white/10"><Map className="h-4 w-4" />Газрын зураг</Link>
+          <Link href="/bolomj" className="flex min-h-10 items-center gap-1.5 rounded-md px-3 hover:bg-white/10"><Calculator className="h-4 w-4" />Боломж</Link>
         </nav>
       </div>
     </header>

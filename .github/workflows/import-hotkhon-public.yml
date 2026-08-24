@@ -32,3 +32,11 @@ jobs:
           python analytics/scripts/import_hotkhon_public.py
           --database-url "$DATABASE_URL"
           ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Import licensed public affordability snapshot
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: >-
+          python analytics/scripts/import_hotkhon_bolomj_public.py
+          --database-url "$DATABASE_URL"
+          ${{ inputs.dry_run && '--dry-run' || '' }}

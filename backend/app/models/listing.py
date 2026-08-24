@@ -137,6 +137,18 @@ class PublicComplexContour(Base):
     scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 
 
+class PublicAffordabilitySnapshot(Base):
+    __tablename__ = "public_affordability_snapshots"
+
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    data_as_of = mapped_column(Date, primary_key=True)
+    source_url: Mapped[str] = mapped_column(Text)
+    districts: Mapped[list] = mapped_column(JSON)
+    listings: Mapped[list] = mapped_column(JSON)
+    rules: Mapped[dict] = mapped_column(JSON)
+    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
 class NotificationState(Base):
     """Singleton read cursor for the V1.5 single-admin deal feed."""
 

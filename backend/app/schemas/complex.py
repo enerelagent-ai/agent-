@@ -44,3 +44,11 @@ class PublicComplexSummary(BaseModel):
 class PublicComplexMapData(BaseModel):
     profiles: list[PublicComplexSummary]
     contours: dict[str, list[list[list[float]]]]
+
+
+class PublicAffordabilitySnapshot(BaseModel):
+    source_url: str
+    data_as_of: str
+    districts: list[str]
+    listings: list[list[float]]
+    rules: dict
