@@ -84,11 +84,11 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
     .join(" · ");
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-[#f3f5f7] text-slate-900">
+      <header className="bg-[#20334b] text-white shadow-sm">
         <div className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/sale" className="text-xl font-black tracking-tight text-[#e53935]">Enerel Market</Link>
-          <Link href={backHref} className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900">
+          <Link href="/sale" className="text-xl font-black tracking-tight">Enerel<span className="text-[#ff8a5c]">Market</span></Link>
+          <Link href={backHref} className="flex items-center gap-1.5 text-sm font-semibold text-slate-200 hover:text-white">
             <ArrowLeft className="h-4 w-4" aria-hidden /> Зарын жагсаалт
           </Link>
         </div>
@@ -96,7 +96,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
 
       <main className="mx-auto max-w-[1240px] px-5 py-6 lg:px-8">
         <nav className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-500" aria-label="Breadcrumb">
-          <Link href={backHref} className="hover:text-[#d92d2d]">{isRent ? "Түрээслэх" : "Худалдах"}</Link>
+          <Link href={backHref} className="hover:text-[#e85520]">{isRent ? "Түрээслэх" : "Худалдах"}</Link>
           <span>/</span>
           <span>{categoryLabel(listing.property_type)}</span>
           <span>/</span>
@@ -109,14 +109,14 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
           <div className="space-y-6">
             <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-md px-2.5 py-1 text-xs font-extrabold text-white ${isRent ? "bg-blue-600" : "bg-[#e53935]"}`}>
+                <span className={`rounded-md px-2.5 py-1 text-xs font-extrabold text-white ${isRent ? "bg-[#2677d8]" : "bg-[#ff6b35]"}`}>
                   {isRent ? "ТҮРЭЭСЛҮҮЛНЭ" : "ЗАРНА"}
                 </span>
                 <span className="text-xs font-medium text-slate-500">{categoryLabel(listing.property_type)}</span>
               </div>
               <h1 className="mt-3 text-2xl font-bold leading-tight text-slate-950 sm:text-3xl">{listing.title}</h1>
               <p className="mt-3 flex items-start gap-2 text-sm text-slate-600">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#e53935]" aria-hidden />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6b35]" aria-hidden />
                 {location || "Байршил тодорхойгүй"}
               </p>
               <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 border-y border-slate-100 py-4 text-sm font-semibold text-slate-700">
@@ -160,7 +160,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className={`leading-tight ${price.isEstimate ? "text-base font-semibold italic text-slate-600" : "text-3xl font-black text-slate-950"}`}>{price.text}</p>
               {listing.price_per_sqm !== null && !listing.price_negotiable && <p className="mt-2 text-sm font-medium text-slate-500">{formatMnt(listing.price_per_sqm)} / м²</p>}
-              <a href={listing.source_url} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#e53935] px-4 py-3 text-sm font-bold text-white hover:bg-[#cf2f2f]">
+              <a href={listing.source_url} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-3 text-sm font-bold text-white hover:bg-[#ed5b29]">
                 Эх зар дээр харах <ExternalLink className="h-4 w-4" aria-hidden />
               </a>
               {listing.contact_phone && (
@@ -176,7 +176,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                 <h2 className="font-bold">Байршил</h2>
                 <p className="mt-2 text-sm text-slate-600">{location || "Координат бүртгэгдсэн"}</p>
                 {listing.lat !== null && listing.lng !== null && (
-                  <a href={`https://www.google.com/maps?q=${listing.lat},${listing.lng}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#d92d2d] hover:underline">Газрын зураг дээр нээх <ExternalLink className="h-4 w-4" aria-hidden /></a>
+                  <a href={`https://www.google.com/maps?q=${listing.lat},${listing.lng}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#e85520] hover:underline">Газрын зураг дээр нээх <ExternalLink className="h-4 w-4" aria-hidden /></a>
                 )}
               </section>
             )}
