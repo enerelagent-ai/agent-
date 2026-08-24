@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import {
   searchMarketplaceListings,
   type ListingFacets,
+  type DistrictInvestmentSummary,
   type MarketplaceListingPage,
   type TransactionType,
 } from "@/lib/api";
 import { formatMnt } from "@/lib/format";
 import { MarketplaceListingCard } from "./MarketplaceListingCard";
+import { MarketplaceInsightPanel } from "./MarketplaceInsightPanel";
 
 const PAGE_SIZE = 24;
 
@@ -103,10 +105,12 @@ export function MarketplaceBrowse({
   listingType,
   facets,
   initialPage,
+  investmentSummary,
 }: {
   listingType: TransactionType;
   facets: ListingFacets;
   initialPage: MarketplaceListingPage;
+  investmentSummary: DistrictInvestmentSummary[];
 }) {
   const [page, setPage] = useState(initialPage);
   const [district, setDistrict] = useState("");
@@ -271,7 +275,17 @@ export function MarketplaceBrowse({
           )}
         </button>
 
-        <div className="grid items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <details className="group mb-4 overflow-hidden rounded-lg border border-slate-200 bg-white xl:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-extrabold text-[#20334b]">
+            <span className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-[#ff6b35]" /> Зах зээлийн анализ</span>
+            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-slate-100 p-3">
+            <MarketplaceInsightPanel listingType={listingType} district={district} summaries={investmentSummary} />
+          </div>
+        </details>
+
+        <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_260px]">
           <aside className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white lg:sticky lg:top-5 lg:block">
             <div className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
               <div className="flex w-full items-center gap-2 bg-slate-50 px-5 pt-4"><SlidersHorizontal className="h-4 w-4 text-[#ff6b35]" aria-hidden /><h2 className="text-sm font-extrabold">Нарийвчилсан хайлт</h2></div>
@@ -305,6 +319,10 @@ export function MarketplaceBrowse({
               </div>
             )}
           </section>
+
+          <aside className="hidden xl:sticky xl:top-5 xl:block">
+            <MarketplaceInsightPanel listingType={listingType} district={district} summaries={investmentSummary} />
+          </aside>
         </div>
       </main>
 
