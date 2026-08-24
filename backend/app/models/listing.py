@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, CheckConstraint, Computed, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, Text, UniqueConstraint, text
+from sqlalchemy import ARRAY, JSON, BigInteger, Boolean, CheckConstraint, Computed, Date, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -102,6 +102,39 @@ class VerifiedListingComplexOverride(Base):
     evidence_text: Mapped[str] = mapped_column(Text)
     registry_version: Mapped[str] = mapped_column(Text)
     verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class PublicComplexProfile(Base):
+    __tablename__ = "public_complex_profiles"
+
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    source_slug: Mapped[str] = mapped_column(Text, primary_key=True)
+    source_url: Mapped[str] = mapped_column(Text)
+    canonical_name: Mapped[str] = mapped_column(Text)
+    district: Mapped[str | None] = mapped_column(Text)
+    median_price_per_sqm: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    active_listings: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    lat: Mapped[float | None] = mapped_column(Double)
+    lng: Mapped[float | None] = mapped_column(Double)
+    photo_url: Mapped[str | None] = mapped_column(Text)
+    has_contour: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    location_kind: Mapped[str | None] = mapped_column(Text)
+    data_as_of = mapped_column(Date)
+    profile_metrics: Mapped[dict] = mapped_column(JSON, server_default=text("'{}'::jsonb"))
+    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+
+
+class PublicComplexContour(Base):
+    __tablename__ = "public_complex_contours"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    source: Mapped[str] = mapped_column(Text)
+    source_slug: Mapped[str] = mapped_column(Text)
+    polygon_index: Mapped[int] = mapped_column(Integer)
+    location_kind: Mapped[str | None] = mapped_column(Text)
+    geometry: Mapped[list] = mapped_column(JSON)
+    data_as_of = mapped_column(Date)
+    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 
 
 class NotificationState(Base):

@@ -4,7 +4,7 @@ import { Building2, Map, MapPin, Search, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { ComplexIntelligenceSummary } from "@/lib/api";
+import type { PublicComplexSummary } from "@/lib/api";
 import { ComplexMap } from "./ComplexMap";
 
 function pricePerSqm(value: number | null): string {
@@ -14,9 +14,11 @@ function pricePerSqm(value: number | null): string {
 export function ComplexExplorer({
   complexes,
   mode,
+  contours = {},
 }: {
-  complexes: ComplexIntelligenceSummary[];
+  complexes: PublicComplexSummary[];
   mode: "list" | "map";
+  contours?: Record<string, number[][][]>;
 }) {
   const [query, setQuery] = useState("");
   const [district, setDistrict] = useState("");
@@ -62,13 +64,13 @@ export function ComplexExplorer({
         </div>
       ) : mode === "map" ? (
         <>
-          <ComplexMap complexes={filtered} />
+          <ComplexMap complexes={filtered} contours={contours} />
           <p className="mt-3 text-xs leading-5 text-slate-500">Тойргийн хэмжээ нь идэвхтэй зарын тоо. Өнгө нь медиан зарлах ₮/м² үнэ. Координат нь баталгаатай заруудын төв цэг бөгөөд хотхоны албан ёсны хил биш.</p>
         </>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => (
-            <Link key={item.id} href={`/complexes/${item.id}`} className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b35] hover:shadow-md">
+            <Link key={item.source_slug} href={`/complexes/${item.source_slug}`} className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b35] hover:shadow-md">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-black text-slate-950 group-hover:text-[#e85520]">{item.name}</h2>
@@ -77,10 +79,9 @@ export function ComplexExplorer({
                 <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-label="Баталгаатай" />
               </div>
               <p className="mt-5 text-xl font-black text-[#20334b]">{pricePerSqm(item.median_sale_price_per_sqm)}</p>
-              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center text-xs">
-                <div><strong className="block text-sm text-slate-900">{item.active_listings}</strong><span className="text-slate-500">нийт</span></div>
-                <div><strong className="block text-sm text-slate-900">{item.sale_listings}</strong><span className="text-slate-500">зарна</span></div>
-                <div><strong className="block text-sm text-slate-900">{item.rent_listings}</strong><span className="text-slate-500">түрээс</span></div>
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 text-xs">
+                <div><strong className="block text-sm text-slate-900">{item.active_listings}</strong><span className="text-slate-500">идэвхтэй зар</span></div>
+                <div className="text-right"><strong className="block text-sm text-slate-900">{item.has_contour ? "Контур" : "Цэг"}</strong><span className="text-slate-500">байршлын төрөл</span></div>
               </div>
             </Link>
           ))}

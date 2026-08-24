@@ -25,3 +25,22 @@ class ComplexIntelligenceDetail(ComplexIntelligenceSummary):
     median_sale_price: float | None
     median_rent_price: float | None
 
+
+class PublicComplexSummary(BaseModel):
+    source_slug: str
+    source_url: str
+    name: str
+    district: str | None
+    median_sale_price_per_sqm: float | None
+    active_listings: int
+    lat: float | None
+    lng: float | None
+    photo_url: str | None
+    has_contour: bool
+    location_kind: str | None
+    data_as_of: str
+
+
+class PublicComplexMapData(BaseModel):
+    profiles: list[PublicComplexSummary]
+    contours: dict[str, list[list[list[float]]]]

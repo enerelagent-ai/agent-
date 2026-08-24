@@ -1,9 +1,9 @@
 import { ComplexExplorer } from "@/components/ComplexExplorer";
 import { ComplexSiteHeader } from "@/components/ComplexSiteHeader";
-import { getComplexIntelligence } from "@/lib/api";
+import { getPublicComplexes } from "@/lib/api";
 
 export default async function ComplexDirectoryPage() {
-  const complexes = await getComplexIntelligence();
+  const complexes = await getPublicComplexes();
   const activeListings = complexes.reduce((sum, item) => sum + item.active_listings, 0);
 
   return (
@@ -14,7 +14,7 @@ export default async function ComplexDirectoryPage() {
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#e85520]">Хотхоны intelligence</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-[#20334b] sm:text-4xl">Улаанбаатарын баталгаатай хотхонууд</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">Хотхон бүрийн идэвхтэй зар, медиан м² үнэ, үнийн хүрээг өдөр тутмын зарын өгөгдлөөс харьцуулна.</p>
-          <div className="mt-5 flex flex-wrap gap-6 text-sm text-slate-500"><span><strong className="text-xl text-slate-950">{complexes.length}</strong> хотхон</span><span><strong className="text-xl text-slate-950">{activeListings}</strong> баталгаатай зар</span></div>
+          <div className="mt-5 flex flex-wrap gap-6 text-sm text-slate-500"><span><strong className="text-xl text-slate-950">{complexes.length}</strong> хотхон</span><span><strong className="text-xl text-slate-950">{activeListings.toLocaleString("mn-MN")}</strong> идэвхтэй зар</span><span>Эх сурвалж: hotkhon.mn public data</span></div>
         </div>
         <ComplexExplorer complexes={complexes} mode="list" />
       </main>

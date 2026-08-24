@@ -110,6 +110,26 @@ export interface ComplexIntelligenceDetail extends ComplexIntelligenceSummary {
   median_rent_price: number | null;
 }
 
+export interface PublicComplexSummary {
+  source_slug: string;
+  source_url: string;
+  name: string;
+  district: string | null;
+  median_sale_price_per_sqm: number | null;
+  active_listings: number;
+  lat: number | null;
+  lng: number | null;
+  photo_url: string | null;
+  has_contour: boolean;
+  location_kind: string | null;
+  data_as_of: string;
+}
+
+export interface PublicComplexMapData {
+  profiles: PublicComplexSummary[];
+  contours: Record<string, number[][][]>;
+}
+
 export interface ListingFacets {
   listing_type: TransactionType;
   total: number;
@@ -359,6 +379,18 @@ export function getComplexIntelligenceDetail(
   complexId: number,
 ): Promise<ComplexIntelligenceDetail> {
   return getJSON(`/complexes/${complexId}`);
+}
+
+export function getPublicComplexes(): Promise<PublicComplexSummary[]> {
+  return getJSON("/complexes/public");
+}
+
+export function getPublicComplexMap(): Promise<PublicComplexMapData> {
+  return getJSON("/complexes/public/map");
+}
+
+export function getPublicComplex(sourceSlug: string): Promise<PublicComplexSummary> {
+  return getJSON(`/complexes/public/${encodeURIComponent(sourceSlug)}`);
 }
 
 export function searchMarketplaceListings(

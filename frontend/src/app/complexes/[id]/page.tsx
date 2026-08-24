@@ -4,12 +4,19 @@ import { notFound } from "next/navigation";
 
 import { ComplexSiteHeader } from "@/components/ComplexSiteHeader";
 import { MarketplaceListingCard } from "@/components/MarketplaceListingCard";
-import { getComplexIntelligenceDetail, searchMarketplaceListings } from "@/lib/api";
+import { getComplexIntelligenceDetail, getPublicComplex, searchMarketplaceListings, type PublicComplexSummary } from "@/lib/api";
 import { formatMnt } from "@/lib/format";
 
 export default async function ComplexDetailPage({ params }: { params: { id: string } }) {
   const id = Number(params.id);
-  if (!Number.isInteger(id) || id < 1) notFound();
+  if (!Number.isInteger(id) || id < 1) {
+    try {
+      const profile = await getPublicComplex(params.id);
+      return <PublicProfile profile={profile} />;
+    } catch {
+      notFound();
+    }
+  }
   let complex;
   try {
     complex = await getComplexIntelligenceDetail(id);
@@ -52,6 +59,30 @@ export default async function ComplexDetailPage({ params }: { params: { id: stri
 
         <ListingSection title="Худалдах зарууд" href={`/sale`} items={sale.items} />
         <ListingSection title="Түрээсийн зарууд" href={`/rent`} items={rent.items} />
+      </main>
+    </div>
+  );
+}
+
+function PublicProfile({ profile }: { profile: PublicComplexSummary }) {
+  return (
+    <div className="min-h-screen bg-[#f3f5f7]">
+      <ComplexSiteHeader />
+      <main className="mx-auto max-w-[1000px] px-4 py-7 sm:px-6 lg:px-8">
+        <Link href="/complexes" className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-[#e85520]"><ArrowLeft className="h-4 w-4" />Бүх хотхон</Link>
+        {profile.photo_url && <div className="mt-5 aspect-[16/7] overflow-hidden rounded-2xl bg-slate-200"><img src={profile.photo_url} alt={`${profile.name} гадна зураг`} className="h-full w-full object-cover" /></div>}
+        <section className="mt-5 overflow-hidden rounded-2xl bg-[#20334b] p-6 text-white sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="text-xs font-bold uppercase tracking-wider text-[#ff9a73]">Хотхоны public тойм · {profile.district}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{profile.name}</h1><p className="mt-2 flex items-center gap-1 text-sm text-slate-300"><MapPin className="h-4 w-4" />{profile.has_contour ? "Хэмжсэн контуртай" : "Ойролцоо цэгэн байршил"}</p></div>
+            <div className="rounded-xl bg-white/10 px-5 py-4 text-right"><p className="text-xs text-slate-300">Медиан зарлах үнэ / м²</p><p className="mt-1 text-2xl font-black">{profile.median_sale_price_per_sqm === null ? "—" : formatMnt(profile.median_sale_price_per_sqm)}</p></div>
+          </div>
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3"><Metric label="Идэвхтэй зар" value={String(profile.active_listings)} /><Metric label="Мэдээллийн огноо" value={profile.data_as_of} /><Metric label="Байршлын төрөл" value={profile.location_kind ?? "point"} /></div>
+        </section>
+        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600">
+          <h2 className="font-black text-slate-950">Эх сурвалж ба тайлбар</h2>
+          <p className="mt-2">Нийтэд нээлттэй Hotkhon Intelligence мэдээллийг дахин нийтлэх зөвшөөрлийн хүрээнд импортлов. Тоо нь зарлах үнэ бөгөөд бодит хэлцлийн үнэ биш.</p>
+          <a href={profile.source_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex font-bold text-[#e85520]">Эх public profile-ийг харах →</a>
+        </section>
       </main>
     </div>
   );
