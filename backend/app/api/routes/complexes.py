@@ -4,10 +4,68 @@ from sqlalchemy import and_, func
 from analytics.matches import superseded_listing_ids_conn
 from app.api.deps import DbSession
 from app.config import settings
-from app.models.listing import Complex, Listing, ListingComplexMatch
-from app.schemas.complex import ComplexIntelligenceDetail, ComplexIntelligenceSummary
+from app.models.listing import Complex, Listing, ListingComplexMatch, PublicComplexContour, PublicComplexProfile
+from app.schemas.complex import ComplexIntelligenceDetail, ComplexIntelligenceSummary, PublicComplexMapData, PublicComplexSummary
 
 router = APIRouter(prefix="/complexes", tags=["complexes"])
+
+
+def _serialize_public(row: PublicComplexProfile) -> dict:
+    return {
+        "source_slug": row.source_slug,
+        "source_url": row.source_url,
+        "name": row.canonical_name,
+        "district": row.district,
+        "median_sale_price_per_sqm": float(row.median_price_per_sqm) if row.median_price_per_sqm is not None else None,
+        "active_listings": row.active_listings,
+        "lat": row.lat,
+        "lng": row.lng,
+        "photo_url": row.photo_url,
+        "has_contour": row.has_contour,
+        "location_kind": row.location_kind,
+        "data_as_of": row.data_as_of.isoformat(),
+    }
+
+
+@router.get("/public", response_model=list[PublicComplexSummary])
+def list_public_complexes(db: DbSession) -> list[dict]:
+    rows = (
+        db.query(PublicComplexProfile)
+        .filter(PublicComplexProfile.source == "hotkhon.mn")
+        .order_by(PublicComplexProfile.active_listings.desc(), PublicComplexProfile.canonical_name)
+        .all()
+    )
+    return [_serialize_public(row) for row in rows]
+
+
+@router.get("/public/map", response_model=PublicComplexMapData)
+def public_complex_map(db: DbSession) -> dict:
+    profiles = list_public_complexes(db)
+    rows = (
+        db.query(PublicComplexContour)
+        .filter(PublicComplexContour.source == "hotkhon.mn")
+        .order_by(PublicComplexContour.source_slug, PublicComplexContour.polygon_index)
+        .all()
+    )
+    contours: dict[str, list] = {}
+    for row in rows:
+        contours.setdefault(row.source_slug, []).append(row.geometry)
+    return {"profiles": profiles, "contours": contours}
+
+
+@router.get("/public/{source_slug}", response_model=PublicComplexSummary)
+def get_public_complex(source_slug: str, db: DbSession) -> dict:
+    row = (
+        db.query(PublicComplexProfile)
+        .filter(
+            PublicComplexProfile.source == "hotkhon.mn",
+            PublicComplexProfile.source_slug == source_slug,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Public complex profile not found")
+    return _serialize_public(row)
 
 
 def _summary_query(db: DbSession):
@@ -108,4 +166,3 @@ def get_complex_intelligence(complex_id: int, db: DbSession) -> dict:
         func.percentile_cont(0.5).within_group(Listing.price)
     ).scalar()
     return result
-

@@ -16,7 +16,7 @@ function isPublicMarketplaceRequest(request: NextRequest): boolean {
     pathname === "/listings" ||
     pathname === "/complexes" ||
     pathname === "/complexes/map" ||
-    /^\/complexes\/\d+$/.test(pathname) ||
+    /^\/complexes\/[^/]+$/.test(pathname) ||
     /^\/listings\/\d+$/.test(pathname)
   ) {
     return readOnly;

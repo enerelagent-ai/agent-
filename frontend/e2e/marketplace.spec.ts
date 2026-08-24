@@ -78,11 +78,11 @@ test("complex intelligence directory, map and detail are publicly connected", as
   await expect(page.getByRole("heading", { name: "Улаанбаатарын баталгаатай хотхонууд" })).toBeVisible();
   const firstComplex = page.locator("a[href^='/complexes/']:not([href='/complexes/map'])").first();
   const href = await firstComplex.getAttribute("href");
-  expect(href).toMatch(/^\/complexes\/\d+$/);
+  expect(href).toMatch(/^\/complexes\/[a-z0-9-]+$/);
   await firstComplex.click();
   await page.waitForURL(new RegExp(`${href}$`));
-  await expect(page.getByText("Баталгаатай хотхон", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Үнийн хүрээ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Эх сурвалж ба тайлбар" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Эх public profile/ })).toBeVisible();
 
   await page.goto("/complexes/map");
   await expect(page.getByRole("heading", { name: "Хотхоны интерактив газрын зураг" })).toBeVisible();
