@@ -75,7 +75,7 @@ test("verified complex filter returns only the selected complex", async ({ page 
 
 test("complex intelligence directory, map and detail are publicly connected", async ({ page }) => {
   await page.goto("/complexes");
-  await expect(page.getByRole("heading", { name: "Улаанбаатарын баталгаатай хотхонууд" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Улаанбаатарын хотхоны мэдээлэл" })).toBeVisible();
   const firstComplex = page.locator("a[href^='/complexes/']:not([href='/complexes/map'])").first();
   const href = await firstComplex.getAttribute("href");
   expect(href).toMatch(/^\/complexes\/[a-z0-9-]+$/);
