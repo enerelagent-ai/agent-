@@ -92,6 +92,7 @@ export interface ListingFacets {
   total: number;
   districts: Array<{ value: string; count: number }>;
   property_types: Array<{ value: string; count: number }>;
+  complexes: Array<{ id: number; name: string; district: string | null; count: number }>;
   rooms: Array<{ value: number; count: number }>;
   price: {
     min: number | null;
@@ -110,6 +111,7 @@ export interface MarketplaceSearchFilters {
   listingType: TransactionType;
   district?: string;
   propertyType?: string;
+  complexId?: number;
   rooms?: number;
   minPrice?: number;
   maxPrice?: number;
@@ -332,6 +334,7 @@ export function searchMarketplaceListings(
   const params = new URLSearchParams({ listing_type: filters.listingType });
   if (filters.district) params.set("district", filters.district);
   if (filters.propertyType) params.set("property_type", filters.propertyType);
+  if (filters.complexId !== undefined) params.set("complex_id", String(filters.complexId));
   if (filters.rooms !== undefined) params.set("rooms", String(filters.rooms));
   if (filters.minPrice !== undefined) params.set("min_price", String(filters.minPrice));
   if (filters.maxPrice !== undefined) params.set("max_price", String(filters.maxPrice));

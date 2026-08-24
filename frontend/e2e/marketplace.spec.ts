@@ -47,6 +47,32 @@ test("district filter cannot return another district", async ({ page }) => {
   }
 });
 
+test("verified complex filter returns only the selected complex", async ({ page }) => {
+  await page.goto("/sale");
+  const complexSelect = page.getByLabel("Хотхон / хороолол").first();
+  const options = complexSelect.locator("option");
+  test.skip((await options.count()) < 2, "Dataset has no approved complex matches");
+  const selectedId = await options.nth(1).getAttribute("value");
+  const selectedLabel = (await options.nth(1).textContent())?.replace(/\s*\(\d+\)\s*$/u, "").trim();
+  expect(selectedId).toBeTruthy();
+  expect(selectedLabel).toBeTruthy();
+  await complexSelect.selectOption(selectedId as string);
+
+  const responsePromise = page.waitForResponse(
+    (response) => response.url().includes(`complex_id=${selectedId}`) && response.ok(),
+  );
+  await page.getByRole("button", { name: "Хайх" }).first().click();
+  await responsePromise;
+
+  const cards = page.locator("article");
+  await expect(cards.first()).toBeVisible();
+  const cardCount = await cards.count();
+  for (let index = 0; index < cardCount; index += 1) {
+    await expect(cards.nth(index)).toContainText(selectedLabel as string);
+    await expect(cards.nth(index).getByText("Verified", { exact: true })).toBeVisible();
+  }
+});
+
 test("listing card opens an internal detail page with source action", async ({ page }) => {
   await page.goto("/sale");
   const firstCardLink = page.locator("article a[href^='/listings/']").first();

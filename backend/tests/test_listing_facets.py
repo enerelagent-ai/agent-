@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.api.routes import listings as listings_route
-from app.models.listing import Listing
+from app.models.listing import Complex, Listing, ListingComplexMatch
 
 
 _NOW = datetime(2099, 3, 1, tzinfo=timezone.utc)
@@ -86,3 +86,69 @@ def test_listing_facets_require_known_transaction_type(client) -> None:
         client.get("/listings/facets", params={"listing_type": "lease"}).status_code
         == 422
     )
+
+
+def test_complex_facet_and_search_only_use_approved_current_unit_matches(
+    client, db_session, monkeypatch
+) -> None:
+    approved_complex = Complex(
+        canonical_name="TEST VERIFIED COMPLEX",
+        normalized_name="test verified complex",
+        aliases=[],
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+    pending_complex = Complex(
+        canonical_name="TEST PENDING COMPLEX",
+        normalized_name="test pending complex",
+        aliases=[],
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+    db_session.add_all([approved_complex, pending_complex])
+    db_session.flush()
+    approved_listing = _listing("verified-complex", complex_id=approved_complex.id)
+    pending_listing = _listing("pending-complex", complex_id=pending_complex.id)
+    legacy_listing = _listing("legacy-complex", complex_id=approved_complex.id)
+    db_session.add_all([approved_listing, pending_listing, legacy_listing])
+    db_session.flush()
+    db_session.add_all(
+        [
+            ListingComplexMatch(
+                listing_id=approved_listing.id,
+                complex_id=approved_complex.id,
+                relation="unit",
+                confidence=1.0,
+                evidence_text=approved_listing.title,
+                extractor_version="test",
+                review_status="approved",
+                reviewed_at=_NOW,
+                is_current=True,
+            ),
+            ListingComplexMatch(
+                listing_id=pending_listing.id,
+                complex_id=pending_complex.id,
+                relation="unit",
+                confidence=0.9,
+                evidence_text=pending_listing.title,
+                extractor_version="test",
+                review_status="pending",
+                is_current=True,
+            ),
+        ]
+    )
+    db_session.flush()
+    monkeypatch.setattr(listings_route, "superseded_listing_ids_conn", lambda _dsn: set())
+
+    facets = client.get("/listings/facets", params={"listing_type": "sale"})
+    assert facets.status_code == 200
+    complex_ids = {item["id"] for item in facets.json()["complexes"]}
+    assert approved_complex.id in complex_ids
+    assert pending_complex.id not in complex_ids
+
+    search = client.get(
+        "/listings/search",
+        params={"listing_type": "sale", "complex_id": approved_complex.id},
+    )
+    assert search.status_code == 200
+    assert [item["id"] for item in search.json()["items"]] == [approved_listing.id]

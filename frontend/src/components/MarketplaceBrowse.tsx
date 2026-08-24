@@ -30,12 +30,14 @@ function categoryLabel(value: string): string {
 interface FilterControlsProps {
   facets: ListingFacets;
   district: string;
+  complexId: string;
   propertyType: string;
   rooms: string;
   minPrice: string;
   maxPrice: string;
   loading: boolean;
   onDistrictChange: (value: string) => void;
+  onComplexIdChange: (value: string) => void;
   onPropertyTypeChange: (value: string) => void;
   onRoomsChange: (value: string) => void;
   onMinPriceChange: (value: string) => void;
@@ -47,12 +49,14 @@ interface FilterControlsProps {
 function FilterControls({
   facets,
   district,
+  complexId,
   propertyType,
   rooms,
   minPrice,
   maxPrice,
   loading,
   onDistrictChange,
+  onComplexIdChange,
   onPropertyTypeChange,
   onRoomsChange,
   onMinPriceChange,
@@ -60,6 +64,11 @@ function FilterControls({
   onApply,
   onClear,
 }: FilterControlsProps) {
+  const complexes = facets.complexes ?? [];
+  const availableComplexes = district
+    ? complexes.filter((item) => item.district === district)
+    : complexes;
+
   return (
     <div className="space-y-5">
       <label className="block text-[13px] font-bold text-slate-800">
@@ -68,6 +77,19 @@ function FilterControls({
           <option value="">Бүх дүүрэг</option>
           {facets.districts.map((item) => <option key={item.value} value={item.value}>{item.value} ({item.count})</option>)}
         </select>
+      </label>
+
+      <label className="block text-[13px] font-bold text-slate-800">
+        Хотхон / хороолол
+        <select value={complexId} onChange={(event) => onComplexIdChange(event.target.value)} className="mt-2 min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition focus:border-[#ff6b35] focus:ring-2 focus:ring-[#ff6b35]/10 sm:text-sm">
+          <option value="">Бүх хотхон</option>
+          {availableComplexes.map((item) => (
+            <option key={`${item.id}-${item.district ?? ""}`} value={item.id}>
+              {item.name} ({item.count})
+            </option>
+          ))}
+        </select>
+        <p className="mt-1.5 text-[11px] leading-4 text-slate-400">Зөвхөн баталгаажсан хотхоны холбоосууд</p>
       </label>
 
       <label className="block text-[13px] font-bold text-slate-800">
@@ -124,6 +146,7 @@ export function MarketplaceBrowse({
 }) {
   const [page, setPage] = useState(initialPage);
   const [district, setDistrict] = useState("");
+  const [complexId, setComplexId] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [rooms, setRooms] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -135,7 +158,7 @@ export function MarketplaceBrowse({
   const [filterOpen, setFilterOpen] = useState(false);
 
   const transactionLabel = listingType === "sale" ? "Зарна" : "Түрээслүүлнэ";
-  const activeFilterCount = [district, propertyType, rooms, minPrice, maxPrice].filter(Boolean).length;
+  const activeFilterCount = [district, complexId, propertyType, rooms, minPrice, maxPrice].filter(Boolean).length;
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -162,6 +185,7 @@ export function MarketplaceBrowse({
       const result = await searchMarketplaceListings({
         listingType,
         district: district || undefined,
+        complexId: complexId ? Number(complexId) : undefined,
         propertyType: (propertyTypeOverride ?? propertyType) || undefined,
         rooms: rooms ? Number(rooms) : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
@@ -191,6 +215,7 @@ export function MarketplaceBrowse({
 
   function clearFilters() {
     setDistrict("");
+    setComplexId("");
     setPropertyType("");
     setRooms("");
     setMinPrice("");
@@ -199,6 +224,14 @@ export function MarketplaceBrowse({
     setCursor(undefined);
     setCursorHistory([]);
     setError(null);
+  }
+
+  function changeDistrict(value: string) {
+    setDistrict(value);
+    if (complexId) {
+      const selectedComplex = facets.complexes?.find((item) => item.id === Number(complexId));
+      if (value && selectedComplex?.district !== value) setComplexId("");
+    }
   }
 
   function nextPage() {
@@ -300,7 +333,7 @@ export function MarketplaceBrowse({
             <div className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
               <div className="flex w-full items-center gap-2 bg-slate-50 px-5 pt-4"><SlidersHorizontal className="h-4 w-4 text-[#ff6b35]" aria-hidden /><h2 className="text-sm font-extrabold">Нарийвчилсан хайлт</h2></div>
             </div>
-            <div className="px-5 pb-5"><FilterControls facets={facets} district={district} propertyType={propertyType} rooms={rooms} minPrice={minPrice} maxPrice={maxPrice} loading={loading} onDistrictChange={setDistrict} onPropertyTypeChange={setPropertyType} onRoomsChange={setRooms} onMinPriceChange={setMinPrice} onMaxPriceChange={setMaxPrice} onApply={applyFilters} onClear={clearFilters} /></div>
+            <div className="px-5 pb-5"><FilterControls facets={facets} district={district} complexId={complexId} propertyType={propertyType} rooms={rooms} minPrice={minPrice} maxPrice={maxPrice} loading={loading} onDistrictChange={changeDistrict} onComplexIdChange={setComplexId} onPropertyTypeChange={setPropertyType} onRoomsChange={setRooms} onMinPriceChange={setMinPrice} onMaxPriceChange={setMaxPrice} onApply={applyFilters} onClear={clearFilters} /></div>
           </aside>
 
           <section aria-busy={loading}>
@@ -359,7 +392,7 @@ export function MarketplaceBrowse({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-5">
-              <FilterControls facets={facets} district={district} propertyType={propertyType} rooms={rooms} minPrice={minPrice} maxPrice={maxPrice} loading={loading} onDistrictChange={setDistrict} onPropertyTypeChange={setPropertyType} onRoomsChange={setRooms} onMinPriceChange={setMinPrice} onMaxPriceChange={setMaxPrice} onApply={() => { applyFilters(); setFilterOpen(false); }} onClear={clearFilters} />
+              <FilterControls facets={facets} district={district} complexId={complexId} propertyType={propertyType} rooms={rooms} minPrice={minPrice} maxPrice={maxPrice} loading={loading} onDistrictChange={changeDistrict} onComplexIdChange={setComplexId} onPropertyTypeChange={setPropertyType} onRoomsChange={setRooms} onMinPriceChange={setMinPrice} onMaxPriceChange={setMaxPrice} onApply={() => { applyFilters(); setFilterOpen(false); }} onClear={clearFilters} />
             </div>
           </div>
         </div>
