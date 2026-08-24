@@ -272,6 +272,9 @@ export function MarketplaceBrowse({
             >
               Түрээслэх
             </Link>
+            <Link href="/complexes" className="min-h-10 flex-1 rounded-md px-4 py-2 text-center text-slate-200 transition hover:bg-white/10 sm:flex-none">
+              Хотхонууд
+            </Link>
           </nav>
           <Link href="#market-analysis" className="hidden rounded-md bg-[#ff6b35] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#ed5b29] sm:block">
             Анализ харах

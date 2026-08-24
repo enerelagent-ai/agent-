@@ -87,6 +87,29 @@ export interface ComplexOption {
   canonical_name: string;
 }
 
+export interface ComplexIntelligenceSummary {
+  id: number;
+  name: string;
+  district: string | null;
+  active_listings: number;
+  sale_listings: number;
+  rent_listings: number;
+  median_sale_price_per_sqm: number | null;
+  min_sale_price_per_sqm: number | null;
+  max_sale_price_per_sqm: number | null;
+  lat: number | null;
+  lng: number | null;
+  location_kind: "listing_centroid" | "unknown";
+  has_contour: boolean;
+  data_as_of: string;
+}
+
+export interface ComplexIntelligenceDetail extends ComplexIntelligenceSummary {
+  aliases: string[];
+  median_sale_price: number | null;
+  median_rent_price: number | null;
+}
+
 export interface ListingFacets {
   listing_type: TransactionType;
   total: number;
@@ -326,6 +349,16 @@ export function getListingFacets(
   listingType: TransactionType,
 ): Promise<ListingFacets> {
   return getJSON(`/listings/facets?listing_type=${listingType}`);
+}
+
+export function getComplexIntelligence(): Promise<ComplexIntelligenceSummary[]> {
+  return getJSON("/complexes");
+}
+
+export function getComplexIntelligenceDetail(
+  complexId: number,
+): Promise<ComplexIntelligenceDetail> {
+  return getJSON(`/complexes/${complexId}`);
 }
 
 export function searchMarketplaceListings(
