@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Хяналтын самбар", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Зах зээлийн анализ", icon: LayoutDashboard, href: "/sale#market-analysis" },
   { label: "Зарын зах", icon: Store, href: "/market" },
   { label: "Зар мэдээлэл", icon: ListChecks, href: "/listings" },
   { label: "Зах зээлийн тойм", icon: TrendingUp, href: null },
@@ -39,7 +39,7 @@ export function Sidebar({ publicView = false }: { publicView?: boolean }) {
   const pathname = usePathname();
   const items = publicView
     ? NAV_ITEMS.filter(({ href }) =>
-        href === "/dashboard" || href === "/market" || href === "/listings" || href === "/calculator",
+        href === "/sale#market-analysis" || href === "/market" || href === "/listings" || href === "/calculator",
       )
     : NAV_ITEMS;
 
@@ -56,7 +56,7 @@ export function Sidebar({ publicView = false }: { publicView?: boolean }) {
 
       <nav className="flex-1 space-y-1 px-3 pt-2">
         {items.map(({ label, icon: Icon, href }) => {
-          const active = href !== null && pathname.startsWith(href);
+          const active = href !== null && pathname.startsWith(href.split("#")[0]);
           return href ? (
             <Link
               key={label}
