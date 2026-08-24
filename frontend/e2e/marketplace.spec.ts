@@ -15,6 +15,17 @@ test("sale and rent routes never mix transaction badges", async ({ page }) => {
   await expect(rentCards.first().getByText("ТҮРЭЭСЛҮҮЛНЭ", { exact: true })).toBeVisible();
 });
 
+test("dashboard analysis now lives inside both marketplace routes", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/sale#market-analysis$/);
+  await expect(page.getByRole("heading", { name: "Дэлгэрэнгүй зах зээлийн анализ" })).toBeVisible();
+  await expect(page.getByText("Дүүргийн хөрөнгө оруулалтын үзүүлэлт")).toBeVisible();
+
+  await page.goto("/rent#market-analysis");
+  await expect(page.getByRole("heading", { name: "Дэлгэрэнгүй зах зээлийн анализ" })).toBeVisible();
+  await expect(page.getByText("Дүүргийн хөрөнгө оруулалтын үзүүлэлт")).toBeVisible();
+});
+
 test("district filter cannot return another district", async ({ page }) => {
   await page.goto("/sale");
   const districtSelect = page.getByLabel("Дүүрэг").first();

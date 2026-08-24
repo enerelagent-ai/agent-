@@ -9,11 +9,15 @@ import {
   type ListingFacets,
   type DistrictInvestmentSummary,
   type MarketplaceListingPage,
+  type ListingTypeCount,
+  type PriceTrendPoint,
+  type TodaysOpportunity,
   type TransactionType,
 } from "@/lib/api";
 import { formatMnt } from "@/lib/format";
 import { MarketplaceListingCard } from "./MarketplaceListingCard";
 import { MarketplaceInsightPanel } from "./MarketplaceInsightPanel";
+import { MarketplaceDeepAnalysis } from "./MarketplaceDeepAnalysis";
 
 const PAGE_SIZE = 24;
 
@@ -106,11 +110,17 @@ export function MarketplaceBrowse({
   facets,
   initialPage,
   investmentSummary,
+  todaysOpportunity,
+  listingCounts,
+  priceTrend,
 }: {
   listingType: TransactionType;
   facets: ListingFacets;
   initialPage: MarketplaceListingPage;
   investmentSummary: DistrictInvestmentSummary[];
+  todaysOpportunity: TodaysOpportunity | null;
+  listingCounts: ListingTypeCount[];
+  priceTrend: PriceTrendPoint[];
 }) {
   const [page, setPage] = useState(initialPage);
   const [district, setDistrict] = useState("");
@@ -208,7 +218,7 @@ export function MarketplaceBrowse({
         <div className="border-b border-white/10">
           <div className="mx-auto flex h-9 max-w-[1280px] items-center justify-between px-4 text-[11px] text-slate-300 sm:px-6 lg:px-8">
             <span>Үл хөдлөх хөрөнгийн зар ба бодит зах зээлийн шинжилгээ</span>
-            <Link href="/dashboard" className="hidden items-center gap-1.5 font-semibold hover:text-white sm:flex"><BarChart3 className="h-3.5 w-3.5" /> Хөрөнгө оруулалтын самбар</Link>
+            <Link href="#market-analysis" className="hidden items-center gap-1.5 font-semibold hover:text-white sm:flex"><BarChart3 className="h-3.5 w-3.5" /> Зах зээлийн анализ</Link>
           </div>
         </div>
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:px-6 lg:px-8">
@@ -230,7 +240,7 @@ export function MarketplaceBrowse({
               Түрээслэх
             </Link>
           </nav>
-          <Link href="/dashboard" className="hidden rounded-md bg-[#ff6b35] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#ed5b29] sm:block">
+          <Link href="#market-analysis" className="hidden rounded-md bg-[#ff6b35] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#ed5b29] sm:block">
             Анализ харах
           </Link>
         </div>
@@ -325,6 +335,15 @@ export function MarketplaceBrowse({
           </aside>
         </div>
       </main>
+
+      <MarketplaceDeepAnalysis
+        listingType={listingType}
+        district={district}
+        todaysOpportunity={todaysOpportunity}
+        investmentSummary={investmentSummary}
+        listingCounts={listingCounts}
+        priceTrend={priceTrend}
+      />
 
       {filterOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Зар шүүх">

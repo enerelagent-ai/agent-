@@ -83,7 +83,7 @@ export function MarketplaceInsightPanel({
       )}
 
       <div className="border-t border-slate-100 bg-slate-50 p-3">
-        <Link href="/dashboard" className="flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-white text-xs font-extrabold text-[#20334b] ring-1 ring-slate-200 transition hover:text-[#e85520]">
+        <Link href="#market-analysis" className="flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-white text-xs font-extrabold text-[#20334b] ring-1 ring-slate-200 transition hover:text-[#e85520]">
           Дэлгэрэнгүй анализ <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
         <Link href="/calculator" className="mt-2 flex items-center justify-center gap-1.5 py-1 text-[11px] font-semibold text-slate-500 hover:text-[#e85520]">
