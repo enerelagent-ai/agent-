@@ -14,6 +14,13 @@ class RoomFacetValue(BaseModel):
     count: int
 
 
+class ComplexFacetValue(BaseModel):
+    id: int
+    name: str
+    district: str | None
+    count: int
+
+
 class PriceFacet(BaseModel):
     min: float | None
     max: float | None
@@ -25,6 +32,7 @@ class ListingFacets(BaseModel):
     total: int
     districts: list[FacetValue]
     property_types: list[FacetValue]
+    complexes: list[ComplexFacetValue]
     rooms: list[RoomFacetValue]
     price: PriceFacet
 

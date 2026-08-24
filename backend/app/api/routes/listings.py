@@ -107,6 +107,31 @@ def listing_facets(
         .order_by(Listing.rooms.asc())
         .all()
     )
+    complex_rows = (
+        active_query(
+            Complex.id,
+            Complex.canonical_name,
+            Listing.district,
+            func.count(func.distinct(Listing.id)),
+        )
+        .join(Complex, Complex.id == Listing.complex_id)
+        .join(
+            ListingComplexMatch,
+            and_(
+                ListingComplexMatch.listing_id == Listing.id,
+                ListingComplexMatch.complex_id == Listing.complex_id,
+                ListingComplexMatch.is_current.is_(True),
+                ListingComplexMatch.relation == "unit",
+                ListingComplexMatch.review_status == "approved",
+            ),
+        )
+        .group_by(Complex.id, Complex.canonical_name, Listing.district)
+        .order_by(
+            func.count(func.distinct(Listing.id)).desc(),
+            Complex.canonical_name.asc(),
+        )
+        .all()
+    )
     price_min, price_max, price_count = (
         active_query(
             func.min(Listing.price),
@@ -131,6 +156,10 @@ def listing_facets(
             {"value": value, "count": count}
             for value, count in property_type_rows
         ],
+        "complexes": [
+            {"id": complex_id, "name": name, "district": district, "count": count}
+            for complex_id, name, district, count in complex_rows
+        ],
         "rooms": [{"value": value, "count": count} for value, count in room_rows],
         "price": {
             "min": float(price_min) if price_min is not None else None,
@@ -146,6 +175,7 @@ def search_marketplace_listings(
     listing_type: Literal["sale", "rent"] = Query(...),
     district: str | None = Query(None),
     property_type: str | None = Query(None),
+    complex_id: int | None = Query(None, ge=1),
     rooms: int | None = Query(None, ge=1),
     min_price: float | None = Query(None, ge=0),
     max_price: float | None = Query(None, ge=0),
@@ -167,6 +197,19 @@ def search_marketplace_listings(
         query = query.filter(Listing.district == district)
     if property_type is not None:
         query = query.filter(Listing.property_type == property_type)
+    if complex_id is not None:
+        approved_match = (
+            db.query(ListingComplexMatch.id)
+            .filter(
+                ListingComplexMatch.listing_id == Listing.id,
+                ListingComplexMatch.complex_id == Listing.complex_id,
+                ListingComplexMatch.is_current.is_(True),
+                ListingComplexMatch.relation == "unit",
+                ListingComplexMatch.review_status == "approved",
+            )
+            .exists()
+        )
+        query = query.filter(Listing.complex_id == complex_id, approved_match)
     if rooms is not None:
         query = query.filter(Listing.rooms == rooms)
     if min_price is not None:
