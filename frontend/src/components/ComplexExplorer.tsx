@@ -51,7 +51,7 @@ export function ComplexExplorer({
       </div>
 
       <div className="my-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-600"><strong className="text-slate-950">{filtered.length}</strong> баталгаатай хотхон</p>
+        <p className="text-sm text-slate-600"><strong className="text-slate-950">{filtered.length}</strong> public мэдээлэлтэй хотхон</p>
         <div className="flex rounded-lg border border-slate-200 bg-white p-1 text-sm font-bold">
           <Link href="/complexes" className={`flex min-h-9 items-center gap-1.5 rounded-md px-3 ${mode === "list" ? "bg-[#20334b] text-white" : "text-slate-600"}`}><Building2 className="h-4 w-4" />Жагсаалт</Link>
           <Link href="/complexes/map" className={`flex min-h-9 items-center gap-1.5 rounded-md px-3 ${mode === "map" ? "bg-[#20334b] text-white" : "text-slate-600"}`}><Map className="h-4 w-4" />Газрын зураг</Link>
