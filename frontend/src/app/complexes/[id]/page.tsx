@@ -65,6 +65,7 @@ export default async function ComplexDetailPage({ params }: { params: { id: stri
 }
 
 function PublicProfile({ profile }: { profile: PublicComplexSummary }) {
+  const metrics = profile.profile_metrics ?? {};
   return (
     <div className="min-h-screen bg-[#f3f5f7]">
       <ComplexSiteHeader />
@@ -73,11 +74,19 @@ function PublicProfile({ profile }: { profile: PublicComplexSummary }) {
         {profile.photo_url && <div className="mt-5 aspect-[16/7] overflow-hidden rounded-2xl bg-slate-200"><img src={profile.photo_url} alt={`${profile.name} гадна зураг`} className="h-full w-full object-cover" /></div>}
         <section className="mt-5 overflow-hidden rounded-2xl bg-[#20334b] p-6 text-white sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div><p className="text-xs font-bold uppercase tracking-wider text-[#ff9a73]">Хотхоны public тойм · {profile.district}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{profile.name}</h1><p className="mt-2 flex items-center gap-1 text-sm text-slate-300"><MapPin className="h-4 w-4" />{profile.has_contour ? "Хэмжсэн контуртай" : "Ойролцоо цэгэн байршил"}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wider text-[#ff9a73]">Хотхоны тойм · {profile.district}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{profile.name}</h1>{metrics.building_summary && <p className="mt-2 text-sm text-slate-300">{metrics.building_summary}</p>}<p className="mt-2 flex items-center gap-1 text-sm text-slate-300"><MapPin className="h-4 w-4" />{profile.has_contour ? "Хэмжсэн контуртай" : "Ойролцоо цэгэн байршил"}</p></div>
             <div className="rounded-xl bg-white/10 px-5 py-4 text-right"><p className="text-xs text-slate-300">Медиан зарлах үнэ / м²</p><p className="mt-1 text-2xl font-black">{profile.median_sale_price_per_sqm === null ? "—" : formatMnt(profile.median_sale_price_per_sqm)}</p></div>
           </div>
-          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3"><Metric label="Идэвхтэй зар" value={String(profile.active_listings)} /><Metric label="Мэдээллийн огноо" value={profile.data_as_of} /><Metric label="Байршлын төрөл" value={profile.location_kind ?? "point"} /></div>
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4"><Metric label="Идэвхтэй зар" value={String(profile.active_listings)} /><Metric label="Үнийн хүрээ" value={metrics.price_range_million ? `${metrics.price_range_million[0]}–${metrics.price_range_million[1]} сая ₮` : "—"} /><Metric label="Байршлын оноо" value={metrics.location_score !== undefined ? `${metrics.location_score}/10` : "—"} /><Metric label="Мэдээллийн огноо" value={profile.data_as_of} /></div>
         </section>
+
+        {(metrics.clearance_days !== undefined || metrics.rental_yield_pct !== undefined) && <section className="mt-6"><h2 className="text-xl font-black text-[#20334b]">Зах зээлийн байдал</h2><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4"><MetricLightCard label="Зар цэвэрлэгдэх" value={metrics.clearance_days !== undefined ? `${metrics.clearance_days} хоног` : "—"} /><MetricLightCard label="Зарагдсан байж болзошгүй" value={metrics.likely_sold !== undefined ? String(metrics.likely_sold) : "—"} /><MetricLightCard label="Үнээ бууруулсан / 14 хоног" value={metrics.price_reductions_14d !== undefined ? String(metrics.price_reductions_14d) : "—"} /><MetricLightCard label="Түрээсийн жилийн өгөөж" value={metrics.rental_yield_pct !== undefined ? `${metrics.rental_yield_pct}%` : "—"} /></div></section>}
+
+        {metrics.room_price_per_sqm_million?.length ? <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-black text-[#20334b]">Өрөөний тоогоор м² үнэ</h2><div className="mt-5 space-y-4">{metrics.room_price_per_sqm_million.map((item) => { const max = Math.max(...metrics.room_price_per_sqm_million!.map((row) => row.value)); return <div key={item.rooms}><div className="mb-1.5 flex justify-between text-sm"><span className="font-bold text-slate-700">{item.rooms} өрөө</span><span className="font-black text-[#20334b]">{item.value} сая ₮/м²</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#ff6b35]" style={{ width: `${item.value / max * 100}%` }} /></div></div>; })}</div></section> : null}
+
+        {metrics.location_breakdown?.length ? <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-black text-[#20334b]">Байршлын задаргаа</h2><div className="mt-5 grid gap-4 sm:grid-cols-2">{metrics.location_breakdown.map((item) => <div key={item.label}><div className="mb-1.5 flex justify-between text-sm"><span className="font-bold text-slate-700">{item.label}</span><span className="font-black">{item.score}/10</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${item.score * 10}%` }} /></div></div>)}</div></section> : null}
+
+        {metrics.price_drivers?.length ? <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-black text-[#20334b]">Үнэд нөлөөлж буй хүчин зүйл</h2><div className="mt-4 divide-y divide-slate-100">{metrics.price_drivers.map((item) => <div key={item.label} className="flex items-center justify-between py-3 text-sm"><span className="font-bold text-slate-700">{item.label}</span><span className={`font-black ${item.impact_pct >= 0 ? "text-emerald-700" : "text-red-600"}`}>{item.impact_pct > 0 ? "+" : ""}{item.impact_pct}%</span></div>)}</div></section> : null}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600">
           <h2 className="font-black text-slate-950">Мэдээллийн тайлбар</h2>
           <p className="mt-2">Энд харагдах тоо нь зарлах үнэ бөгөөд бодит хэлцлийн үнэ биш.</p>
@@ -90,6 +99,7 @@ function PublicProfile({ profile }: { profile: PublicComplexSummary }) {
 
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-lg bg-white/10 p-3"><p className="text-[11px] text-slate-300">{label}</p><p className="mt-1 font-black">{value}</p></div>; }
 function MetricLight({ label, value }: { label: string; value: string }) { return <div><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-lg font-black text-[#20334b]">{value}</p></div>; }
+function MetricLightCard({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs leading-5 text-slate-500">{label}</p><p className="mt-2 text-xl font-black text-[#20334b]">{value}</p></div>; }
 function ListingSection({ title, href, items }: { title: string; href: string; items: Awaited<ReturnType<typeof searchMarketplaceListings>>["items"] }) {
   return <section className="mt-8"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black text-[#20334b]">{title}</h2><Link href={href} className="text-sm font-bold text-[#e85520]">Бүгдийг харах →</Link></div>{items.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => <MarketplaceListingCard key={item.id} listing={item} />)}</div> : <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Одоогоор идэвхтэй зар алга.</div>}</section>;
 }

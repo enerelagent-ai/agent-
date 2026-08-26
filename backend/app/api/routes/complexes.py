@@ -23,6 +23,7 @@ def get_public_affordability(db: DbSession) -> dict:
     return {
         "source_url": row.source_url,
         "data_as_of": row.data_as_of.isoformat(),
+        "profile_metrics": row.profile_metrics or {},
         "districts": row.districts,
         "listings": row.listings,
         "rules": row.rules,
