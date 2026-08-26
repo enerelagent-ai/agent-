@@ -37,7 +37,15 @@ def _text(value: str) -> str:
 
 
 def _number_before_label(html: str, label: str) -> float | None:
-    match = re.search(r'<div class="v[^\"]*">\s*([\d.]+).*?<div class="k">' + re.escape(label), html, re.DOTALL)
+    value_then_label = (
+        r'<div class="v[^"]*">\s*([\d.]+)[^<]*(?:<small>[^<]*</small>)?\s*</div>\s*'
+        r'<div class="k">' + re.escape(label) + r'</div>'
+    )
+    label_then_value = (
+        r'<div class="k">' + re.escape(label) + r'</div>\s*'
+        r'<div class="v[^"]*">\s*([\d.]+)'
+    )
+    match = re.search(value_then_label, html, re.DOTALL) or re.search(label_then_value, html, re.DOTALL)
     return float(match.group(1)) if match else None
 
 
@@ -160,6 +168,16 @@ def import_map_data(dsn: str, data: PublicMapData, *, dry_run: bool, profile_met
                         THEN public_complex_profiles.profile_metrics ELSE EXCLUDED.profile_metrics END,
                     scraped_at=now()
             """, profiles, page_size=200)
+            metric_updates = [
+                (Json(metrics), SOURCE, slug)
+                for slug, metrics in (profile_metrics or {}).items()
+                if metrics and "import_error" not in metrics
+            ]
+            execute_batch(cursor, """
+                UPDATE public_complex_profiles
+                SET profile_metrics=%s, scraped_at=now()
+                WHERE source=%s AND source_slug=%s
+            """, metric_updates, page_size=200)
             cursor.execute("DELETE FROM public_complex_contours WHERE source=%s", (SOURCE,))
             contours = []
             per_slug_index: dict[str, int] = {}
@@ -191,7 +209,8 @@ def main() -> None:
     metrics = None if args.skip_profile_metrics else fetch_profile_metrics(data.profiles)
     result = import_map_data(args.database_url, data, dry_run=args.dry_run, profile_metrics=metrics)
     if metrics is not None:
-        result["profile_metrics"] = sum(1 for item in metrics.values() if "import_error" not in item)
+        result["profile_metrics"] = sum(1 for item in metrics.values() if item and "import_error" not in item)
+        result["profile_metric_errors"] = sum(1 for item in metrics.values() if "import_error" in item)
     result["imported_at"] = datetime.now(timezone.utc).isoformat()
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
