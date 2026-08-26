@@ -4,14 +4,15 @@ import Link from "next/link";
 import { AffordabilityExplorer } from "@/components/AffordabilityExplorer";
 import { ComplexSiteHeader } from "@/components/ComplexSiteHeader";
 import { MarketplaceListingCard } from "@/components/MarketplaceListingCard";
-import { getPublicAffordability, getPublicComplexes, getTodaysOpportunity, searchMarketplaceListings } from "@/lib/api";
+import { getPublicComplexes, getTodaysOpportunity, searchMarketplaceListings } from "@/lib/api";
+import { getAvailableAffordability } from "@/lib/publicAffordability";
 
 export default async function HomePage() {
   const [sale, rent, complexes, affordability, opportunity] = await Promise.all([
     searchMarketplaceListings({ listingType: "sale", limit: 6 }).catch(() => null),
     searchMarketplaceListings({ listingType: "rent", limit: 3 }).catch(() => null),
     getPublicComplexes().catch(() => []),
-    getPublicAffordability().catch(() => null),
+    getAvailableAffordability().catch(() => null),
     getTodaysOpportunity().catch(() => null),
   ]);
   const activeComplexListings = complexes.reduce((sum, item) => sum + item.active_listings, 0);

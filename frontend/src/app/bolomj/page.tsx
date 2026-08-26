@@ -1,9 +1,11 @@
 import { AffordabilityExplorer } from "@/components/AffordabilityExplorer";
 import { ComplexSiteHeader } from "@/components/ComplexSiteHeader";
-import { getPublicAffordability } from "@/lib/api";
+import { getAvailableAffordability } from "@/lib/publicAffordability";
+
+export const dynamic = "force-dynamic";
 
 export default async function AffordabilityPage() {
-  const data = await getPublicAffordability();
+  const data = await getAvailableAffordability();
   return <div className="min-h-screen bg-[#f3f5f7]">
     <ComplexSiteHeader />
     <main className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
