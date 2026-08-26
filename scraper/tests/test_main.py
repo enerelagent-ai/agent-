@@ -23,13 +23,14 @@ def test_cli_parses_expected_flags(monkeypatch, capsys) -> None:
 
     captured: dict = {}
 
-    def fake_run_pipeline(dsn, max_pages, ads_per_category, skip_recent_days=0.0, stop_after_known_pages=0):
+    def fake_run_pipeline(dsn, max_pages, ads_per_category, skip_recent_days=0.0, stop_after_known_pages=0, start_page=1):
         captured.update(
             dsn=dsn,
             max_pages=max_pages,
             ads_per_category=ads_per_category,
             skip_recent_days=skip_recent_days,
             stop_after_known_pages=stop_after_known_pages,
+            start_page=start_page,
         )
         return 0
 
@@ -46,6 +47,7 @@ def test_cli_parses_expected_flags(monkeypatch, capsys) -> None:
         "ads_per_category": None,
         "skip_recent_days": 1.0,
         "stop_after_known_pages": 3,
+        "start_page": 1,
     }
 
 
