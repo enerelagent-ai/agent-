@@ -14,7 +14,7 @@ export default async function AffordabilityPage() {
       </div>
       <AffordabilityExplorer data={data} />
       <section className="mt-7 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-950">
-        <strong>Анхаарах нь:</strong> Энэ нь урьдчилсан мэдээллийн тооцоо бөгөөд зээлийн зөвшөөрөл, санхүүгийн зөвлөгөө биш. Эцсийн шалгуур, орлого ба зээлжих чадварыг банк өөрөө шийднэ. Өгөгдөл: {data.data_as_of} · Эх сурвалж: hotkhon.mn public мэдээлэл.
+        <strong>Анхаарах нь:</strong> Энэ нь урьдчилсан мэдээллийн тооцоо бөгөөд зээлийн зөвшөөрөл, санхүүгийн зөвлөгөө биш. Эцсийн шалгуур, орлого ба зээлжих чадварыг банк өөрөө шийднэ. Өгөгдөл шинэчлэгдсэн: {data.data_as_of}.
       </section>
     </main>
   </div>;

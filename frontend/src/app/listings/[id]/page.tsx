@@ -168,7 +168,7 @@ export default async function ListingDetailPage({ params }: { params: { id: stri
                   <Phone className="h-4 w-4" aria-hidden /> {listing.contact_phone}
                 </a>
               )}
-              <p className="mt-3 text-xs leading-5 text-slate-400">Үнэ болон зарын төлөв өөрчлөгдсөн байж болно. Эх сурвалж дээр давхар шалгана уу.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-400">Үнэ болон зарын төлөв өөрчлөгдсөн байж болно. Эх зарыг нээж давхар шалгана уу.</p>
             </section>
 
             {(listing.lat !== null || listing.lng !== null) && (

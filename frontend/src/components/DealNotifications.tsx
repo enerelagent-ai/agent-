@@ -60,7 +60,7 @@ export function DealNotifications({ initialFeed }: { initialFeed: DealAlertFeed 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-[#0ca30c]/10 px-2 py-0.5 text-xs font-medium text-[#0ca30c]">Дүүргээс ↓ {formatPercent(item.deal_pct)}</span>
                     <span className="text-xs text-ink-muted">{timeAgo(item.scraped_at)}</span>
-                    <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-series-1 hover:underline">Эх сурвалж <ExternalLink className="h-3.5 w-3.5" /></a>
+                    <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-series-1 hover:underline">Зар харах <ExternalLink className="h-3.5 w-3.5" /></a>
                   </div>
                 </div>
               </li>
