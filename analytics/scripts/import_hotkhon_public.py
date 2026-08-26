@@ -54,6 +54,9 @@ def extract_profile_metrics(html: str) -> dict:
     sub = re.search(r'<div class="sub">(.*?)</div>', html, re.DOTALL)
     price_range = re.search(r'<div class="v">\s*([\d.,]+)\s*[–-]\s*([\d.,]+).*?<div class="k">Үнийн хүрээ', html, re.DOTALL)
     history = re.search(r'<span class="rng">(\d{4}-\d{2}-\d{2})\s*[—-]+\s*(\d{4}-\d{2}-\d{2})</span>', html)
+    history_path = re.search(r'aria-label="Өдөр тутмын ₮/м²-ийн зам".*?<path d="([ML\d.,\s-]+)" fill="none"', html, re.DOTALL)
+    nearby = re.search(r'<td>Ойролцоох харьцуулагч хотхон</td>\s*<td class="r">(\d+)</td>\s*<td class="note">(\d+) нь', html)
+    water = re.search(r'<td>Усны сүлжээнээс зай</td>\s*<td class="r">([\d.]+) км</td>\s*<td class="note">(.*?)</td>', html, re.DOTALL)
     profile: dict = {
         "building_summary": _text(sub.group(1)) if sub else None,
         "price_range_million": [float(price_range.group(1).replace(",", "")), float(price_range.group(2).replace(",", ""))] if price_range else None,
@@ -63,6 +66,11 @@ def extract_profile_metrics(html: str) -> dict:
         "price_reductions_14d": _number_before_label(html, "Үнээ бууруулсан"),
         "rental_yield_pct": _number_before_label(html, "Түрээсийн өгөөж"),
         "history_range": list(history.groups()) if history else None,
+        "history_svg_path": history_path.group(1) if history_path else None,
+        "nearby_comparables": int(nearby.group(1)) if nearby else None,
+        "nearby_cheaper": int(nearby.group(2)) if nearby else None,
+        "water_distance_km": float(water.group(1)) if water else None,
+        "water_name": _text(water.group(2)) if water else None,
     }
 
     room_section = re.search(r'<h2>Өрөөний тоогоор</h2>(.*?)(?:<h2>Байршлын задаргаа</h2>|<div class="sh" style="margin-top:0">\s*<h2>Байршлын задаргаа)', html, re.DOTALL)
@@ -84,6 +92,15 @@ def extract_profile_metrics(html: str) -> dict:
         profile["price_drivers"] = [
             {"label": _text(label), "impact_pct": float(value.replace("−", "-"))}
             for label, value in re.findall(r'<span class="lab">(.*?)</span>.*?<span class="val [^"]+">([+−-]?[\d.]+)%</span>', drivers_section.group(1), re.DOTALL)
+        ]
+    structure_section = re.search(r'<h2>Байрны бүтэц</h2>(.*?)(?:<div class="legal">|$)', html, re.DOTALL)
+    if structure_section:
+        profile["unit_structure"] = [
+            {"rooms": int(rooms), "observed_units": int(count), "area_min_sqm": float(area_min), "area_max_sqm": float(area_max)}
+            for rooms, count, area_min, area_max in re.findall(
+                r'<td>(\d+) өрөө</td>\s*<td class="r">(\d+)</td>\s*<td class="r">([\d.]+)[–-]([\d.]+)</td>',
+                structure_section.group(1),
+            )
         ]
     return {key: value for key, value in profile.items() if value not in (None, [], "")}
 

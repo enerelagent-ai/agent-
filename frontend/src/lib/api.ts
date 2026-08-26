@@ -132,9 +132,15 @@ export interface PublicComplexSummary {
     price_reductions_14d?: number;
     rental_yield_pct?: number;
     history_range?: [string, string];
+    history_svg_path?: string;
+    nearby_comparables?: number;
+    nearby_cheaper?: number;
+    water_distance_km?: number;
+    water_name?: string;
     room_price_per_sqm_million?: Array<{ rooms: number; value: number }>;
     location_breakdown?: Array<{ label: string; score: number }>;
     price_drivers?: Array<{ label: string; impact_pct: number }>;
+    unit_structure?: Array<{ rooms: number; observed_units: number; area_min_sqm: number; area_max_sqm: number }>;
   };
 }
 
