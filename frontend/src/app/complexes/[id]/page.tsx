@@ -6,12 +6,16 @@ import { ComplexSiteHeader } from "@/components/ComplexSiteHeader";
 import { MarketplaceListingCard } from "@/components/MarketplaceListingCard";
 import { getComplexIntelligenceDetail, getPublicComplex, searchMarketplaceListings, type PublicComplexSummary } from "@/lib/api";
 import { formatMnt } from "@/lib/format";
+import { getLicensedPublicProfileMetrics } from "@/lib/publicComplexMetrics";
 
 export default async function ComplexDetailPage({ params }: { params: { id: string } }) {
   const id = Number(params.id);
   if (!Number.isInteger(id) || id < 1) {
     try {
       const profile = await getPublicComplex(params.id);
+      if (Object.keys(profile.profile_metrics ?? {}).length === 0) {
+        profile.profile_metrics = await getLicensedPublicProfileMetrics(params.id);
+      }
       return <PublicProfile profile={profile} />;
     } catch {
       notFound();
