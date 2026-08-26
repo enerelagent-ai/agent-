@@ -147,6 +147,7 @@ def import_map_data(dsn: str, data: PublicMapData, *, dry_run: bool, profile_met
     if dry_run:
         return {"profiles": len(profiles), "contours": len(data.contours), "cutoff": data.cutoff}
 
+    saved_metric_profiles = 0
     with psycopg2.connect(normalize_dsn(dsn)) as connection:
         with connection.cursor() as cursor:
             execute_batch(cursor, """
@@ -194,7 +195,13 @@ def import_map_data(dsn: str, data: PublicMapData, *, dry_run: bool, profile_met
                     (source, source_slug, polygon_index, location_kind, geometry, data_as_of, scraped_at)
                 VALUES (%s, %s, %s, %s, %s, %s, now())
             """, contours, page_size=200)
-    return {"profiles": len(profiles), "contours": len(contours), "cutoff": data.cutoff}
+            cursor.execute("""
+                SELECT count(*) FROM public_complex_profiles
+                WHERE source=%s AND profile_metrics <> '{}'::jsonb
+            """, (SOURCE,))
+            saved_metric_profiles = cursor.fetchone()[0]
+    return {"profiles": len(profiles), "contours": len(contours), "cutoff": data.cutoff,
+            "saved_metric_profiles": saved_metric_profiles}
 
 
 def main() -> None:
