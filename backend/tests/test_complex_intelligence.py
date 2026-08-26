@@ -1,7 +1,24 @@
 from datetime import datetime, timezone
 
 from app.api.routes import complexes as complexes_route
-from app.models.listing import Complex, Listing, ListingComplexMatch
+from app.models.listing import Complex, Listing, ListingComplexMatch, PublicAffordabilitySnapshot
+
+
+def test_public_affordability_returns_latest_snapshot(client, db_session) -> None:
+    db_session.add(PublicAffordabilitySnapshot(
+        source="hotkhon.mn",
+        data_as_of=datetime(2026, 8, 24).date(),
+        source_url="https://hotkhon.mn/bolomj/",
+        districts=["Хан-Уул", "Баянзүрх"],
+        listings=[[80, 200, 0], [41, 155, 1]],
+        rules={"loan_cap_mnt": 150_000_000, "min_downpayment_ratio": 0.3, "max_area_sqm": 80},
+    ))
+    db_session.flush()
+
+    response = client.get("/complexes/public-affordability/latest")
+    assert response.status_code == 200
+    assert response.json()["data_as_of"] == "2026-08-24"
+    assert response.json()["listings"] == [[80.0, 200.0, 0.0], [41.0, 155.0, 1.0]]
 
 
 def test_complex_intelligence_only_exposes_approved_active_units(
@@ -67,4 +84,3 @@ def test_complex_intelligence_only_exposes_approved_active_units(
     assert detail.status_code == 200
     assert detail.json()["aliases"] == ["TEST IC"]
     assert detail.json()["median_sale_price"] == 200_000_000
-

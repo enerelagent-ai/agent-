@@ -255,7 +255,7 @@ export function MarketplaceBrowse({
           </div>
         </div>
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:px-6 lg:px-8">
-          <Link href="/sale" className="flex items-center gap-2 text-xl font-black tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-xl font-black tracking-tight">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#ff6b35] text-white"><Home className="h-5 w-5" /></span>
             <span>Enerel<span className="text-[#ff8a5c]">Market</span></span>
           </Link>
@@ -275,6 +275,9 @@ export function MarketplaceBrowse({
             <Link href="/complexes" className="min-h-10 flex-1 rounded-md px-4 py-2 text-center text-slate-200 transition hover:bg-white/10 sm:flex-none">
               Хотхонууд
             </Link>
+            <Link href="/bolomj" className="min-h-10 flex-1 rounded-md px-4 py-2 text-center text-slate-200 transition hover:bg-white/10 sm:flex-none">
+              Боломж
+            </Link>
           </nav>
           <Link href="#market-analysis" className="hidden rounded-md bg-[#ff6b35] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#ed5b29] sm:block">
             Анализ харах
@@ -284,7 +287,7 @@ export function MarketplaceBrowse({
 
       <main className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">
         <nav className="mb-4 flex items-center gap-2 text-xs text-slate-500" aria-label="Breadcrumb">
-          <Link href="/sale" className="hover:text-[#ff6b35]">Нүүр</Link><ChevronRight className="h-3.5 w-3.5" />
+          <Link href="/" className="hover:text-[#ff6b35]">Нүүр</Link><ChevronRight className="h-3.5 w-3.5" />
           <span>Үл хөдлөх</span><ChevronRight className="h-3.5 w-3.5" />
           <span className="font-semibold text-slate-700">{transactionLabel}</span>
         </nav>

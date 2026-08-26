@@ -130,6 +130,19 @@ export interface PublicComplexMapData {
   contours: Record<string, number[][][]>;
 }
 
+export interface PublicAffordabilitySnapshot {
+  source_url: string;
+  data_as_of: string;
+  districts: string[];
+  listings: Array<[number, number, number]>;
+  rules: {
+    loan_cap_mnt: number;
+    min_downpayment_ratio: number;
+    max_area_sqm: number;
+    formula_version: string;
+  };
+}
+
 export interface ListingFacets {
   listing_type: TransactionType;
   total: number;
@@ -391,6 +404,10 @@ export function getPublicComplexMap(): Promise<PublicComplexMapData> {
 
 export function getPublicComplex(sourceSlug: string): Promise<PublicComplexSummary> {
   return getJSON(`/complexes/public/${encodeURIComponent(sourceSlug)}`);
+}
+
+export function getPublicAffordability(): Promise<PublicAffordabilitySnapshot> {
+  return getJSON("/complexes/public-affordability/latest");
 }
 
 export function searchMarketplaceListings(
