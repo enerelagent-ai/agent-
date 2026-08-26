@@ -39,6 +39,7 @@ class PublicComplexSummary(BaseModel):
     has_contour: bool
     location_kind: str | None
     data_as_of: str
+    profile_metrics: dict = {}
 
 
 class PublicComplexMapData(BaseModel):

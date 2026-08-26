@@ -123,6 +123,19 @@ export interface PublicComplexSummary {
   has_contour: boolean;
   location_kind: string | null;
   data_as_of: string;
+  profile_metrics: {
+    building_summary?: string;
+    price_range_million?: [number, number];
+    location_score?: number;
+    clearance_days?: number;
+    likely_sold?: number;
+    price_reductions_14d?: number;
+    rental_yield_pct?: number;
+    history_range?: [string, string];
+    room_price_per_sqm_million?: Array<{ rooms: number; value: number }>;
+    location_breakdown?: Array<{ label: string; score: number }>;
+    price_drivers?: Array<{ label: string; impact_pct: number }>;
+  };
 }
 
 export interface PublicComplexMapData {
