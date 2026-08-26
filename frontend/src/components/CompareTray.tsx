@@ -81,7 +81,7 @@ export function CompareTray({
                   <CompareRow label="Gross rental yield" listings={listings} render={(row) => row.rental_yield_pct === null ? "—" : formatPercent(row.rental_yield_pct)} />
                   <CompareRow label="Үзэлт" listings={listings} render={(row) => row.view_count == null ? "—" : row.view_count.toLocaleString("mn-MN")} />
                   <tr>
-                    <th className="border-t border-line-grid p-3 text-left text-xs font-medium text-ink-muted">Эх сурвалж</th>
+                    <th className="border-t border-line-grid p-3 text-left text-xs font-medium text-ink-muted">Зар</th>
                     {listings.map((listing) => (
                       <td key={listing.id} className="border-t border-line-grid p-3">
                         <a href={listing.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-series-1 hover:underline">Зар харах <ExternalLink className="h-3.5 w-3.5" /></a>

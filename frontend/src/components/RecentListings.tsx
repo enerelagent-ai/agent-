@@ -350,7 +350,7 @@ export function RecentListings({
                       </span>
                     )}
                     {listing.view_count != null && (
-                      <span className="flex items-center gap-1 text-xs text-ink-muted" title="Эх сурвалж дээрх нийт үзэлт">
+                      <span className="flex items-center gap-1 text-xs text-ink-muted" title="Эх зарын нийт үзэлт">
                         <Eye className="h-3 w-3" aria-hidden />
                         {listing.view_count.toLocaleString("mn-MN")}
                       </span>
@@ -377,7 +377,7 @@ export function RecentListings({
                       onClick={(e) => e.stopPropagation()}
                       className="ml-auto flex items-center gap-1 text-xs text-series-1 hover:underline"
                     >
-                      Эх сурвалж <ExternalLink className="h-3 w-3" />
+                      Зар харах <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>

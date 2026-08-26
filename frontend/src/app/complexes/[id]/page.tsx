@@ -79,9 +79,9 @@ function PublicProfile({ profile }: { profile: PublicComplexSummary }) {
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3"><Metric label="Идэвхтэй зар" value={String(profile.active_listings)} /><Metric label="Мэдээллийн огноо" value={profile.data_as_of} /><Metric label="Байршлын төрөл" value={profile.location_kind ?? "point"} /></div>
         </section>
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600">
-          <h2 className="font-black text-slate-950">Эх сурвалж ба тайлбар</h2>
-          <p className="mt-2">Нийтэд нээлттэй Hotkhon Intelligence мэдээллийг дахин нийтлэх зөвшөөрлийн хүрээнд импортлов. Тоо нь зарлах үнэ бөгөөд бодит хэлцлийн үнэ биш.</p>
-          <p className="mt-3 text-xs font-semibold text-slate-500">Эх сурвалж: hotkhon.mn public мэдээлэл · {profile.data_as_of}</p>
+          <h2 className="font-black text-slate-950">Мэдээллийн тайлбар</h2>
+          <p className="mt-2">Энд харагдах тоо нь зарлах үнэ бөгөөд бодит хэлцлийн үнэ биш.</p>
+          <p className="mt-3 text-xs font-semibold text-slate-500">Мэдээлэл шинэчлэгдсэн: {profile.data_as_of}</p>
         </section>
       </main>
     </div>

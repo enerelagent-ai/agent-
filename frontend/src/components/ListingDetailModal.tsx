@@ -201,7 +201,7 @@ export function ListingDetailModal({ listing, onClose }: ListingDetailModalProps
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 rounded-md bg-series-1 px-4 py-2 text-sm font-medium text-white"
         >
-          Эх сурвалж дээр харах <ExternalLink className="h-4 w-4" />
+          Эх зарыг харах <ExternalLink className="h-4 w-4" />
         </a>
       </div>
     </div>
