@@ -1,0 +1,39 @@
+name: Unegui real-estate range worker
+
+on:
+  workflow_call:
+    inputs:
+      start_page:
+        required: true
+        type: number
+      end_page:
+        required: true
+        type: number
+    secrets:
+      DATABASE_URL:
+        required: true
+
+jobs:
+  scrape-range:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scraper and analytics
+        working-directory: scraper
+        run: pip install -r requirements.txt
+      - name: Install Chromium
+        working-directory: scraper
+        run: playwright install --with-deps chromium
+      - name: Backfill only Unegui real estate sale and rent
+        working-directory: scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: >-
+          python -m scraper.main
+          --start-page ${{ inputs.start_page }}
+          --pages ${{ inputs.end_page }}
+          --skip-recent-days 3650

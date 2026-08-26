@@ -1,0 +1,40 @@
+name: Backfill all Unegui real-estate pages
+
+on:
+  workflow_dispatch: {}
+
+# Shares the same lock with daily-scrape.yml and the one-range backfill.
+# This guarantees Unegui sees only one real-estate crawler at a time.
+concurrency:
+  group: unegui-scraper
+  cancel-in-progress: false
+
+jobs:
+  pages-096-130:
+    uses: ./.github/workflows/_backfill-unegui-range.yml
+    with: { start_page: 96, end_page: 130 }
+    secrets: inherit
+  pages-131-165:
+    needs: pages-096-130
+    if: always()
+    uses: ./.github/workflows/_backfill-unegui-range.yml
+    with: { start_page: 131, end_page: 165 }
+    secrets: inherit
+  pages-166-200:
+    needs: pages-131-165
+    if: always()
+    uses: ./.github/workflows/_backfill-unegui-range.yml
+    with: { start_page: 166, end_page: 200 }
+    secrets: inherit
+  pages-201-235:
+    needs: pages-166-200
+    if: always()
+    uses: ./.github/workflows/_backfill-unegui-range.yml
+    with: { start_page: 201, end_page: 235 }
+    secrets: inherit
+  pages-236-270:
+    needs: pages-201-235
+    if: always()
+    uses: ./.github/workflows/_backfill-unegui-range.yml
+    with: { start_page: 236, end_page: 270 }
+    secrets: inherit
