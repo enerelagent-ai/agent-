@@ -1,0 +1,43 @@
+name: Backfill Unegui real-estate inventory
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_page:
+        description: "First list page (inclusive)"
+        required: true
+        type: number
+      end_page:
+        description: "Last list page (inclusive)"
+        required: true
+        type: number
+
+concurrency:
+  group: unegui-scraper
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scraper and analytics
+        working-directory: scraper
+        run: pip install -r requirements.txt
+      - name: Install Chromium
+        working-directory: scraper
+        run: playwright install --with-deps chromium
+      - name: Backfill requested page range
+        working-directory: scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: >-
+          python -m scraper.main
+          --start-page ${{ inputs.start_page }}
+          --pages ${{ inputs.end_page }}
+          --skip-recent-days 3650
+

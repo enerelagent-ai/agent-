@@ -125,6 +125,7 @@ def run_pipeline(
     ads_per_category: int | None,
     skip_recent_days: float = 0.0,
     stop_after_known_pages: int = 0,
+    start_page: int = 1,
 ) -> int:
     """Collect ad URLs from both categories, scrape details, upsert into Postgres.
 
@@ -154,6 +155,7 @@ def run_pipeline(
                 max_pages=max_pages,
                 known_urls_checker=known_checker,
                 stop_after_known=stop_after_known_pages or 3,
+                start_page=start_page,
             )
             if skip_recent_days > 0:
                 skip = recently_scraped_urls(dsn, ad_urls, skip_recent_days)
@@ -184,6 +186,7 @@ def main() -> None:
     """CLI entry point; reads the Postgres URL from the DATABASE_URL env var."""
     parser = argparse.ArgumentParser(description="Unegui.mn -> Postgres scraping pipeline")
     parser.add_argument("--pages", type=int, default=1, help="list pages per category (default 1)")
+    parser.add_argument("--start-page", type=int, default=1, help="first list page to crawl (default 1)")
     parser.add_argument(
         "--ads-per-category",
         type=int,
@@ -227,6 +230,7 @@ def main() -> None:
             ads_per_category=args.ads_per_category,
             skip_recent_days=args.skip_recent_days,
             stop_after_known_pages=args.stop_after_known_pages,
+            start_page=args.start_page,
         )
     sys.exit(1 if error_count else 0)
 

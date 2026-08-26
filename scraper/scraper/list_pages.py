@@ -73,6 +73,7 @@ def collect_ad_urls(
     stop_after_stale: int = 3,
     known_urls_checker: Callable[[list[str]], set[str]] | None = None,
     stop_after_known: int = 3,
+    start_page: int = 1,
 ) -> list[str]:
     """Walk pages 1..max_pages of a category listing and collect unique ad detail URLs.
 
@@ -101,6 +102,7 @@ def collect_ad_urls(
         stop_after_stale=stop_after_stale,
         known_urls_checker=known_urls_checker,
         stop_after_known=stop_after_known,
+        start_page=start_page,
     ).urls
 
 
@@ -114,6 +116,7 @@ def collect_ad_inventory(
     known_urls_checker: Callable[[list[str]], set[str]] | None = None,
     stop_after_known: int = 3,
     strict_fetch: bool = False,
+    start_page: int = 1,
 ) -> InventoryResult:
     """Collect URLs and report whether the category's natural end was seen.
 
@@ -126,7 +129,9 @@ def collect_ad_inventory(
     stale_pages = 0
     known_streak = 0
     stop_reason = "max_pages"
-    for page_num in range(1, max_pages + 1):
+    if start_page < 1 or start_page > max_pages:
+        raise ValueError("start_page must be between 1 and max_pages")
+    for page_num in range(start_page, max_pages + 1):
         page_url = build_page_url(category_url, page_num)
         if strict_fetch:
             ad_urls = fetch_ad_urls_from_page(browser, page_url, strict=True)

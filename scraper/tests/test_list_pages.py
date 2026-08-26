@@ -100,3 +100,16 @@ def test_inventory_is_complete_only_after_natural_end(monkeypatch) -> None:
     assert complete.stop_reason == "natural_end"
     assert capped.complete is False
     assert capped.stop_reason == "max_pages"
+
+
+def test_inventory_can_start_from_later_page(monkeypatch) -> None:
+    pages = {n: [f"https://x/adv/{n}_a/"] for n in range(3, 6)}
+    fetched: list[int] = []
+    monkeypatch.setattr(list_pages_module, "fetch_ad_urls_from_page", _fake_fetch(pages, fetched))
+
+    result = collect_ad_inventory(
+        None, "https://x/", 5, start_page=3, delay_range=(0, 0)
+    )
+
+    assert result.stop_reason == "max_pages"
+    assert fetched == [3, 4, 5]
