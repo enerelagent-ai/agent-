@@ -13,6 +13,7 @@ function isPublicMarketplaceRequest(request: NextRequest): boolean {
     pathname === "/rent" ||
     pathname === "/dashboard" ||
     pathname === "/calculator" ||
+    pathname === "/bolomj" ||
     pathname === "/listings" ||
     pathname === "/complexes" ||
     pathname === "/complexes/map" ||
