@@ -32,8 +32,24 @@ jobs:
         working-directory: scraper
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: >-
-          python -m scraper.main
-          --start-page ${{ inputs.start_page }}
-          --pages ${{ inputs.end_page }}
-          --skip-recent-days 3650
+        shell: bash
+        run: |
+          set +e
+          max_attempts=5
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "Backfill attempt $attempt/$max_attempts for pages ${{ inputs.start_page }}-${{ inputs.end_page }}"
+            python -m scraper.main \
+              --start-page ${{ inputs.start_page }} \
+              --pages ${{ inputs.end_page }} \
+              --skip-recent-days 3650
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              echo "Transient detail failures remain; cooling down for 120 seconds before retrying."
+              sleep 120
+            fi
+          done
+          echo "Some pages still failed after $max_attempts attempts; the parent queue will continue with the next range."
+          exit "$status"
